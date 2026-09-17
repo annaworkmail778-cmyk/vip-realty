@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+.env*.local
+tsconfig.tsbuildinfo
+.data
+
+# Secrets and local tooling state (Phase 0 hardening)
+.env
+*.pem
+.vercel/
+supabase/.temp/
+.claude/settings.local.json

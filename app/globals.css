@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   VIP Realty — design tokens
+   Black · deep espresso brown · warm ivory · champagne gold · subtle beige.
+   Gold is an accent only: rules, small caps, arrows, active states.
+--------------------------------------------------------------------------- */
+
+@theme {
+  --color-black: #0b0a09;
+  --color-ink: #14110f;
+  --color-espresso: #2a1d16;
+  --color-espresso-2: #3b2a20;
+  --color-cocoa: #6b4e3d;
+  --color-beige: #c9b79f;
+  --color-sand: #dccbb4;
+  --color-ivory: #f4efe7;
+  --color-ivory-2: #efe6d8;
+  --color-gold: #c9a227;
+  --color-champagne: #d9be7a;
+
+  --font-display: var(--font-serif), "Cormorant Garamond", "Times New Roman", serif;
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, "Helvetica Neue", sans-serif;
+
+  --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-cinematic: cubic-bezier(0.65, 0.05, 0.36, 1);
+
+  --spacing-section: clamp(5.5rem, 11vw, 11rem);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --nav-h: 4.5rem;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-ink);
+    color: var(--color-ivory);
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    line-height: 1.65;
+    letter-spacing: 0.01em;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--color-champagne);
+    color: var(--color-black);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    letter-spacing: -0.015em;
+    line-height: 0.95;
+    text-wrap: balance;
+  }
+
+  /* Thin, brand-toned scrollbar rather than the OS default. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-espresso-2) transparent;
+  }
+}
+
+@layer components {
+  /* Editorial display sizes — one scale, used everywhere. */
+  .display-xl { font-size: clamp(3rem, min(12.5vw, 21vh), 11rem); line-height: 0.86; }
+  .display-lg { font-size: clamp(2.6rem, min(8vw, 14vh), 7rem); line-height: 0.9; }
+  .display-md { font-size: clamp(2.2rem, 5.2vw, 4.75rem); line-height: 0.95; }
+  .display-sm { font-size: clamp(1.6rem, 3vw, 2.6rem); line-height: 1.05; }
+
+  /* Small caps metadata — navigation, labels, numbers. */
+  .label {
+    font-family: var(--font-sans);
+    font-size: clamp(0.62rem, 0.72vw, 0.72rem);
+    font-weight: 400;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+  .label-lg {
+    font-size: clamp(0.68rem, 0.85vw, 0.82rem);
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  .rule { height: 1px; background: currentColor; opacity: 0.18; }
+
+  .measure { max-width: 34rem; }
+
+  /* Frame used for every full-bleed media block. */
+  .media-fill { position: absolute; inset: 0; overflow: hidden; }
+  .media-fill img,
+  .media-fill video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Cinematic scrim so type stays legible over photography. */
+  .scrim-bottom {
+    background: linear-gradient(to top, rgb(11 10 9 / 0.88) 0%, rgb(11 10 9 / 0.45) 38%, rgb(11 10 9 / 0.06) 72%, transparent 100%);
+  }
+  .scrim-full {
+    background:
+      linear-gradient(to top, rgb(11 10 9 / 0.92) 0%, rgb(11 10 9 / 0.58) 32%, rgb(11 10 9 / 0.2) 62%, rgb(11 10 9 / 0.48) 100%);
+  }
+
+  /* For sections carrying real photography: hold type against the left and
+     bottom edges without flattening the middle of the frame. */
+  .scrim-film {
+    background:
+      linear-gradient(to right, rgb(11 10 9 / 0.8) 0%, rgb(11 10 9 / 0.42) 34%, rgb(11 10 9 / 0.08) 62%, rgb(11 10 9 / 0.16) 100%),
+      linear-gradient(to top, rgb(11 10 9 / 0.8) 0%, rgb(11 10 9 / 0.3) 22%, transparent 48%),
+      linear-gradient(to bottom, rgb(11 10 9 / 0.55) 0%, transparent 24%);
+  }
+
+  /* Booking panel: slides in from the right on desktop, up on a phone. */
+  .booking-panel-in { animation: booking-up 0.55s var(--ease-editorial) both; }
+
+  @media (min-width: 640px) {
+    .booking-panel-in { animation-name: booking-in; }
+  }
+
+  .gold-rule {
+    background: linear-gradient(to right, var(--color-gold), rgb(201 162 39 / 0));
+  }
+}
+
+@keyframes booking-in {
+  from { opacity: 0; transform: translateX(2.5rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes booking-up {
+  from { opacity: 0; transform: translateY(2rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@layer components {
+  /* Admin form controls: denser than the editorial site, same palette. */
+  .admin-input,
+  .admin-select {
+    border: 1px solid rgb(244 239 231 / 0.12);
+    background: rgb(0 0 0 / 0.4);
+    color: var(--color-ivory);
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.3s var(--ease-editorial);
+  }
+  .admin-input::placeholder { color: rgb(244 239 231 / 0.3); }
+  .admin-input:focus,
+  .admin-select:focus { border-color: var(--color-champagne); }
+  .admin-select { letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.68rem; }
+  .admin-select option,
+  .admin-input option { background: var(--color-ink); }
+
+  .nav-sq {
+    display: flex; align-items: center; justify-content: center;
+    height: 2.4rem; width: 2.4rem;
+    border: 1px solid rgb(244 239 231 / 0.15);
+    color: rgb(244 239 231 / 0.7);
+    transition: color 0.3s var(--ease-editorial), border-color 0.3s var(--ease-editorial);
+  }
+  .nav-sq:hover { border-color: var(--color-champagne); color: var(--color-champagne); }
+}
+
+@layer utilities {
+  .shell { width: 100%; padding-inline: clamp(1.25rem, 5vw, 5.5rem); }
+  .shell-wide { width: 100%; padding-inline: clamp(1rem, 3vw, 3rem); }
+
+  /* Underline that draws in from the left on hover. */
+  .link-underline {
+    position: relative;
+    display: inline-block;
+  }
+  .link-underline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -0.28em;
+    height: 1px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.55s var(--ease-editorial);
+  }
+  .link-underline:hover::after,
+  .link-underline[data-active="true"]::after { transform: scaleX(1); }
+
+  .arrow-slide { transition: transform 0.5s var(--ease-editorial); }
+  .group:hover .arrow-slide { transform: translateX(0.4rem); }
+
+  .img-zoom { transition: transform 1.2s var(--ease-editorial); will-change: transform; }
+  .group:hover .img-zoom { transform: scale(1.045); }
+}
+
+/* Reveal primitives. The hidden state only applies once the client has
+   confirmed motion is wanted, so content is never trapped at opacity 0. */
+html.motion-on [data-reveal] { opacity: 0; }
+html.motion-on [data-reveal="up"] { transform: translateY(1.75rem); }
+html.motion-on [data-reveal="mask"] { clip-path: inset(0 0 100% 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  html.motion-on [data-reveal] { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

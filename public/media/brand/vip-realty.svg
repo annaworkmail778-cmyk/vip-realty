@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="200" viewBox="0 0 640 200">
+  <rect width="640" height="200" fill="none"/>
+  <g fill="none" stroke="#C9A227" stroke-width="6">
+    <path d="M44 150 L86 50 L128 150"/><path d="M62 112 H110"/>
+  </g>
+  <text x="160" y="104" font-family="Georgia, 'Times New Roman', serif" font-size="66"
+        letter-spacing="10" fill="#F4EFE7">VIP</text>
+  <text x="162" y="150" font-family="Helvetica, Arial, sans-serif" font-size="28"
+        letter-spacing="14" fill="#D9BE7A">REALTY</text>
+</svg>

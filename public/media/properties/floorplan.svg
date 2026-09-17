@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1000" viewBox="0 0 1400 1000">
+  <rect width="1400" height="1000" fill="#F4EFE7"/>
+  <g stroke="#2A1D16" fill="none" stroke-width="9">
+    <rect x="90" y="90" width="1220" height="820"/>
+    <path d="M 610 90 V 520"/>
+    <path d="M 610 520 H 1310"/>
+    <path d="M 950 520 V 910"/>
+    <path d="M 90 650 H 390"/>
+    <path d="M 390 650 V 910"/>
+  </g>
+  <g stroke="#6B4E3D" fill="none" stroke-width="3" stroke-dasharray="14 10">
+    <path d="M 390 790 H 610"/>
+    <path d="M 610 270 H 870"/>
+  </g>
+  <g stroke="#6B4E3D" fill="none" stroke-width="3">
+    <path d="M 240 210 h 220 v 140 h -220 z"/>
+    <circle cx="790" cy="730" r="54"/>
+    <path d="M 1040 650 h 200 v 120 h -200 z"/>
+  </g>
+  <text x="240" y="390" font-family="Helvetica, Arial, sans-serif" font-size="26" letter-spacing="3" fill="#6B4E3D">LIVING</text>
+  <text x="710" y="210" font-family="Helvetica, Arial, sans-serif" font-size="26" letter-spacing="3" fill="#6B4E3D">KITCHEN</text>
+  <text x="690" y="650" font-family="Helvetica, Arial, sans-serif" font-size="26" letter-spacing="3" fill="#6B4E3D">BEDROOM 01</text>
+  <text x="1040" y="610" font-family="Helvetica, Arial, sans-serif" font-size="26" letter-spacing="3" fill="#6B4E3D">BEDROOM 02</text>
+  <text x="130" y="730" font-family="Helvetica, Arial, sans-serif" font-size="26" letter-spacing="3" fill="#6B4E3D">TERRACE</text>
+  <text x="1010" y="880" font-family="Helvetica, Arial, sans-serif" font-size="22" letter-spacing="3" fill="#6B4E3D">PLACEHOLDER PLAN</text>
+</svg>

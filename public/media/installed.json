@@ -1,0 +1,73 @@
+{
+  "scrub": {
+    "source": "Architectural_transformation_of_…_20260911155912.mp4",
+    "installedAt": "2026-09-11T12:07:44.976Z",
+    "duration": "00:00:06.50",
+    "resolution": "1280x720",
+    "trimmed": 1.5
+  },
+  "heroImage": {
+    "source": "vip hero image .jpg",
+    "installedAt": "2026-09-12T06:52:37.177Z",
+    "sourceResolution": "1132x1751 (portrait)",
+    "output": "7680x4320",
+    "crop": "top 380, full width, 16:9",
+    "note": "8K upscaled from 2560x1440"
+  },
+  "buy": {
+    "source": "buy scene.mp4",
+    "installedAt": "2026-09-12T07:10:28.781Z",
+    "duration": "00:00:08.00",
+    "resolution": "960x540"
+  },
+  "rent": {
+    "source": "rent scene.mp4",
+    "installedAt": "2026-09-12T07:10:04.791Z",
+    "duration": "00:00:08.00",
+    "resolution": "960x540"
+  },
+  "land": {
+    "source": "land scene.mp4",
+    "installedAt": "2026-09-12T07:10:12.983Z",
+    "duration": "00:00:08.00",
+    "resolution": "960x540"
+  },
+  "propertyPhotos": {
+    "atelier-loft": {
+      "source": "atelier loft.png",
+      "installedAt": "2026-09-12T07:25:22.789Z",
+      "sourceResolution": "1408x768"
+    },
+    "cascade-house": {
+      "source": "cascade house.png",
+      "installedAt": "2026-09-12T07:25:25.103Z",
+      "sourceResolution": "1376x768"
+    },
+    "hillside-land": {
+      "source": "hillside plot.png",
+      "installedAt": "2026-09-12T07:25:23.596Z",
+      "sourceResolution": "1584x672"
+    },
+    "modern-residence": {
+      "source": "modern residence.png",
+      "installedAt": "2026-09-12T07:25:23.954Z",
+      "sourceResolution": "1408x768"
+    },
+    "north-avenue-flat": {
+      "source": "north av flat.png",
+      "installedAt": "2026-09-12T07:25:24.314Z",
+      "sourceResolution": "1376x768"
+    },
+    "panorama-penthouse": {
+      "source": "penthouse.png",
+      "installedAt": "2026-09-12T07:25:24.652Z",
+      "sourceResolution": "1584x672"
+    }
+  },
+  "teamPhoto": {
+    "source": "vip team.jpeg",
+    "installedAt": "2026-09-12T07:43:41.467Z",
+    "sourceResolution": "1408x768",
+    "output": "2400x1500"
+  }
+}
