@@ -22,7 +22,10 @@ Visitors browse published listings and contact the agency about a property:
 There is no viewing booking, scheduling or availability system.
 
 Listings will be created from agents' WhatsApp messages through n8n automation
-and AI extraction in a later phase; that automation is **not implemented yet**.
+and AI extraction. The **ingestion foundation** exists (inbound WhatsApp messages
+are stored in Supabase through the n8n workflow in `automation/n8n/`, inactive
+until credentials are configured); extraction and listing creation are **not
+implemented yet**.
 
 ## Configuration
 
@@ -110,6 +113,7 @@ lib/
   env.ts                    server-only configuration
 supabase/
   migrations/               schema history (see docs/rebuild/)
+automation/n8n/             secret-free exports of the n8n workflows
 scripts/media/              the placeholder generator and footage installer
 docs/rebuild/               rebuild phase records
 ```
@@ -126,6 +130,11 @@ Supabase appears without a rebuild.
 Inquiries are submitted through `/api/inquiries`, which validates the form and
 calls the database function `submit_inquiry`; that function accepts only a
 published listing (by slug) and writes to the private `inquiries` table.
+
+Inbound WhatsApp messages reach Supabase through n8n, which calls the database
+function `ingest_whatsapp_message` with the service role (n8n credential only).
+It stores each message once, with media metadata, the agent's submission
+session and an audit trail — see `docs/rebuild/phase-04-whatsapp-n8n-foundation.md`.
 
 ## Motion
 

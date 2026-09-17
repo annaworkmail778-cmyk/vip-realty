@@ -1,0 +1,372 @@
+{
+  "name": "VIP Realty — WhatsApp Inbound",
+  "nodes": [
+    {
+      "name": "WhatsApp Trigger",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": [
+            "failed"
+          ]
+        }
+      },
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "name": "VIP Realty WhatsApp (Meta app)"
+        }
+      }
+    },
+    {
+      "name": "Split into message events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// The WhatsApp Trigger emits one item per webhook change: change.value plus `field`.\n// Only `messages` changes that actually carry inbound messages continue. Status updates\n// (sent/delivered/read/failed of outbound messages) contain `statuses`, not `messages`,\n// and are not inbound messages, so they end here.\nconst out = [];\nfor (const item of $input.all()) {\n  const value = item.json || {};\n  if (value.field !== 'messages' || value.messages === undefined) continue;\n\n  const metadata = value.metadata && typeof value.metadata === 'object' ? value.metadata : {};\n  const contacts = Array.isArray(value.contacts) ? value.contacts : [];\n\n  if (!Array.isArray(value.messages) || value.messages.length === 0) {\n    // Malformed change: keep the whole value so the rejection is recorded with its payload.\n    out.push({ json: { value_error: 'malformed_messages', metadata, contacts, message: null, value } });\n    continue;\n  }\n\n  // One Meta webhook can batch several messages; each is ingested independently.\n  for (const message of value.messages) {\n    out.push({ json: { value_error: null, messaging_product: value.messaging_product ?? null, metadata, contacts, message } });\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Normalize message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Maps one Meta WhatsApp Cloud API message to the provider-neutral event accepted by\n// Supabase public.ingest_whatsapp_message(p_event). No business decisions happen here:\n// routing, sender resolution, idempotency and sessions are decided in the database.\nconst KNOWN = ['text', 'image', 'document', 'video', 'audio', 'sticker', 'location', 'contacts',\n  'interactive', 'button', 'reaction', 'order', 'system'];\nconst MEDIA = ['image', 'video', 'audio', 'document', 'sticker'];\n\nconst src = $json;\nconst isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);\nconst text = (v) => (typeof v === 'string' && v.trim() !== '' ? v : null);\n\nconst m = isObject(src.message) ? src.message : null;\nconst from = m ? text(m.from) : null;\nconst contacts = Array.isArray(src.contacts) ? src.contacts : [];\nconst contact = contacts.find((c) => isObject(c) && c.wa_id === from) || (contacts.length === 1 ? contacts[0] : null);\n\nconst providerType = m ? text(m.type) : null;\nconst type = KNOWN.includes(providerType) ? providerType : 'unsupported';\nconst part = m && providerType && isObject(m[providerType]) ? m[providerType] : {};\n\nlet body = null;\nif (type === 'text') body = text(part.body);\nelse if (type === 'image' || type === 'video' || type === 'document') body = text(part.caption);\nelse if (type === 'button') body = text(part.text);\nelse if (type === 'interactive') body = text(part.button_reply?.title) ?? text(part.list_reply?.title);\nelse if (type === 'reaction') body = text(part.emoji);\nelse if (type === 'location') body = [text(part.name), text(part.address)].filter(Boolean).join(', ') || null;\n\n// Media: metadata/reference only. Nothing is downloaded in this phase.\nconst media = MEDIA.includes(type) && (typeof part.id === 'string' || typeof part.id === 'number')\n  ? { provider_media_id: String(part.id), mime_type: text(part.mime_type), filename: text(part.filename) }\n  : null;\n\n// Meta sends unix seconds as a string.\nconst tsRaw = m ? String(m.timestamp ?? '') : '';\nconst providerTimestamp = /^[0-9]{9,11}$/.test(tsRaw) ? new Date(Number(tsRaw) * 1000).toISOString() : null;\n\n// Raw payload: the provider's own shape narrowed to this message. Temporary media URLs are dropped.\nlet rawMessage = m;\nif (m && providerType && isObject(m[providerType]) && 'url' in m[providerType]) {\n  const cleanPart = { ...m[providerType] };\n  delete cleanPart.url;\n  rawMessage = { ...m, [providerType]: cleanPart };\n}\nconst rawPayload = src.value ?? {\n  messaging_product: src.messaging_product ?? null,\n  metadata: src.metadata ?? {},\n  contacts: contact ? [contact] : [],\n  messages: rawMessage ? [rawMessage] : [],\n  field: 'messages',\n};\n\nlet normalizationError = src.value_error || null;\nif (!normalizationError && !m) normalizationError = 'malformed_message';\n\nreturn {\n  json: {\n    event: {\n      schema_version: 1,\n      provider: 'whatsapp_cloud',\n      normalization_error: normalizationError,\n      recipient_phone_number_id: text(String(src.metadata?.phone_number_id ?? '')),\n      provider_message_id: m ? text(m.id) : null,\n      sender_wa_id: from,\n      sender_name: text(contact?.profile?.name),\n      provider_timestamp: providerTimestamp,\n      provider_message_type: providerType,\n      message_type: type,\n      text_body: body,\n      context_provider_message_id: m ? text(m.context?.id) : null,\n      media,\n      raw_payload: rawPayload,\n    },\n  },\n};\n"
+      }
+    },
+    {
+      "name": "Persist inbound message (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        800,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/ingest_whatsapp_message",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_event: $json.event, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Fail: ingestion unavailable (retry execution)",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        560
+      ],
+      "parameters": {
+        "errorType": "errorMessage",
+        "errorMessage": "=Supabase ingestion failed after 3 attempts for provider message {{ $(\"Normalize message\").item.json.event.provider_message_id || \"without id\" }}. The event is preserved in this failed execution; retry it from Executions once Supabase is reachable."
+      }
+    },
+    {
+      "name": "Route by ingestion outcome",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1080,
+        200
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "stored",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "stored"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "duplicate",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "duplicate"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "rejected",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "rejected"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "unroutable",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "unroutable"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unexpected"
+        }
+      }
+    },
+    {
+      "name": "Stored — handoff point for Phase 5 buffering",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Duplicate delivery — already stored",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        150
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Rejected — recorded in automation_events",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Unroutable — recorded in automation_events",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        450
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Fail: unexpected ingestion response",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        600
+      ],
+      "parameters": {
+        "errorType": "errorMessage",
+        "errorMessage": "Supabase ingestion returned an unexpected response; the event is preserved in this execution."
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Split into message events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split into message events": {
+      "main": [
+        [
+          {
+            "node": "Normalize message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize message": {
+      "main": [
+        [
+          {
+            "node": "Persist inbound message (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist inbound message (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Route by ingestion outcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail: ingestion unavailable (retry execution)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by ingestion outcome": {
+      "main": [
+        [
+          {
+            "node": "Stored — handoff point for Phase 5 buffering",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Duplicate delivery — already stored",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rejected — recorded in automation_events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unroutable — recorded in automation_events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail: unexpected ingestion response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 120
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "vip-realty"
+    },
+    {
+      "name": "phase-4"
+    },
+    {
+      "name": "whatsapp"
+    }
+  ]
+}
