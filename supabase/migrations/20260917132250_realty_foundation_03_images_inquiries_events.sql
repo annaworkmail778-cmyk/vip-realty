@@ -1,0 +1,128 @@
+-- =============================================================================
+-- Realty foundation 3/5 — property images, inquiries, automation events
+--
+--   property_images    ordered gallery rows; binaries live in Storage, not Postgres
+--   inquiries          website "request information" leads (not a CRM)
+--   automation_events  append-only diagnostic trail of the automation pipeline
+--
+-- All tables private by default (RLS enabled, anon/authenticated revoked).
+-- Public read access to images is granted in migration 4.
+-- =============================================================================
+
+-- ------------------------------------------------------------ property_images
+create table public.property_images (
+  id           uuid primary key default gen_random_uuid(),
+  agency_id    uuid not null references public.agencies (id) on delete restrict,
+  property_id  uuid not null references public.properties (id) on delete cascade,
+  media_id     uuid references public.whatsapp_media (id) on delete set null,
+  storage_path text not null,
+  sort_order   integer not null,
+  alt_text     text,
+  is_primary   boolean not null default false,
+  width        integer,
+  height       integer,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  constraint property_images_storage_path_key unique (storage_path),
+  constraint property_images_sort_order_key unique (property_id, sort_order) deferrable initially deferred,
+  constraint property_images_storage_path_format check (
+    storage_path ~ ('^properties/' || property_id::text || '/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp|avif)$')
+  ),
+  constraint property_images_sort_order_check check (sort_order >= 0),
+  constraint property_images_alt_text_check
+    check (alt_text is null or (btrim(alt_text) <> '' and char_length(alt_text) <= 300)),
+  constraint property_images_dimensions_check check ((width is null or width > 0) and (height is null or height > 0))
+);
+
+comment on table public.property_images is
+  'Ordered images of a property. Files live in the public property-images bucket at properties/{property_id}/{file}; public URL = <SUPABASE_URL>/storage/v1/object/public/property-images/{storage_path}.';
+comment on column public.property_images.media_id is
+  'Original WhatsApp media this image was produced from, if any. Deleting the image never deletes the original.';
+comment on column public.property_images.sort_order is
+  'Gallery order (ascending). Unique per property; the constraint is deferred so images can be reordered in one transaction.';
+
+create unique index property_images_one_primary on public.property_images (property_id) where is_primary;
+create unique index property_images_property_media_key
+  on public.property_images (property_id, media_id) where media_id is not null;
+create index property_images_media_idx on public.property_images (media_id) where media_id is not null;
+create index property_images_agency_idx on public.property_images (agency_id);
+
+create trigger property_images_touch_trg before update on public.property_images
+  for each row execute function public.touch_updated_at();
+
+alter table public.property_images enable row level security;
+revoke all on table public.property_images from anon, authenticated;
+
+-- ------------------------------------------------------------------ inquiries
+create table public.inquiries (
+  id                   uuid primary key default gen_random_uuid(),
+  agency_id            uuid not null references public.agencies (id) on delete restrict,
+  property_id          uuid references public.properties (id) on delete set null,
+  name                 text not null,
+  phone                text,
+  email                text,
+  message              text,
+  source               text not null default 'website',
+  status               text not null default 'new',
+  client_submission_id uuid,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now(),
+  constraint inquiries_name_check check (char_length(btrim(name)) between 2 and 120),
+  constraint inquiries_phone_check check (phone is null or char_length(btrim(phone)) between 6 and 32),
+  constraint inquiries_email_format check (email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$' and char_length(email) <= 254),
+  constraint inquiries_message_check check (message is null or (btrim(message) <> '' and char_length(message) <= 2000)),
+  constraint inquiries_contact_required check (phone is not null or email is not null),
+  constraint inquiries_source_check check (source in ('website', 'whatsapp', 'phone', 'email', 'other')),
+  constraint inquiries_status_check check (status in ('new', 'contacted', 'closed'))
+);
+
+comment on table public.inquiries is
+  'Website "request information" leads. Written only server-side (never directly by the browser). Not a CRM.';
+comment on column public.inquiries.client_submission_id is
+  'Idempotency key generated by the form; a retried or double-clicked submission cannot create a second inquiry.';
+
+create unique index inquiries_client_submission_key
+  on public.inquiries (agency_id, client_submission_id) where client_submission_id is not null;
+create index inquiries_agency_status_created_idx on public.inquiries (agency_id, status, created_at desc);
+create index inquiries_property_idx on public.inquiries (property_id, created_at desc) where property_id is not null;
+
+create trigger inquiries_touch_trg before update on public.inquiries
+  for each row execute function public.touch_updated_at();
+
+alter table public.inquiries enable row level security;
+revoke all on table public.inquiries from anon, authenticated;
+
+-- ---------------------------------------------------------- automation_events
+create table public.automation_events (
+  id             bigint generated always as identity primary key,
+  agency_id      uuid references public.agencies (id) on delete restrict,
+  event_type     text not null,
+  severity       text not null default 'info',
+  source         text not null,
+  session_id     uuid references public.submission_sessions (id) on delete set null,
+  message_id     uuid references public.whatsapp_messages (id) on delete set null,
+  property_id    uuid references public.properties (id) on delete set null,
+  correlation_id text,
+  details        jsonb not null default '{}'::jsonb,
+  created_at     timestamptz not null default now(),
+  constraint automation_events_event_type_format
+    check (event_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$' and char_length(event_type) <= 100),
+  constraint automation_events_severity_check check (severity in ('info', 'warning', 'error')),
+  constraint automation_events_source_check check (source in ('n8n', 'website', 'database', 'admin', 'system')),
+  constraint automation_events_correlation_id_check check (char_length(correlation_id) <= 200),
+  constraint automation_events_details_object check (jsonb_typeof(details) = 'object')
+);
+
+comment on table public.automation_events is
+  'Append-only diagnostic trail, e.g. whatsapp.received, session.buffered, extraction.completed, validation.failed, property.created, media.downloaded, property.published. Put media/extraction ids in details.';
+comment on column public.automation_events.correlation_id is 'Correlates events of one run, e.g. the n8n execution id.';
+
+create index automation_events_agency_created_idx on public.automation_events (agency_id, created_at desc);
+create index automation_events_session_idx on public.automation_events (session_id, created_at) where session_id is not null;
+create index automation_events_message_idx on public.automation_events (message_id) where message_id is not null;
+create index automation_events_property_idx on public.automation_events (property_id, created_at) where property_id is not null;
+
+alter table public.automation_events enable row level security;
+revoke all on table public.automation_events from anon, authenticated;
+-- Append-only: events are inserted, never edited or removed by the application.
+revoke update, delete, truncate on table public.automation_events from service_role;
