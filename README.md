@@ -22,9 +22,10 @@ Visitors browse published listings and contact the agency about a property:
 There is no viewing booking, scheduling or availability system.
 
 Listings will be created from agents' WhatsApp messages through n8n automation
-and AI extraction. The **ingestion foundation** exists (inbound WhatsApp messages
-are stored in Supabase through the n8n workflow in `automation/n8n/`, inactive
-until credentials are configured); extraction and listing creation are **not
+and AI extraction. Implemented so far (n8n workflows in `automation/n8n/`, inactive
+until credentials are configured): inbound WhatsApp messages are stored in
+Supabase, grouped into submission sessions, and turned into validated **extraction
+results**. Creating or publishing listings from those results is **not
 implemented yet**.
 
 ## Configuration
@@ -114,6 +115,7 @@ lib/
 supabase/
   migrations/               schema history (see docs/rebuild/)
 automation/n8n/             secret-free exports of the n8n workflows
+automation/prompts/         versioned AI extraction prompt and output schema
 scripts/media/              the placeholder generator and footage installer
 docs/rebuild/               rebuild phase records
 ```
@@ -135,6 +137,13 @@ Inbound WhatsApp messages reach Supabase through n8n, which calls the database
 function `ingest_whatsapp_message` with the service role (n8n credential only).
 It stores each message once, with media metadata, the agent's submission
 session and an audit trail — see `docs/rebuild/phase-04-whatsapp-n8n-foundation.md`.
+
+A scheduled n8n workflow advances sessions (5-minute quiet period, 90-second media
+settle, 60-minute cap, `done`/`cancel` commands), claims one ready session at a time
+in the database, asks the AI to extract the listing fields, and records the result
+through `record_extraction_result`, which validates the untrusted output
+deterministically. Extraction results are append-only and never modify
+`properties` — see `docs/rebuild/phase-05-session-buffering-ai-extraction.md`.
 
 ## Motion
 

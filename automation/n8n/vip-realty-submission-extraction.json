@@ -1,0 +1,394 @@
+{
+  "name": "VIP Realty — Submission Extraction",
+  "nodes": [
+    {
+      "name": "Every minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Advance session buffers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/advance_submission_sessions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "name": "Claim next ready session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/claim_submission_session",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_worker: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true
+    },
+    {
+      "name": "Session claimed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.claimed === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "name": "Run AI extraction",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        960,
+        200
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "mode": "once",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "<id of VIP Realty — Property Extraction (AI)>",
+          "cachedResultName": "VIP Realty — Property Extraction (AI)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "attempt_id": "={{ $json.attempt_id }}",
+            "extraction_input": "={{ $json.extraction_input }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "attempt_id",
+              "displayName": "attempt_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "extraction_input",
+              "displayName": "extraction_input",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "name": "Record extraction result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_extraction_result",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_attempt_id: $(\"Claim next ready session\").item.json.attempt_id, p_provider: $json.provider, p_model: $json.model, p_prompt_version: $json.prompt_version, p_raw_output: $json.raw_output, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Classify AI failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        420
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Maps a failed AI sub-workflow run to a stable error code for record_extraction_failure.\n// Only the error text is used; it is redacted again in the database before storage.\nconst err = $json.error;\nconst message = String((err && (err.description || err.message)) || err || 'AI extraction failed').slice(0, 500);\nconst lower = message.toLowerCase();\nlet code = 'ai_error';\nif (lower.includes('timeout') || lower.includes('timed out') || lower.includes('etimedout')) code = 'ai_timeout';\nelse if (lower.includes('429') || lower.includes('rate limit') || lower.includes('overloaded')) code = 'ai_rate_limited';\nelse if (lower.includes('invalid extraction input') || lower.includes('invalid attempt id')) code = 'invalid_input';\nreturn { json: { error_code: code, error_message: message } };\n"
+      }
+    },
+    {
+      "name": "Record extraction failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        420
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_extraction_failure",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_attempt_id: $(\"Claim next ready session\").item.json.attempt_id, p_error_code: $json.error_code, p_error_message: $json.error_message, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "name": "Extraction recorded (no property changes)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        60
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Nothing ready",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        960,
+        460
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Fail: result not recorded (lease will retry)",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        220
+      ],
+      "parameters": {
+        "errorType": "errorMessage",
+        "errorMessage": "Supabase did not accept the extraction result after 3 attempts; the session lease expires and the attempt is retried automatically."
+      }
+    }
+  ],
+  "connections": {
+    "Every minute": {
+      "main": [
+        [
+          {
+            "node": "Advance session buffers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advance session buffers": {
+      "main": [
+        [
+          {
+            "node": "Claim next ready session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim next ready session": {
+      "main": [
+        [
+          {
+            "node": "Session claimed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session claimed?": {
+      "main": [
+        [
+          {
+            "node": "Run AI extraction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run AI extraction": {
+      "main": [
+        [
+          {
+            "node": "Record extraction result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify AI failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record extraction result": {
+      "main": [
+        [
+          {
+            "node": "Extraction recorded (no property changes)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail: result not recorded (lease will retry)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify AI failure": {
+      "main": [
+        [
+          {
+            "node": "Record extraction failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 180
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "vip-realty"
+    },
+    {
+      "name": "phase-5"
+    },
+    {
+      "name": "extraction"
+    }
+  ]
+}

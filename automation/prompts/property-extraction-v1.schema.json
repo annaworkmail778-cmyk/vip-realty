@@ -1,0 +1,1225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "vip-realty/property-extraction-v1.schema.json",
+  "title": "VIP Realty property extraction output (schema_version 1, prompt property-extraction-v1)",
+  "description": "Shape the model must return. Enforced deterministically in Supabase by public.validate_property_extraction, which additionally checks verbatim evidence, source message references, status/value consistency, conflict bookkeeping and cross-field rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "fields",
+    "conflicts",
+    "notes",
+    "languages"
+  ],
+  "properties": {
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "description",
+        "intent",
+        "property_type",
+        "country",
+        "city",
+        "district",
+        "address",
+        "latitude",
+        "longitude",
+        "price",
+        "currency",
+        "price_negotiable",
+        "price_period",
+        "area_sqm",
+        "land_area_sqm",
+        "rooms",
+        "bedrooms",
+        "bathrooms",
+        "floor",
+        "total_floors",
+        "year_built",
+        "features"
+      ],
+      "properties": {
+        "title": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 160
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "description": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 5000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "intent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "buy",
+                    "rent"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "property_type": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "apartment",
+                    "penthouse",
+                    "house",
+                    "villa",
+                    "townhouse",
+                    "commercial",
+                    "office",
+                    "retail",
+                    "warehouse",
+                    "land",
+                    "garage",
+                    "other"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "country": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Z]{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "city": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "district": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "address": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "latitude": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "longitude": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "price": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 100000000000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "currency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "USD",
+                    "AMD",
+                    "EUR",
+                    "RUB"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "price_negotiable": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "price_period": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "month",
+                    "day",
+                    "year"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "area_sqm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 100000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "land_area_sqm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1000000000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "rooms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 50
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "bedrooms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 50
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "bathrooms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "floor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -5,
+                  "maximum": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "total_floors": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "year_built": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1800
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "status",
+            "source_messages",
+            "evidence"
+          ],
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 40,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$",
+                    "maxLength": 40
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "explicit",
+                "normalized",
+                "uncertain",
+                "conflicting",
+                "unknown"
+              ]
+            },
+            "source_messages": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "evidence": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            }
+          }
+        }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "values",
+          "source_messages",
+          "resolution"
+        ],
+        "properties": {
+          "field": {
+            "enum": [
+              "title",
+              "description",
+              "intent",
+              "property_type",
+              "country",
+              "city",
+              "district",
+              "address",
+              "latitude",
+              "longitude",
+              "price",
+              "currency",
+              "price_negotiable",
+              "price_period",
+              "area_sqm",
+              "land_area_sqm",
+              "rooms",
+              "bedrooms",
+              "bathrooms",
+              "floor",
+              "total_floors",
+              "year_built",
+              "features"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "minItems": 2
+          },
+          "source_messages": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "resolution": {
+            "enum": [
+              "latest_correction",
+              "unresolved"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      }
+    },
+    "languages": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]{2,3}$"
+      }
+    }
+  }
+}
