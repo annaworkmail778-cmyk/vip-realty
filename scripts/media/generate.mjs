@@ -39,20 +39,7 @@ async function jpg(svg, file, { width, quality = 80 } = {}) {
 
 /* ----------------------------- still photography --------------------------- */
 
-const PROPERTY_SCENES = [
-  { id: "modern-residence",   kind: "interior", time: "golden", seed: 101 },
-  { id: "panorama-penthouse", kind: "interior", time: "dusk",   seed: 202 },
-  { id: "cascade-house",       kind: "exterior", time: "dusk",   seed: 303 },
-  { id: "atelier-loft",        kind: "interior", time: "day",    seed: 404 },
-  { id: "hillside-land",       kind: "land",     time: "golden", seed: 505 },
-  { id: "north-avenue-flat",   kind: "interior", time: "golden", seed: 606 },
-];
-
-function scene(kind, opts) {
-  if (kind === "exterior") return exteriorScene(opts);
-  if (kind === "land") return landScene(opts);
-  return interiorScene(opts);
-}
+// Listing photographs are not generated: they live in Supabase Storage.
 
 async function images() {
   console.log("\nhero");
@@ -76,24 +63,6 @@ async function images() {
     ["commercial", () => interiorScene({ w: 1500, h: 1900, seed: 34, time: "day", dressing: 0.35, materials: 0.8 })],
   ];
   for (const [id, fn] of collection) await jpg(fn(), out("collection", `${id}.jpg`));
-
-  console.log("\nproperties");
-  const installedPhotos = await installedPropertyPhotos();
-  for (const p of PROPERTY_SCENES) {
-    // A listing with supplied photography must never be regenerated over.
-    if (installedPhotos.has(p.id)) {
-      console.log(`  ${p.id} — supplied photography installed, skipping`);
-      continue;
-    }
-    const base = { seed: p.seed, time: p.time };
-    await jpg(scene(p.kind, { ...base, w: 2400, h: 1500 }), out("properties", `${p.id}.jpg`), { quality: 80 });
-    await jpg(scene(p.kind, { ...base, w: 1400, h: 1750, seed: p.seed + 1 }),
-      out("properties", `${p.id}-portrait.jpg`));
-    for (let g = 1; g <= 3; g++) {
-      await jpg(scene(p.kind, { ...base, w: 1600, h: 1067, seed: p.seed + 10 * g, vignette: 0.42 }),
-        out("properties", `${p.id}-g${g}.jpg`), { quality: 76 });
-    }
-  }
 
   if (await isInstalled("teamPhoto")) {
     console.log("\nteam — supplied photograph installed, skipping");
@@ -145,16 +114,6 @@ async function encode(framesDir, name) {
     "-g", "5", "-deadline", "good", "-cpu-used", "2", "-an",
     out("transformation", `${name}.webm`)]);
   process.stdout.write(`  media/transformation/${name}.webm\n`);
-}
-
-/** Listings whose photography was supplied; the generator must not touch them. */
-async function installedPropertyPhotos() {
-  try {
-    const manifest = JSON.parse(await readFile(path.join(MEDIA, "installed.json"), "utf8"));
-    return new Set(Object.keys(manifest.propertyPhotos ?? {}));
-  } catch {
-    return new Set();
-  }
 }
 
 /** Real footage installed by `npm run media:video` must never be overwritten. */
@@ -237,41 +196,6 @@ async function brand() {
   await mkdir(out("brand"), { recursive: true });
   await writeFile(out("brand", "vip-realty.svg"), logo);
   process.stdout.write("  media/brand/vip-realty.svg\n");
-
-  // A clean architectural line drawing, used on the property detail page.
-  const W = 1400, H = 1000, m = 90;
-  const wall = `stroke="${BRAND.espresso}" fill="none" stroke-width="9"`;
-  const thin = `stroke="${BRAND.cocoa}" fill="none" stroke-width="3"`;
-  const label = (x, y, t, s = 26) =>
-    `<text x="${x}" y="${y}" font-family="Helvetica, Arial, sans-serif" font-size="${s}" letter-spacing="3" fill="${BRAND.cocoa}">${t}</text>`;
-  const plan = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <rect width="${W}" height="${H}" fill="${BRAND.ivory}"/>
-  <g ${wall}>
-    <rect x="${m}" y="${m}" width="${W - m * 2}" height="${H - m * 2}"/>
-    <path d="M ${m + 520} ${m} V ${m + 430}"/>
-    <path d="M ${m + 520} ${m + 430} H ${W - m}"/>
-    <path d="M ${m + 860} ${m + 430} V ${H - m}"/>
-    <path d="M ${m} ${m + 560} H ${m + 300}"/>
-    <path d="M ${m + 300} ${m + 560} V ${H - m}"/>
-  </g>
-  <g ${thin} stroke-dasharray="14 10">
-    <path d="M ${m + 300} ${m + 700} H ${m + 520}"/>
-    <path d="M ${m + 520} ${m + 180} H ${m + 780}"/>
-  </g>
-  <g ${thin}>
-    <path d="M ${m + 150} ${m + 120} h 220 v 140 h -220 z"/>
-    <circle cx="${m + 700}" cy="${m + 640}" r="54"/>
-    <path d="M ${m + 950} ${m + 560} h 200 v 120 h -200 z"/>
-  </g>
-  ${label(m + 150, m + 300, "LIVING")}
-  ${label(m + 620, m + 120, "KITCHEN")}
-  ${label(m + 600, m + 560, "BEDROOM 01")}
-  ${label(m + 950, m + 520, "BEDROOM 02")}
-  ${label(m + 40, m + 640, "TERRACE")}
-  ${label(W - m - 300, H - m - 30, "PLACEHOLDER PLAN", 22)}
-</svg>`;
-  await writeFile(out("properties", "floorplan.svg"), plan);
-  process.stdout.write("  media/properties/floorplan.svg\n");
 }
 
 /* ----------------------------------- main --------------------------------- */

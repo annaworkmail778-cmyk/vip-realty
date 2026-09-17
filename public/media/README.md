@@ -5,10 +5,16 @@ Most of this folder is **machine-generated placeholder art**, produced by
 real footage that was supplied and encoded for the site — the generator will
 not touch those files.
 
-**Real so far:** the hero still, the three section 02 intent loops, the six
-listing photographs, and the section 04 scroll-scrubbed clip.
+**Real so far:** the hero still, the three section 02 intent loops and the
+section 04 scroll-scrubbed clip.
 **Still placeholder:** everything else. None of it is photography of a real
 property, and none of it should ship.
+
+**Listing photographs are not in this folder.** They are stored in the Supabase
+Storage bucket `property-images` and attached to listings in the database.
+`properties/` holds only legacy photographs of the former hard-coded demo
+listings; the site no longer uses them and they are kept temporarily for
+reference.
 
 ## Replacing it
 
@@ -26,32 +32,8 @@ changes are needed. Delete nothing else.
 | `transformation/poster.jpg` | 04 First frame | 16:9 | taken from the clip |
 | `interior/buy.jpg` · `rent.jpg` · `land.jpg` | 02 Search intent | 4:5 | 1800×2250 |
 | `collection/*.jpg` | 05 Collection | 4:5 | 1500×1900 |
-| `properties/<slug>.jpg` | Panels, index, detail hero | 16:10 | 2400×1500 |
-| `properties/<slug>-portrait.jpg` | Small-screen panels | 4:5 | 1400×1750 |
-| `properties/<slug>-g1…g3.jpg` | Detail gallery | 3:2 | 1600×1067 |
-| `properties/floorplan.svg` | Detail floor plan | free | per listing |
 | `team/team.jpg` | 06 About | 16:10 | 2400×1500 |
 | `brand/vip-realty.svg` | Reference lockup | — | the agency's own artwork |
-
-`<slug>` is the `slug` field of each entry in `lib/properties.ts`.
-
-## Installing real photography
-
-```bash
-npm run media:photos -- <folder>                     # match by filename
-npm run media:photos -- <file.jpg> --slug cascade-house
-npm run media:photos -- <file.jpg> --position east   # bias the portrait crop
-```
-
-Filenames are matched to listing slugs, so `cascade house.png` installs as
-`cascade-house`. Each source produces the landscape master (2400×1500) and the
-portrait crop (1400×1750) the site expects, and the slug is recorded in
-`installed.json` so `npm run media` skips it from then on.
-
-A listing with supplied photography should also be listed in
-`REAL_PHOTOGRAPHY` in `lib/media.ts`, which stops its detail page padding the
-gallery with generated images. When extra views of a property arrive, name them
-`<slug>-g1.jpg` … `-g3.jpg` and take the slug back out of that set.
 
 ## Installing real footage
 

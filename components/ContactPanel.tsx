@@ -1,22 +1,21 @@
 "use client";
 
-import { BookViewingButton } from "@/components/booking/BookViewingButton";
+import { InquiryButton } from "@/components/inquiry/InquiryButton";
+import type { InquiryListing } from "@/components/inquiry/InquiryDialog";
 import { site, WHATSAPP_URL } from "@/lib/site";
 import { formatPrice } from "@/lib/listings/format";
 import type { Listing } from "@/lib/listings/types";
-import type { Property } from "@/lib/properties";
 
 /* ----------------------------------------------------------------------------
-   Sticky contact panel: booking, agent, call and WhatsApp.
+   Sticky contact panel: request information, agent, call and WhatsApp.
 
-   Booking a viewing runs through the (legacy) viewing system, which only knows
-   the hard-coded listings: `bookable` is that legacy record when one exists for
-   this slug, otherwise the booking action is not offered. WhatsApp and phone
-   are always available.
+   Contact details come from the site configuration (lib/site.ts). The WhatsApp
+   message is prefilled with the listing title and its public reference (slug)
+   only — nothing internal.
 ---------------------------------------------------------------------------- */
 
-export function ContactPanel({ listing, bookable }: { listing: Listing; bookable: Property | null }) {
-  const enquiry = `Hello VIP Realty — I'd like to know more about ${listing.name} (${listing.districtLabel ?? listing.city}), listed at ${formatPrice(listing)}.`;
+export function ContactPanel({ listing, inquiry }: { listing: Listing; inquiry: InquiryListing }) {
+  const enquiry = `Hello VIP Realty — I'd like to know more about ${listing.name} (${listing.districtLabel ?? listing.city}), listed at ${formatPrice(listing)}. Ref: ${listing.slug}`;
 
   return (
     <aside className="lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)]">
@@ -24,14 +23,12 @@ export function ContactPanel({ listing, bookable }: { listing: Listing; bookable
         <p className="label text-ivory/40">Price</p>
         <p className="mt-2 font-display text-[2.1rem] leading-none text-champagne">{formatPrice(listing)}</p>
 
-        {bookable && (
-          <div className="mt-6">
-            <BookViewingButton property={bookable} />
-            <p className="label mt-3 text-ivory/35">
-              Choose a date and time. No account needed.
-            </p>
-          </div>
-        )}
+        <div className="mt-6">
+          <InquiryButton listing={inquiry} />
+          <p className="label mt-3 text-ivory/35">
+            Leave your details and we&rsquo;ll get back to you.
+          </p>
+        </div>
 
         <div className="mt-7 border-t border-ivory/12 pt-6">
           <p className="label text-ivory/40">Your agent</p>

@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { formatDateShort, formatTime24 } from "@/lib/booking/time";
-import { CONFIRMATION_LABELS, STATUS_LABELS, type Booking } from "@/lib/booking/types";
 
 /* Small shared building blocks for the admin screens. */
 
@@ -19,10 +17,16 @@ export function PageHeader({
 }
 
 export function StatCard({
-  value, label, tone = "default", href,
-}: { value: number | string; label: string; tone?: "default" | "accent" | "muted"; href?: string }) {
+  value, label, tone = "default", href, active = false,
+}: {
+  value: number | string; label: string; tone?: "default" | "accent" | "muted"; href?: string; active?: boolean;
+}) {
   const body = (
-    <div className="border border-ivory/12 bg-ink px-5 py-6 transition-colors duration-300 hover:border-ivory/25">
+    <div
+      className={`border bg-ink px-5 py-6 transition-colors duration-300 hover:border-ivory/25 ${
+        active ? "border-champagne/60" : "border-ivory/12"
+      }`}
+    >
       <p className={`font-display text-[2.4rem] leading-none ${tone === "accent" ? "text-champagne" : tone === "muted" ? "text-ivory/45" : "text-ivory"}`}>
         {value}
       </p>
@@ -32,43 +36,66 @@ export function StatCard({
   return href ? <Link href={href} className="block">{body}</Link> : body;
 }
 
-const STATUS_TONE: Record<string, string> = {
-  pending: "border-ivory/25 text-ivory/70",
-  confirmed: "border-champagne/60 text-champagne",
-  cancelled: "border-ivory/12 text-ivory/35 line-through",
-  completed: "border-ivory/20 text-ivory/55",
-  no_show: "border-ivory/20 text-ivory/40",
+const LISTING_TONE: Record<string, string> = {
+  draft: "border-ivory/25 text-ivory/70",
+  published: "border-champagne/60 text-champagne",
+  sold: "border-ivory/20 text-ivory/55",
+  rented: "border-ivory/20 text-ivory/55",
+  archived: "border-ivory/12 text-ivory/35",
 };
 
-export function StatusPill({ status }: { status: Booking["status"] }) {
-  return (
-    <span className={`label inline-block border px-2.5 py-1 text-[0.55rem] ${STATUS_TONE[status] ?? ""}`}>
-      {STATUS_LABELS[status]}
-    </span>
-  );
+const REVIEW_TONE: Record<string, string> = {
+  pending: "border-ivory/25 text-ivory/70",
+  approved: "border-champagne/40 text-champagne/80",
+  rejected: "border-ivory/12 text-ivory/40 line-through",
+};
+
+const LABELS: Record<string, string> = {
+  draft: "Draft",
+  published: "Published",
+  sold: "Sold",
+  rented: "Rented",
+  archived: "Archived",
+  pending: "Pending review",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+
+function Pill({ tone, children }: { tone: string; children: React.ReactNode }) {
+  return <span className={`label inline-block whitespace-nowrap border px-2.5 py-1 text-[0.55rem] ${tone}`}>{children}</span>;
 }
 
-export function ConfirmationNote({ booking }: { booking: Booking }) {
-  const tone = booking.confirmationStatus === "confirmed" ? "text-champagne"
-    : booking.confirmationStatus === "expired" ? "text-ivory/35" : "text-ivory/50";
-  return <span className={`label ${tone}`}>{CONFIRMATION_LABELS[booking.confirmationStatus]}</span>;
+/** Public listing lifecycle status. */
+export function ListingStatusPill({ status }: { status: string }) {
+  return <Pill tone={LISTING_TONE[status] ?? "border-ivory/20 text-ivory/60"}>{LABELS[status] ?? status}</Pill>;
 }
 
-export function BookingLine({ booking }: { booking: Booking }) {
-  return (
-    <Link
-      href={`/admin/bookings?ref=${booking.reference}`}
-      className="flex flex-wrap items-baseline gap-x-5 gap-y-1 border-b border-ivory/10 py-3.5 transition-colors duration-300 hover:bg-ivory/[0.03]"
-    >
-      <span className="label w-[7.5rem] shrink-0 text-champagne">{formatTime24(booking.startTime)}</span>
-      <span className="min-w-0 flex-1 text-[0.95rem] text-ivory">{booking.customerName}</span>
-      <span className="label min-w-0 flex-1 text-ivory/55">{booking.propertyTitle}</span>
-      <span className="label text-ivory/35">{formatDateShort(booking.date)}</span>
-      <StatusPill status={booking.status} />
-    </Link>
-  );
+/** Human review state (separate from the listing status). */
+export function ReviewStatusPill({ status }: { status: string | null }) {
+  if (!status) return <span className="label text-ivory/30">Not in review</span>;
+  return <Pill tone={REVIEW_TONE[status] ?? "border-ivory/20 text-ivory/60"}>{LABELS[status] ?? status}</Pill>;
 }
 
 export function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className="label py-10 text-ivory/30">{children}</p>;
+}
+
+/** Shown when admin data cannot be loaded. Never includes internal errors. */
+export function DataNotice({ reason }: { reason: "unconfigured" | "unavailable" }) {
+  return (
+    <div className="mt-8 border border-champagne/30 bg-champagne/5 p-5">
+      <p className="label text-champagne">{reason === "unconfigured" ? "Not configured" : "Temporarily unavailable"}</p>
+      <p className="mt-3 text-[0.88rem] leading-relaxed text-ivory/70">
+        {reason === "unconfigured" ? (
+          <>
+            Listing management needs server-side database access. Set{" "}
+            <code className="text-champagne">SUPABASE_SERVICE_ROLE_KEY</code> in{" "}
+            <code className="text-champagne">.env.local</code> (never in client code) and restart the server.
+          </>
+        ) : (
+          "The database could not be reached. Try again in a moment."
+        )}
+      </p>
+    </div>
+  );
 }

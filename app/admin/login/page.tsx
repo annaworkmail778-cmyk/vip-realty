@@ -13,7 +13,7 @@ export default async function AdminLoginPage() {
     <div className="flex min-h-svh items-center justify-center bg-black px-6 py-20">
       <div className="w-full max-w-[24rem]">
         <Logo className="h-9 w-auto text-ivory" />
-        <p className="label mt-8 text-champagne">Viewing management</p>
+        <p className="label mt-8 text-champagne">Listing management</p>
         <h1 className="display-sm mt-3">Sign in</h1>
 
         {hasAdminAuth() ? (

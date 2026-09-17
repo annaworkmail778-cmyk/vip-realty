@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ADMIN_COOKIE, issueSession, passwordMatches, sessionCookieOptions } from "@/lib/admin/auth";
 import { hasAdminAuth } from "@/lib/env";
-import { clientKey, rateLimit } from "@/lib/booking/rate-limit";
+import { clientKey, rateLimit } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
 

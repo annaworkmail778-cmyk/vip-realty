@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "media": "node scripts/media/generate.mjs",
-    "media:video": "node scripts/media/install-video.mjs",
-    "media:photos": "node scripts/media/install-photos.mjs"
+    "media:video": "node scripts/media/install-video.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

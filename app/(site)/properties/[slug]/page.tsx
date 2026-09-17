@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PropertyDetail } from "@/components/PropertyDetail";
 import { formatPrice, locationLine } from "@/lib/listings/format";
-import { legacyBookingProperty } from "@/lib/listings/legacy-booking";
 import { getPublishedListing, listRelatedListings } from "@/lib/listings/queries";
 
 /* ----------------------------------------------------------------------------
@@ -51,10 +50,6 @@ export default async function PropertyPage({ params }: Params) {
   const related = await listRelatedListings(listing);
 
   return (
-    <PropertyDetail
-      listing={listing}
-      related={related.ok ? related.data : []}
-      bookable={legacyBookingProperty(listing.slug)}
-    />
+    <PropertyDetail listing={listing} related={related.ok ? related.data : []} />
   );
 }

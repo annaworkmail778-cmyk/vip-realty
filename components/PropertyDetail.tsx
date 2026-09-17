@@ -1,30 +1,34 @@
 import Image from "next/image";
 import Link from "next/link";
 import { PropertyGallery } from "@/components/PropertyGallery";
-import { BookViewingButton } from "@/components/booking/BookViewingButton";
 import { ContactPanel } from "@/components/ContactPanel";
 import { YerevanMap } from "@/components/YerevanMap";
+import { InquiryButton } from "@/components/inquiry/InquiryButton";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { formatArea, formatPrice, locationLine } from "@/lib/listings/format";
 import type { Listing } from "@/lib/listings/types";
-import type { Property } from "@/lib/properties";
 
 /* ----------------------------------------------------------------------------
    Reusable property detail page. Everything it renders comes from one published
    Supabase listing, so a new listing needs no new markup. Facts that are not
-   known are left out rather than shown as zero or placeholder values.
+   known are left out rather than shown as zero or placeholder values. The
+   actions are contact actions: request information, call and WhatsApp.
 ---------------------------------------------------------------------------- */
 
 export function PropertyDetail({
   listing,
   related,
-  bookable,
 }: {
   listing: Listing;
   related: Listing[];
-  /** Legacy booking record for this slug, when the booking system knows it. */
-  bookable: Property | null;
 }) {
+  // Only public, display-ready values go to the client-side inquiry panel.
+  const inquiry = {
+    slug: listing.slug,
+    name: listing.name,
+    location: locationLine(listing),
+    price: formatPrice(listing),
+  };
   const facts = [
     { label: "Type", value: listing.typeLabel },
     ...(listing.area !== null ? [{ label: "Area", value: formatArea(listing.area) }] : []),
@@ -70,11 +74,9 @@ export function PropertyDetail({
               <p className="label text-ivory/70">{locationLine(listing)}</p>
               <p className="mt-3 font-display text-[1.9rem] leading-none text-champagne">{formatPrice(listing)}</p>
             </div>
-            {bookable && (
-              <div className="w-full sm:w-auto sm:min-w-[16rem]">
-                <BookViewingButton property={bookable} />
-              </div>
-            )}
+            <div className="w-full sm:w-auto sm:min-w-[16rem]">
+              <InquiryButton listing={inquiry} />
+            </div>
           </div>
         </div>
       </header>
@@ -143,7 +145,7 @@ export function PropertyDetail({
           </section>
         </div>
 
-        <ContactPanel listing={listing} bookable={bookable} />
+        <ContactPanel listing={listing} inquiry={inquiry} />
       </div>
 
       {/* more */}

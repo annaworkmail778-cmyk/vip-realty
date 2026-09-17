@@ -70,43 +70,17 @@ export const media = {
 
   about: { team: `${MEDIA_ROOT}/team/team.jpg` },
 
-  floorPlan: `${MEDIA_ROOT}/properties/floorplan.svg`,
-
   brand: { logo: `${MEDIA_ROOT}/brand/vip-realty.svg` },
 } as const;
 
-/** Per-property media, derived from the property slug. */
-/**
- * Listings with supplied photography rather than generated placeholders.
- * Installed by `npm run media:photos` and recorded in installed.json.
- *
- * One real photograph per listing so far, so these get no generated gallery:
- * three procedural images beside a real one reads worse than a single real
- * one. Remove a slug from this set as soon as its extra views arrive, and name
- * them `<slug>-g1.jpg` … `-g3.jpg`.
- */
-export const REAL_PHOTOGRAPHY = new Set([
-  "modern-residence",
-  "panorama-penthouse",
-  "cascade-house",
-  "atelier-loft",
-  "hillside-land",
-  "north-avenue-flat",
-]);
-
-export const propertyMedia = (slug: string) => ({
-  wide: `${MEDIA_ROOT}/properties/${slug}.jpg`,
-  portrait: `${MEDIA_ROOT}/properties/${slug}-portrait.jpg`,
-  gallery: REAL_PHOTOGRAPHY.has(slug)
-    ? []
-    : [1, 2, 3].map((i) => `${MEDIA_ROOT}/properties/${slug}-g${i}.jpg`),
-});
+/* Listing photographs are not local media: they live in Supabase Storage and
+   are resolved per listing by lib/listings/mappers.ts. */
 
 /**
- * Whether any placeholder content is still on the page. The hero, the six
- * listing photographs, the section 02 intent loops and the section 04 clip are
- * real; the collection images, team photograph, floor plan and map are not,
- * and neither are the contact details or statistics in lib/site.ts.
+ * Whether any placeholder content is still on the page. The hero, the section
+ * 02 intent loops and the section 04 clip are real; the collection images,
+ * team photograph and map are not, and neither are the contact details or
+ * statistics in lib/site.ts.
  *
  * Set to false once those are replaced too — it only drives the small in-page
  * disclosure, never the layout.

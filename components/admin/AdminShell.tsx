@@ -11,22 +11,15 @@ import { Logo } from "@/components/ui/Logo";
 ---------------------------------------------------------------------------- */
 
 const NAV = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/calendar", label: "Viewing calendar" },
-  { href: "/admin/bookings", label: "Bookings" },
-  { href: "/admin/availability", label: "Availability" },
   { href: "/admin/properties", label: "Properties" },
-  { href: "/admin/customers", label: "Customers" },
-  { href: "/admin/notifications", label: "Notifications" },
-  { href: "/admin/settings", label: "Settings" },
 ];
 
 export function AdminShell({
-  children, storeKind, telegramReady,
+  children, databaseReady,
 }: {
   children: React.ReactNode;
-  storeKind: "supabase" | "development";
-  telegramReady: boolean;
+  /** Whether server-side listing access (service role) is configured. Never a value. */
+  databaseReady: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -51,7 +44,7 @@ export function AdminShell({
 
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:mt-4 lg:flex-col lg:overflow-visible lg:px-3 lg:pb-0">
             {NAV.map((item) => {
-              const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+              const active = pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
@@ -67,7 +60,7 @@ export function AdminShell({
           </nav>
 
           <div className="mt-auto hidden px-5 py-6 lg:block">
-            <StoreBadge kind={storeKind} telegramReady={telegramReady} />
+            <DatabaseBadge ready={databaseReady} />
             <button onClick={signOut} className="label mt-5 text-ivory/40 transition-colors hover:text-champagne">
               Sign out
             </button>
@@ -76,7 +69,7 @@ export function AdminShell({
 
         <main className="min-w-0 flex-1 px-5 py-8 lg:px-10 lg:py-10">
           <div className="lg:hidden">
-            <StoreBadge kind={storeKind} telegramReady={telegramReady} />
+            <DatabaseBadge ready={databaseReady} />
           </div>
           <div className="mt-5 lg:mt-0">{children}</div>
         </main>
@@ -85,21 +78,11 @@ export function AdminShell({
   );
 }
 
-function StoreBadge({ kind, telegramReady }: { kind: string; telegramReady: boolean }) {
+function DatabaseBadge({ ready }: { ready: boolean }) {
   return (
-    <div className="space-y-2">
-      <p className="label text-ivory/30">
-        Store ·{" "}
-        <span className={kind === "supabase" ? "text-champagne" : "text-ivory/60"}>
-          {kind === "supabase" ? "Supabase" : "Development"}
-        </span>
-      </p>
-      <p className="label text-ivory/30">
-        Telegram ·{" "}
-        <span className={telegramReady ? "text-champagne" : "text-ivory/60"}>
-          {telegramReady ? "Connected" : "Not configured"}
-        </span>
-      </p>
-    </div>
+    <p className="label text-ivory/30">
+      Listings database ·{" "}
+      <span className={ready ? "text-champagne" : "text-ivory/60"}>{ready ? "Connected" : "Not configured"}</span>
+    </p>
   );
 }
