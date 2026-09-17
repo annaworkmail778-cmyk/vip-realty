@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { PropertiesIndex, IndexFooterNote } from "@/components/PropertiesIndex";
-import { EMPTY_FILTERS, type FilterState } from "@/components/PropertyFilters";
-import type { Intent } from "@/lib/properties";
+import type { FilterState } from "@/components/PropertyFilters";
+import { parseListingSearch } from "@/lib/listings/filters";
+import { getFacetOptions, searchListings } from "@/lib/listings/queries";
 
 export const metadata: Metadata = {
   title: "Properties",
@@ -10,18 +11,20 @@ export const metadata: Metadata = {
 
 type Search = Record<string, string | string[] | undefined>;
 
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-
+/* Rendered per request: the filters in the URL become a Supabase query, and
+   only the matching published listings are sent to the browser. */
 export default async function PropertiesPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const sp = await searchParams;
+  const search = parseListingSearch(await searchParams);
+  const [result, facets] = await Promise.all([searchListings(search), getFacetOptions()]);
 
   const filters: FilterState = {
-    district: (one(sp.district) as FilterState["district"]) ?? EMPTY_FILTERS.district,
-    type: (one(sp.type) as FilterState["type"]) ?? EMPTY_FILTERS.type,
-    price: (one(sp.price) as FilterState["price"]) ?? EMPTY_FILTERS.price,
-    bedrooms: (one(sp.bedrooms) as FilterState["bedrooms"]) ?? EMPTY_FILTERS.bedrooms,
+    district: search.district,
+    type: search.type,
+    price: search.price,
+    bedrooms: search.bedrooms,
   };
-  const intent = (one(sp.intent) as Intent | undefined) ?? "all";
+
+  const queryKey = JSON.stringify(search);
 
   return (
     <div data-nav-tone="dark" className="bg-ink text-ivory">
@@ -33,7 +36,14 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
         <h1 className="display-lg mt-6 max-w-[14ch]">Select your next address.</h1>
       </header>
 
-      <PropertiesIndex initialFilters={filters} initialIntent={intent} />
+      <PropertiesIndex
+        key={queryKey}
+        listings={result.ok ? result.data : []}
+        unavailable={!result.ok}
+        districts={facets.districts}
+        initialFilters={filters}
+        initialIntent={search.intent}
+      />
       <IndexFooterNote />
     </div>
   );

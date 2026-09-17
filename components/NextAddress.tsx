@@ -5,7 +5,8 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { PropertyFeature } from "@/components/PropertyFeature";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap, DESKTOP } from "@/lib/motion";
-import { PROPERTIES } from "@/lib/properties";
+import { positionLabel } from "@/lib/listings/format";
+import type { Listing } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
    03 — Select your next address.
@@ -16,11 +17,13 @@ import { PROPERTIES } from "@/lib/properties";
 
    Below `lg` the same properties render as stacked editorial blocks — a
    scrubbed sequence on a phone fights the user's scroll rather than carrying it.
+
+   `listings` are the most recently published listings, queried on the server.
 ---------------------------------------------------------------------------- */
 
-const items = PROPERTIES;
+const COUNT_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six"];
 
-export function NextAddress() {
+export function NextAddress({ listings: items }: { listings: Listing[] }) {
   const root = useRef<HTMLElement>(null);
   const [current, setCurrent] = useState(0);
 
@@ -78,31 +81,39 @@ export function NextAddress() {
             Select your<br />next address.
           </h2>
           <p data-reveal="up" className="measure pb-2 text-sm font-light leading-relaxed text-ivory/55">
-            Six properties, currently. Each one visited, measured and photographed before it
-            reaches this page.
+            {COUNT_WORDS[items.length] ?? items.length} {items.length === 1 ? "property" : "properties"}, currently.
+            Each one visited, measured and photographed before it reaches this page.
           </p>
         </div>
       </div>
 
+      {items.length === 0 && (
+        <div className="shell mt-14">
+          <p className="border-t border-ivory/12 pt-8 text-sm text-ivory/50">
+            Nothing listed at the moment.
+          </p>
+        </div>
+      )}
+
       {/* ---------- desktop: scrubbed sequence ---------- */}
       <div data-stage-track className="relative mt-16 hidden lg:block" style={{ height: `${items.length * 100}vh` }}>
         <div className="sticky top-0 h-screen w-full overflow-hidden">
-          {items.map((property, i) => (
-            <div key={property.slug} data-layer className="absolute inset-0">
-              <PropertyFeature property={property} variant="stage" priority={i === 0} />
+          {items.map((listing, i) => (
+            <div key={listing.slug} data-layer className="absolute inset-0">
+              <PropertyFeature listing={listing} position={i} variant="stage" priority={i === 0} />
             </div>
           ))}
 
           {/* index rail */}
           <div className="pointer-events-none absolute bottom-0 right-[clamp(1.25rem,5vw,5.5rem)] top-0 z-20 flex flex-col items-end justify-center gap-3">
-            {items.map((property, i) => (
-              <div key={property.slug} className="flex items-center gap-3">
+            {items.map((listing, i) => (
+              <div key={listing.slug} className="flex items-center gap-3">
                 <span
                   className={`label transition-all duration-500 ${
                     current === i ? "text-champagne opacity-100" : "text-ivory opacity-30"
                   }`}
                 >
-                  {property.index}
+                  {positionLabel(i)}
                 </span>
                 <span
                   className={`block h-px origin-right transition-all duration-700 ${
@@ -117,9 +128,9 @@ export function NextAddress() {
 
       {/* ---------- small screens: stacked editorial blocks ---------- */}
       <div className="shell mt-14 space-y-20 lg:hidden">
-        {items.map((property, i) => (
-          <div key={property.slug} data-reveal="up">
-            <PropertyFeature property={property} />
+        {items.map((listing, i) => (
+          <div key={listing.slug} data-reveal="up">
+            <PropertyFeature listing={listing} position={i} />
           </div>
         ))}
       </div>

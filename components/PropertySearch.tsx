@@ -8,7 +8,7 @@ import { PropertyFilters, EMPTY_FILTERS, filtersToQuery, type FilterState } from
 import { media } from "@/lib/media";
 import { DESKTOP, useMediaQuery, useReducedMotion } from "@/lib/motion";
 import { site } from "@/lib/site";
-import type { Intent } from "@/lib/properties";
+import type { DistrictOption, SearchIntent as Intent } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
    02 — Property search.
@@ -77,7 +77,7 @@ function IntentLoop({ poster, video, active }: {
   );
 }
 
-export function PropertySearch() {
+export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
   // The intent frame and the per-option strip are alternatives, not both: only
   // the one actually on screen is allowed to load its clip.
   const isDesktop = useMediaQuery(DESKTOP);
@@ -188,7 +188,7 @@ export function PropertySearch() {
             router.push(`/properties${filtersToQuery(filters, intent)}`);
           }}
         >
-          <PropertyFilters value={filters} onChange={setFilters} />
+          <PropertyFilters value={filters} onChange={setFilters} districts={districts} />
           <div className="mt-10 flex flex-wrap items-center justify-between gap-6 border-t border-ivory/12 pt-8">
             <p className="label text-ivory/40">
               Searching <span className="text-champagne">{intent}</span> · {site.city}

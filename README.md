@@ -12,9 +12,11 @@ npm run media    # regenerate placeholder imagery and video
 
 npm run media:photos -- <folder>                     # install listing photos
 npm run media:video -- scrub <file.mp4> --trim 1.5   # install real footage
-
-npm run db:sync  # push lib/properties.ts into the bookings database
 ```
+
+Property listings are read from Supabase. Set `NEXT_PUBLIC_SUPABASE_URL` and
+`SUPABASE_PUBLISHABLE_KEY` in `.env.local` (see `.env.example`); without them
+the listing pages show an "unavailable" state.
 
 ## Viewing bookings
 
@@ -45,9 +47,7 @@ production:
 | Collection images, team photo, floor plan, map | `public/media/**` — see `public/media/README.md` |
 | Company statistics (1,500+ etc.) | `site.stats` in `lib/site.ts` — flagged with `placeholder: true`, shown with a `*` and a footnote |
 | Phone, WhatsApp, email, address | `site.contact` in `lib/site.ts` |
-| The six listings | `PROPERTIES` in `lib/properties.ts` |
 | District map geometry | `MAP_SHAPES` in `components/YerevanMap.tsx` — abstract shapes, not real outlines |
-| Floor plan | `public/media/properties/floorplan.svg` |
 | Logo lockup | `components/ui/Logo.tsx` — inline SVG drawn to the brand; swap in the agency's artwork |
 
 The hero still, the three section 02 intent loops, the six listing photographs
@@ -82,7 +82,9 @@ components/
   booking/                  the customer booking panel and calendar
   admin/                    the admin screens
 lib/
-  properties.ts             all listings, districts, categories, filtering
+  listings/                 Supabase listing queries, row mapper, types, filters, vocabulary
+  supabase/                 server-only clients (public read, service role)
+  properties.ts             LEGACY hard-coded listings, used only by booking (removed in Phase 3)
   media.ts                  every asset path in one place
   site.ts                   company copy, contact, stats, navigation
   motion.ts                 GSAP setup, reduced-motion guards, hooks
@@ -93,16 +95,17 @@ supabase/
   migrations/               schema, slot functions, RLS, cron
   functions/                the reminder edge function
 scripts/media/              the placeholder generator
-scripts/db/                 property sync
 ```
 
 ## Data
 
-`lib/properties.ts` is the single source of truth. The scroll sequence, the
-collection, the map, search and the detail pages all read from it, so moving to
-a CMS means replacing the `PROPERTIES` array with a fetch that returns the same
-shape. `filterProperties()` backs both the homepage search and the index, and
-`PropertyFilters` is the one filter UI, reused in three places.
+Supabase is the source of truth for property listings. Pages query the
+`published_property_listings` view server-side (`lib/listings/queries.ts`) with
+the publishable key, so only published listings are ever readable; rows are
+validated and mapped once in `lib/listings/mappers.ts`. Filtering runs in the
+database from the URL, and pages render per request, so a listing published in
+Supabase appears without a rebuild. See
+`docs/rebuild/phase-02-nextjs-data-layer.md`.
 
 ## Motion
 

@@ -7,18 +7,42 @@ import { AboutSection } from "@/components/AboutSection";
 import { PropertyMap } from "@/components/PropertyMap";
 import { FeaturedProperty } from "@/components/FeaturedProperty";
 import { FinalCTA } from "@/components/FinalCTA";
+import {
+  getCategoryCounts,
+  getFacetOptions,
+  listFeaturedListings,
+  listRecentListings,
+} from "@/lib/listings/queries";
 
-export default function HomePage() {
+/** How many listings the map section shows; the index has the full set. */
+const MAP_LIMIT = 100;
+/** Length of the scrubbed "next address" sequence. */
+const SEQUENCE_LENGTH = 6;
+
+/* Rendered per request so newly published listings appear immediately. If
+   Supabase is unavailable the listing sections show their empty states and the
+   rest of the page is unaffected. */
+export default async function HomePage() {
+  const [recent, featured, counts, facets] = await Promise.all([
+    listRecentListings(MAP_LIMIT),
+    listFeaturedListings(1),
+    getCategoryCounts(),
+    getFacetOptions(),
+  ]);
+
+  const listings = recent.ok ? recent.data : [];
+  const featuredListing = featured.ok ? featured.data[0] : undefined;
+
   return (
     <>
       <Hero />
-      <PropertySearch />
-      <NextAddress />
+      <PropertySearch districts={facets.districts} />
+      <NextAddress listings={listings.slice(0, SEQUENCE_LENGTH)} />
       <TransformationSection />
-      <PropertyCollection />
+      <PropertyCollection counts={counts.ok ? counts.data : null} />
       <AboutSection />
-      <PropertyMap />
-      <FeaturedProperty />
+      <PropertyMap properties={listings} />
+      {featuredListing && <FeaturedProperty listing={featuredListing} />}
       <FinalCTA />
     </>
   );

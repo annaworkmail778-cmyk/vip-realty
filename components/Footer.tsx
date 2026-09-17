@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { site } from "@/lib/site";
 import { MEDIA_IS_PLACEHOLDER } from "@/lib/media";
-import { CATEGORIES, DISTRICTS } from "@/lib/properties";
+import { CATEGORIES } from "@/lib/listings/taxonomy";
+import type { DistrictOption } from "@/lib/listings/types";
 
-export function Footer() {
+/* `districts` are the neighbourhoods that currently have published listings. */
+export function Footer({ districts }: { districts: DistrictOption[] }) {
   const year = new Date().getFullYear();
 
   return (
@@ -34,7 +36,7 @@ export function Footer() {
           <nav aria-label="Neighbourhoods">
             <p className="label text-ivory/35">Neighbourhoods</p>
             <ul className="mt-5 space-y-2.5">
-              {DISTRICTS.map((d) => (
+              {districts.map((d) => (
                 <li key={d.id}>
                   <Link href={`/properties?district=${d.id}`} className="label link-underline text-ivory/75 hover:text-ivory">
                     {d.label}

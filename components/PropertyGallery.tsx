@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import type { ListingImage } from "@/lib/listings/types";
 
-/* Elegant gallery: an editorial strip that opens into a full-bleed lightbox. */
-export function PropertyGallery({ images, name }: { images: string[]; name: string }) {
+/* Elegant gallery: an editorial strip that opens into a full-bleed lightbox.
+   Images arrive in gallery order from property_images (Supabase Storage). */
+export function PropertyGallery({ images, name }: { images: ListingImage[]; name: string }) {
   const [open, setOpen] = useState<number | null>(null);
 
   const move = useCallback(
@@ -24,12 +26,14 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
     return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
   }, [open, move]);
 
+  if (images.length === 0) return null;
+
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
-        {images.map((src, i) => (
+        {images.map((image, i) => (
           <button
-            key={src}
+            key={image.url}
             type="button"
             onClick={() => setOpen(i)}
             className={`group relative block overflow-hidden bg-black ${
@@ -38,8 +42,8 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
             aria-label={`Open image ${i + 1} of ${images.length}`}
           >
             <Image
-              src={src}
-              alt={`${name}, image ${i + 1}`}
+              src={image.url}
+              alt={image.alt}
               fill
               sizes="(max-width: 640px) 100vw, 46vw"
               loading="lazy"
@@ -52,7 +56,7 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
         ))}
       </div>
 
-      {open !== null && (
+      {open !== null && images[open] && (
         <div
           role="dialog"
           aria-modal="true"
@@ -67,8 +71,8 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
           />
           <div className="relative h-[76vh] w-full max-w-6xl">
             <Image
-              src={images[open]}
-              alt={`${name}, image ${open + 1}`}
+              src={images[open].url}
+              alt={images[open].alt}
               fill
               sizes="90vw"
               className="object-contain"

@@ -3,13 +3,21 @@
 import { useId } from "react";
 import {
   BEDROOM_OPTIONS,
-  DISTRICTS,
   PRICE_BANDS,
   PROPERTY_TYPES,
-  type Filters,
-} from "@/lib/properties";
+  type BedroomFilter,
+  type PriceFilter,
+  type TypeFilter,
+} from "@/lib/listings/taxonomy";
+import type { DistrictOption } from "@/lib/listings/types";
 
-export type FilterState = Required<Pick<Filters, "district" | "type" | "price" | "bedrooms">>;
+export interface FilterState {
+  /** "any" or a district URL id from the published listings. */
+  district: string;
+  type: TypeFilter;
+  price: PriceFilter;
+  bedrooms: BedroomFilter;
+}
 
 export const EMPTY_FILTERS: FilterState = {
   district: "any",
@@ -21,20 +29,29 @@ export const EMPTY_FILTERS: FilterState = {
 /* ----------------------------------------------------------------------------
    The four filters, reused by: the editorial search section, the navigation
    search overlay, and the properties index. Presentation switches on `tone`;
-   the data and the state shape never change.
+   the data and the state shape never change. District options come from the
+   districts that currently have published listings in Supabase.
 ---------------------------------------------------------------------------- */
 
 export function PropertyFilters({
   value,
   onChange,
+  districts,
   tone = "dark",
   className = "",
 }: {
   value: FilterState;
   onChange: (next: FilterState) => void;
+  districts: DistrictOption[];
   tone?: "dark" | "light";
   className?: string;
 }) {
+  // Keep a selected district visible even when it no longer has listings.
+  const districtOptions =
+    value.district !== "any" && !districts.some((d) => d.id === value.district)
+      ? [...districts, { id: value.district, label: value.district }]
+      : districts;
+
   const set = <K extends keyof FilterState>(key: K, v: FilterState[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -47,7 +64,7 @@ export function PropertyFilters({
         onChange={(v) => set("district", v as FilterState["district"])}
         options={[
           { id: "any", label: "All Yerevan" },
-          ...DISTRICTS.map((d) => ({ id: d.id, label: d.label })),
+          ...districtOptions.map((d) => ({ id: d.id, label: d.label })),
         ]}
       />
       <Field

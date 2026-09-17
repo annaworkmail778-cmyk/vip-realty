@@ -57,16 +57,9 @@ supabase link --project-ref <ref>
 supabase db push
 ```
 
-Then point the listings at it:
-
-```bash
-npm run db:sync          # upserts lib/properties.ts into the properties table
-npm run db:sync -- --dry-run
-```
-
-`lib/properties.ts` stays the source of truth for listing content. The
-`properties` table holds only what a booking needs to reference, so there is no
-second property system to maintain.
+> The former `npm run db:sync` script (pushing `lib/properties.ts` into the
+> `properties` table) was removed in the rebuild: Supabase is now the source of
+> truth for listings. See `docs/rebuild/phase-02-nextjs-data-layer.md`.
 
 ### 2. Environment
 

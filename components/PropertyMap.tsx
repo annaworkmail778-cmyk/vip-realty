@@ -5,36 +5,35 @@ import Image from "next/image";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { YerevanMap } from "@/components/YerevanMap";
 import { ArrowLink } from "@/components/ui/ArrowLink";
-import {
-  DISTRICTS,
-  PROPERTIES,
-  formatPrice,
-  metaLine,
-  type District,
-  type Property,
-} from "@/lib/properties";
+import { formatArea, formatPrice, metaLine, positionLabel } from "@/lib/listings/format";
+import { MAP_DISTRICTS as DISTRICTS } from "@/lib/listings/taxonomy";
+import type { Listing, MapDistrictId as District } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
    07 — Find your place in Yerevan.
 
    District filters, a stylized map (see components/YerevanMap.tsx) and a
    preview panel. Selecting a neighbourhood highlights it, narrows the pins and
-   opens the first property; selecting a pin swaps the preview. Everything reads
-   from lib/properties, so connecting real listings changes nothing here.
+   opens the first property; selecting a pin swaps the preview.
+
+   `properties` are published listings queried on the server. A listing is
+   pinned at its district's position on the stylized map (never at its
+   address); listings in districts the map does not draw appear under
+   "All Yerevan" without a pin.
 ---------------------------------------------------------------------------- */
 
 export function PropertyMap({
-  properties = PROPERTIES,
+  properties,
   className = "",
 }: {
-  properties?: Property[];
+  properties: Listing[];
   className?: string;
 }) {
   const [district, setDistrict] = useState<District | null>(null);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
 
   const visible = useMemo(
-    () => (district ? properties.filter((p) => p.district === district) : properties),
+    () => (district ? properties.filter((p) => p.map?.district === district) : properties),
     [district, properties],
   );
 
@@ -98,10 +97,10 @@ export function PropertyMap({
           <div data-reveal="fade" className="relative">
             <YerevanMap
               selected={district}
-              pins={visible}
+              pins={visible.flatMap((p) => (p.map ? [{ slug: p.slug, map: p.map }] : []))}
               activeSlug={preview?.slug ?? null}
               counts={Object.fromEntries(
-                DISTRICTS.map((d) => [d.id, properties.filter((p) => p.district === d.id).length]),
+                DISTRICTS.map((d) => [d.id, properties.filter((p) => p.map?.district === d.id).length]),
               )}
               onSelectDistrict={select}
               onSelectPin={setActiveSlug}
@@ -127,19 +126,25 @@ export function PropertyMap({
             {preview ? (
               <article key={preview.slug} className="mt-6 border-t border-ivory/12 pt-6">
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-black">
-                  <Image
-                    src={preview.media.wide}
-                    alt={preview.name}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 22rem"
-                    loading="lazy"
-                    className="object-cover"
-                  />
+                  {preview.media.cover && (
+                    <Image
+                      src={preview.media.cover.url}
+                      alt={preview.media.cover.alt}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 22rem"
+                      loading="lazy"
+                      className="object-cover"
+                    />
+                  )}
                 </div>
                 <h3 className="display-sm mt-5">{preview.name}</h3>
-                <p className="label mt-3 text-ivory/50">{preview.districtLabel} · {preview.typeLabel}</p>
+                <p className="label mt-3 text-ivory/50">
+                  {preview.districtLabel ?? preview.city} · {preview.typeLabel}
+                </p>
                 <p className="label mt-2 text-champagne">{formatPrice(preview)}</p>
-                <p className="label mt-4 text-ivory/45">{metaLine(preview).join(" · ")}</p>
+                {metaLine(preview).length > 0 && (
+                  <p className="label mt-4 text-ivory/45">{metaLine(preview).join(" · ")}</p>
+                )}
                 <div className="mt-6">
                   <ArrowLink href={`/properties/${preview.slug}`}>View property</ArrowLink>
                 </div>
@@ -152,7 +157,7 @@ export function PropertyMap({
 
             {visible.length > 1 && (
               <ul className="mt-8 space-y-px border-t border-ivory/12 pt-4">
-                {visible.map((p) => (
+                {visible.map((p, i) => (
                   <li key={p.slug}>
                     <button
                       type="button"
@@ -161,8 +166,10 @@ export function PropertyMap({
                         preview?.slug === p.slug ? "text-champagne" : "text-ivory/55 hover:text-ivory"
                       }`}
                     >
-                      <span className="label">{p.index} · {p.name}</span>
-                      <span className="label shrink-0 opacity-60">{p.area} m²</span>
+                      <span className="label">{positionLabel(i)} · {p.name}</span>
+                      {(p.area ?? p.landArea) !== null && (
+                        <span className="label shrink-0 opacity-60">{formatArea((p.area ?? p.landArea)!)}</span>
+                      )}
                     </button>
                   </li>
                 ))}

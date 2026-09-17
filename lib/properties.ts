@@ -1,12 +1,15 @@
 import { propertyMedia } from "./media";
 
 /* ----------------------------------------------------------------------------
-   Centralized property data.
+   LEGACY hard-coded property data — NOT the source of truth.
 
-   This is the single source of truth for the whole site: the scroll sequence,
-   the collection, the map, search results and the detail pages all read from
-   it. Swapping in a CMS or API means replacing the PROPERTIES array with a
-   fetch that returns the same shape.
+   The public website reads listings from Supabase (lib/listings). This file is
+   kept only for the legacy booking system, which still depends on it:
+     * lib/booking/index.ts            (development booking store)
+     * components/booking/*            (the `Property` prop type)
+     * lib/listings/legacy-booking.ts  (offers booking only for these slugs)
+     * scripts/media/install-photos.mjs (legacy local photo installer)
+   It is removed together with booking in Phase 3. Do not add listings here.
 ---------------------------------------------------------------------------- */
 
 export type Intent = "buy" | "rent" | "land";

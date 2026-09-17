@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { PropertyFilters, EMPTY_FILTERS, filtersToQuery, type FilterState } from "@/components/PropertyFilters";
 import { site } from "@/lib/site";
+import type { DistrictOption } from "@/lib/listings/types";
 
 type Tone = "dark" | "light";
 
@@ -18,7 +19,7 @@ type Tone = "dark" | "light";
    horizontally-scrolled sections where an IntersectionObserver would not.
 ---------------------------------------------------------------------------- */
 
-export function Navbar() {
+export function Navbar({ districts }: { districts: DistrictOption[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [tone, setTone] = useState<Tone>("dark");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -142,7 +143,7 @@ export function Navbar() {
       </header>
 
       <MobileMenu open={menuOpen} onSearch={() => { setMenuOpen(false); setSearchOpen(true); }} />
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} districts={districts} />
     </>
   );
 }
@@ -194,7 +195,9 @@ function MobileMenu({ open, onSearch }: { open: boolean; onSearch: () => void })
   );
 }
 
-function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
+function SearchOverlay({
+  open, onClose, districts,
+}: { open: boolean; onClose: () => void; districts: DistrictOption[] }) {
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const router = useRouter();
 
@@ -238,7 +241,7 @@ function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }
               onClose();
             }}
           >
-            <PropertyFilters value={filters} onChange={setFilters} />
+            <PropertyFilters value={filters} onChange={setFilters} districts={districts} />
             <button
               type="submit"
               className="label-lg group mt-8 inline-flex items-center gap-3 bg-ivory px-8 py-4 text-ink transition-colors duration-500 hover:bg-champagne"

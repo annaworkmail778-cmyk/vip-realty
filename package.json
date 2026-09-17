@@ -9,7 +9,6 @@
     "lint": "eslint .",
     "media": "node scripts/media/generate.mjs",
     "media:video": "node scripts/media/install-video.mjs",
-    "db:sync": "node scripts/db/sync-properties.mjs",
     "media:photos": "node scripts/media/install-photos.mjs"
   },
   "dependencies": {

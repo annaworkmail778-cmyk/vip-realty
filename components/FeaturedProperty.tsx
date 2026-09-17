@@ -4,15 +4,19 @@ import { useRef } from "react";
 import Image from "next/image";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap } from "@/lib/motion";
-import { featuredProperty, formatPrice } from "@/lib/properties";
+import { formatArea, formatPrice, locationLine } from "@/lib/listings/format";
+import type { Listing } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
    08 — Featured property. One listing, full frame, slow parallax.
+
+   `listing` is the most recent published listing marked featured, selected by
+   the database. The homepage omits this section when there is none.
 ---------------------------------------------------------------------------- */
 
-export function FeaturedProperty() {
+export function FeaturedProperty({ listing: property }: { listing: Listing }) {
   const root = useRef<HTMLElement>(null);
-  const property = featuredProperty();
+  const cover = property.media.cover;
 
   useGsap(() => {
     gsap.fromTo(
@@ -27,11 +31,12 @@ export function FeaturedProperty() {
     );
   }, root, []);
 
+  const size = property.area ?? property.landArea;
   const facts = [
-    { label: "Location", value: `${property.city} · ${property.districtLabel}` },
+    { label: "Location", value: locationLine(property) },
     { label: "Price", value: formatPrice(property) },
-    { label: "Size", value: `${property.area} m²` },
-    { label: "Bedrooms", value: String(property.bedrooms) },
+    ...(size !== null ? [{ label: "Size", value: formatArea(size) }] : []),
+    ...(property.bedrooms !== null ? [{ label: "Bedrooms", value: String(property.bedrooms) }] : []),
   ];
 
   return (
@@ -41,15 +46,17 @@ export function FeaturedProperty() {
       className="relative flex h-[100svh] min-h-[36rem] items-end overflow-hidden bg-black text-ivory"
     >
       <div className="media-fill">
-        <Image
-          data-featured-img
-          src={property.media.wide}
-          alt={`${property.name} — featured property`}
-          fill
-          sizes="100vw"
-          loading="lazy"
-          className="object-cover"
-        />
+        {cover && (
+          <Image
+            data-featured-img
+            src={cover.url}
+            alt={`${property.name} — featured property`}
+            fill
+            sizes="100vw"
+            loading="lazy"
+            className="object-cover"
+          />
+        )}
       </div>
       <div className="pointer-events-none absolute inset-0 scrim-full" aria-hidden />
 

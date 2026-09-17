@@ -2,30 +2,36 @@
 
 import { BookViewingButton } from "@/components/booking/BookViewingButton";
 import { site, WHATSAPP_URL } from "@/lib/site";
-import { formatPrice, type Property } from "@/lib/properties";
+import { formatPrice } from "@/lib/listings/format";
+import type { Listing } from "@/lib/listings/types";
+import type { Property } from "@/lib/properties";
 
 /* ----------------------------------------------------------------------------
    Sticky contact panel: booking, agent, call and WhatsApp.
 
-   Booking a viewing is the primary action and runs through the viewing system;
-   WhatsApp and phone stay for everything a scheduled slot cannot answer.
+   Booking a viewing runs through the (legacy) viewing system, which only knows
+   the hard-coded listings: `bookable` is that legacy record when one exists for
+   this slug, otherwise the booking action is not offered. WhatsApp and phone
+   are always available.
 ---------------------------------------------------------------------------- */
 
-export function ContactPanel({ property }: { property: Property }) {
-  const enquiry = `Hello VIP Realty — I'd like to know more about ${property.name} (${property.districtLabel}), listed at ${formatPrice(property)}.`;
+export function ContactPanel({ listing, bookable }: { listing: Listing; bookable: Property | null }) {
+  const enquiry = `Hello VIP Realty — I'd like to know more about ${listing.name} (${listing.districtLabel ?? listing.city}), listed at ${formatPrice(listing)}.`;
 
   return (
     <aside className="lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)]">
       <div className="border border-ivory/12 bg-espresso/30 p-7">
         <p className="label text-ivory/40">Price</p>
-        <p className="mt-2 font-display text-[2.1rem] leading-none text-champagne">{formatPrice(property)}</p>
+        <p className="mt-2 font-display text-[2.1rem] leading-none text-champagne">{formatPrice(listing)}</p>
 
-        <div className="mt-6">
-          <BookViewingButton property={property} />
-          <p className="label mt-3 text-ivory/35">
-            Choose a date and time. No account needed.
-          </p>
-        </div>
+        {bookable && (
+          <div className="mt-6">
+            <BookViewingButton property={bookable} />
+            <p className="label mt-3 text-ivory/35">
+              Choose a date and time. No account needed.
+            </p>
+          </div>
+        )}
 
         <div className="mt-7 border-t border-ivory/12 pt-6">
           <p className="label text-ivory/40">Your agent</p>

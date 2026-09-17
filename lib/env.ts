@@ -17,6 +17,8 @@ const read = (key: string) => {
 export const env = {
   supabaseUrl: read("NEXT_PUBLIC_SUPABASE_URL"),
   supabaseServiceKey: read("SUPABASE_SERVICE_ROLE_KEY"),
+  /** Publishable (anon) key. Used only server-side, for RLS-protected public listing reads. */
+  supabasePublishableKey: read("SUPABASE_PUBLISHABLE_KEY"),
 
   adminPassword: read("ADMIN_PASSWORD"),
   adminSessionSecret: read("ADMIN_SESSION_SECRET"),
@@ -30,6 +32,9 @@ export const env = {
 
 /** True when the real database is wired up. */
 export const hasSupabase = () => Boolean(env.supabaseUrl && env.supabaseServiceKey);
+
+/** True when public listings can be read from Supabase. */
+export const hasPublicSupabase = () => Boolean(env.supabaseUrl && env.supabasePublishableKey);
 
 /** True when the admin panel can authenticate anyone. */
 export const hasAdminAuth = () => Boolean(env.adminPassword && env.adminSessionSecret);

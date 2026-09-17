@@ -6,7 +6,8 @@ import Link from "next/link";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { gsap, useGsap, DESKTOP } from "@/lib/motion";
 import { media } from "@/lib/media";
-import { CATEGORIES, PROPERTIES } from "@/lib/properties";
+import { CATEGORIES } from "@/lib/listings/taxonomy";
+import type { CategoryCounts } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
    05 — The VIP Collection.
@@ -14,16 +15,18 @@ import { CATEGORIES, PROPERTIES } from "@/lib/properties";
    A horizontal gallery driven by vertical scroll: the section pins and the
    track translates. On touch screens it degrades to a native horizontal
    scroller with snap points, which is what a phone actually wants.
+
+   `counts` are published listings per collection, counted by the database.
+   Card imagery is brand photography, not listing photos.
 ---------------------------------------------------------------------------- */
 
-const cards = CATEGORIES.map((c) => ({
-  ...c,
-  image: media.collection[c.id],
-  count: PROPERTIES.filter((p) => p.category === c.id).length,
-}));
-
-export function PropertyCollection() {
+export function PropertyCollection({ counts }: { counts: CategoryCounts | null }) {
   const root = useRef<HTMLElement>(null);
+  const cards = CATEGORIES.map((c) => ({
+    ...c,
+    image: media.collection[c.id],
+    count: counts ? counts[c.id] : null,
+  }));
 
   useGsap(() => {
     // Pinned horizontal scrolling is a desktop behaviour; on touch screens the
@@ -112,7 +115,9 @@ export function PropertyCollection() {
                   <div className="pointer-events-none absolute inset-0 scrim-bottom" aria-hidden />
 
                   <div className="relative flex h-full flex-col justify-end p-7">
-                    <p className="label text-champagne">0{i + 1} · {c.count} listed</p>
+                    <p className="label text-champagne">
+                      0{i + 1}{c.count !== null ? ` · ${c.count} listed` : ""}
+                    </p>
                     <h3 className="display-sm mt-3">{c.label}</h3>
                     <p className="mt-3 max-w-[30ch] text-sm font-light leading-relaxed text-ivory/65">
                       {c.blurb}

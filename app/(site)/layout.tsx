@@ -1,10 +1,15 @@
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { MotionRoot } from "@/components/MotionRoot";
+import { getFacetOptions } from "@/lib/listings/queries";
 
 /* The public site's chrome. The admin panel sits outside this group so it does
-   not inherit the marketing navigation, footer or scroll animation runtime. */
-export default function SiteLayout({ children }: { children: React.ReactNode }) {
+   not inherit the marketing navigation, footer or scroll animation runtime.
+   Neighbourhood links and search options list the districts that currently
+   have published listings. */
+export default async function SiteLayout({ children }: { children: React.ReactNode }) {
+  const facets = await getFacetOptions();
+
   return (
     <>
       <MotionRoot />
@@ -14,9 +19,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       >
         Skip to content
       </a>
-      <Navbar />
+      <Navbar districts={facets.districts} />
       <main id="main">{children}</main>
-      <Footer />
+      <Footer districts={facets.districts} />
     </>
   );
 }

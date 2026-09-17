@@ -1,6 +1,7 @@
 "use client";
 
-import { DISTRICTS, type District, type Property } from "@/lib/properties";
+import { MAP_DISTRICTS as DISTRICTS } from "@/lib/listings/taxonomy";
+import type { MapDistrictId as District } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
    The stylized Yerevan map, shared by the neighbourhood section and the
@@ -8,8 +9,14 @@ import { DISTRICTS, type District, type Property } from "@/lib/properties";
 
    MAP_SHAPES is abstract placeholder geometry. Replace the five paths with real
    district outlines (or put a tile image behind the <svg>) and every consumer
-   keeps working — positions come from `map: { x, y }` in lib/properties.
+   keeps working — pins are placed at their district's position from
+   MAP_DISTRICTS in lib/listings/taxonomy.ts, never at an address.
 ---------------------------------------------------------------------------- */
+
+export interface MapPin {
+  slug: string;
+  map: { x: number; y: number };
+}
 
 export const MAP_SHAPES: Record<District, string> = {
   davtashen: "M 8 8 L 40 12 L 37 35 L 11 33 Z",
@@ -29,7 +36,7 @@ export function YerevanMap({
   className = "",
 }: {
   selected?: District | null;
-  pins?: Property[];
+  pins?: MapPin[];
   activeSlug?: string | null;
   counts?: Partial<Record<District, number>>;
   onSelectDistrict?: (id: District) => void;
