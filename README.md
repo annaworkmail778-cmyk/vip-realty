@@ -138,6 +138,9 @@ Inbound WhatsApp messages reach Supabase through n8n, which calls the database
 function `ingest_whatsapp_message` with the service role (n8n credential only).
 It stores each message once, with media metadata, the agent's submission
 session and an audit trail — see `docs/rebuild/phase-04-whatsapp-n8n-foundation.md`.
+Senders are identified by Meta's business-scoped user id first and the registered
+phone second (never the display name); unknown senders are stored but never
+processed — see `docs/rebuild/phase-06-5-whatsapp-identity.md`.
 
 A scheduled n8n workflow advances sessions (5-minute quiet period, 90-second media
 settle, 60-minute cap, `done`/`cancel` commands), claims one ready session at a time

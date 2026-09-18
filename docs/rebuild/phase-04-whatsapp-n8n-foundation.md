@@ -8,6 +8,10 @@ Status: **complete (foundation)**. Branch `phase/04-whatsapp-n8n-foundation` (fr
 
 No secrets, tokens or credential values appear in this document or in the repository.
 
+> **Identity model superseded in Phase 6.5:** senders are now identified by Meta's business-scoped user id
+> (BSUID) first and the phone second; the phone is optional and the session key is the canonical conversation id.
+> See `docs/rebuild/phase-06-5-whatsapp-identity.md`. The phone-based statements below describe Phase 4 as built.
+
 ---
 
 ## 1. Architecture

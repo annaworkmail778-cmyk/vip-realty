@@ -5,7 +5,7 @@ these files are for review and recovery.
 
 | File | n8n workflow | Phase | Status |
 | --- | --- | --- | --- |
-| `vip-realty-whatsapp-inbound.json` | VIP Realty — WhatsApp Inbound | 4 | Inactive until credentials are configured |
+| `vip-realty-whatsapp-inbound.json` | VIP Realty — WhatsApp Inbound | 4, 6.5 | Inactive until credentials are configured; since Phase 6.5 the normalizer passes the business-scoped user id (BSUID), optional phone and group id |
 | `vip-realty-submission-extraction.json` | VIP Realty — Submission Extraction | 5–6 | Inactive until credentials are configured; since Phase 6 also creates non-public property drafts |
 | `vip-realty-property-extraction-ai.json` | VIP Realty — Property Extraction (AI) | 5 | Sub-workflow, called only by Submission Extraction |
 
@@ -23,5 +23,6 @@ truth is `automation/prompts/property-extraction-v1.md`; the Code node
 *Build extraction request* embeds the identical text.
 
 Architecture, testing and rollback: `docs/rebuild/phase-04-whatsapp-n8n-foundation.md`,
-`docs/rebuild/phase-05-session-buffering-ai-extraction.md` and
-`docs/rebuild/phase-06-property-draft-generation.md`.
+`docs/rebuild/phase-05-session-buffering-ai-extraction.md`,
+`docs/rebuild/phase-06-property-draft-generation.md` and
+`docs/rebuild/phase-06-5-whatsapp-identity.md`.
