@@ -25,7 +25,8 @@ Listings will be created from agents' WhatsApp messages through n8n automation
 and AI extraction. Implemented so far (n8n workflows in `automation/n8n/`, inactive
 until credentials are configured): inbound WhatsApp messages are stored in
 Supabase, grouped into submission sessions, and turned into validated **extraction
-results**. Creating or publishing listings from those results is **not
+results**. Valid results become **non-public property drafts** (`draft`, review
+`pending`) for a human to review; reviewing and publishing them is **not
 implemented yet**.
 
 ## Configuration
@@ -144,6 +145,12 @@ in the database, asks the AI to extract the listing fields, and records the resu
 through `record_extraction_result`, which validates the untrusted output
 deterministically. Extraction results are append-only and never modify
 `properties` — see `docs/rebuild/phase-05-session-buffering-ai-extraction.md`.
+
+A valid extraction result then becomes exactly one property draft through the
+database function `generate_property_draft` (one property per session, ownership
+from the session's agent and agency, deterministic title and slug). Drafts stay
+`draft` / review `pending` and are never visible on the website until a later
+explicit publishing step — see `docs/rebuild/phase-06-property-draft-generation.md`.
 
 ## Motion
 

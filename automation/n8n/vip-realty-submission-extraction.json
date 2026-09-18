@@ -55,7 +55,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        480,
+        720,
         300
       ],
       "parameters": {
@@ -86,7 +86,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        720,
+        960,
         300
       ],
       "parameters": {
@@ -115,7 +115,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        960,
+        1200,
         200
       ],
       "onError": "continueErrorOutput",
@@ -168,7 +168,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        1200,
+        1440,
         120
       ],
       "parameters": {
@@ -199,7 +199,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1200,
+        1440,
         420
       ],
       "parameters": {
@@ -213,7 +213,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        1440,
+        1680,
         420
       ],
       "parameters": {
@@ -239,12 +239,12 @@
       "waitBetweenTries": 3000
     },
     {
-      "name": "Extraction recorded (no property changes)",
+      "name": "Not valid — no draft (session needs review)",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1440,
-        60
+        1920,
+        120
       ],
       "parameters": {}
     },
@@ -253,7 +253,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        960,
+        1200,
         460
       ],
       "parameters": {}
@@ -263,13 +263,128 @@
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        1440,
-        220
+        1680,
+        260
       ],
       "parameters": {
         "errorType": "errorMessage",
         "errorMessage": "Supabase did not accept the extraction result after 3 attempts; the session lease expires and the attempt is retried automatically."
       }
+    },
+    {
+      "name": "Generate pending property drafts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/generate_pending_property_drafts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_limit: 5, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true,
+      "onError": "continueRegularOutput",
+      "notes": "Recovery sweep (Phase 6): creates drafts for valid, current extractions that have none yet (e.g. a previous run stopped after recording the result). Idempotent. A failure here never blocks extraction."
+    },
+    {
+      "name": "Extraction valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        60
+      ],
+      "notes": "Routing only, on the status Supabase returned. generate_property_draft re-checks validity itself; n8n never decides it.",
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.validation_status === 'valid' && !!$json.extraction_result_id }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "name": "Generate property draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        -60
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/generate_property_draft",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_extraction_result_id: $json.extraction_result_id, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput",
+      "notes": "Creates a non-public draft (draft / pending review). Ownership, idempotency, title and slug are decided in Supabase."
+    },
+    {
+      "name": "Draft outcome recorded (review pending, not public)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        -120
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Draft generation deferred (sweep retries next run)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        40
+      ],
+      "parameters": {}
     }
   ],
   "connections": {
@@ -288,7 +403,7 @@
       "main": [
         [
           {
-            "node": "Claim next ready session",
+            "node": "Generate pending property drafts",
             "type": "main",
             "index": 0
           }
@@ -346,7 +461,7 @@
       "main": [
         [
           {
-            "node": "Extraction recorded (no property changes)",
+            "node": "Extraction valid?",
             "type": "main",
             "index": 0
           }
@@ -365,6 +480,53 @@
         [
           {
             "node": "Record extraction failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate pending property drafts": {
+      "main": [
+        [
+          {
+            "node": "Claim next ready session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraction valid?": {
+      "main": [
+        [
+          {
+            "node": "Generate property draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not valid — no draft (session needs review)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate property draft": {
+      "main": [
+        [
+          {
+            "node": "Draft outcome recorded (review pending, not public)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Draft generation deferred (sweep retries next run)",
             "type": "main",
             "index": 0
           }
@@ -389,6 +551,9 @@
     },
     {
       "name": "extraction"
+    },
+    {
+      "name": "phase-6"
     }
   ]
 }
