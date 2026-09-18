@@ -155,6 +155,12 @@ from the session's agent and agency, deterministic title and slug). Drafts stay
 `draft` / review `pending` and are never visible on the website until a later
 explicit publishing step — see `docs/rebuild/phase-06-property-draft-generation.md`.
 
+Photos an agent sends are downloaded from WhatsApp by the n8n *Media Processing*
+workflow into the private `whatsapp-media` bucket, validated from their bytes, and
+copied into `property-images` only for the draft created from the same submission
+session (the database decides the target, the path and the order). Draft images
+appear in no public query or page — see `docs/rebuild/phase-07-media-storage.md`.
+
 ## Motion
 
 - One `MotionRoot` owns every `data-reveal` element, batched so siblings

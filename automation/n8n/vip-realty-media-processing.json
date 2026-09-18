@@ -1,0 +1,1492 @@
+{
+  "name": "VIP Realty — Media Processing",
+  "nodes": [
+    {
+      "name": "Every minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Advance media pipeline (recovery sweep)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/advance_media_pipeline",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true
+    },
+    {
+      "name": "Claim media downloads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/claim_media_downloads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_worker: \"n8n:\" + $execution.id, p_limit: 5 }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true
+    },
+    {
+      "name": "Split claimed downloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Claim RPCs return a JSON array of leased media. Keep only well-formed claims; no claim ends this stage quietly.\nconst out = [];\nfor (const item of $input.all()) {\n  const rows = Array.isArray(item.json) ? item.json : [item.json];\n  for (const row of rows) {\n    if (row && typeof row === 'object' && typeof row.media_id === 'string' && typeof row.attempt_id === 'string') {\n      out.push({ json: row });\n    }\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Resolve media URL (Meta)",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        0
+      ],
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.provider_media_id }}"
+      },
+      "credentials": {
+        "whatsAppApi": {
+          "name": "VIP Realty WhatsApp Cloud API (access token)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Check media URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        -100
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// The media URL comes from Meta's media endpoint (resolved from the trusted media id captured at ingestion).\n// Only HTTPS URLs on Meta media hosts are followed; size limits come from the database claim.\nconst HOST = /^https:\\/\\/([a-z0-9.-]+)(?::443)?(\\/|$)/i;\nconst META = /(^|\\.)(fbsbx\\.com|whatsapp\\.net|facebook\\.com|fbcdn\\.net)$/i;\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const meta = items[i].json || {};\n  const claim = $('Split claimed downloads').itemMatching(i).json;\n  const base = { media_id: claim.media_id, attempt_id: claim.attempt_id };\n  const url = typeof meta.url === 'string' ? meta.url : '';\n  const host = (url.match(HOST) || [])[1] || '';\n  const size = typeof meta.file_size === 'number' ? meta.file_size : Number(meta.file_size);\n  let failure = null;\n  if (meta.error || url === '') {\n    // The WhatsApp node reports failures on its main output: no URL means the provider call failed (retryable).\n    const text = JSON.stringify(meta.error || 'no media URL returned').replace(/\\?[^\\s\"']*/g, '?[query removed]').slice(0, 400);\n    const m = text.match(/\\b([45][0-9][0-9])\\b/);\n    const status = m ? Number(m[1]) : 0;\n    failure = status === 404 || status === 410\n      ? { code: 'provider_media_not_found', permanent: true, message: text }\n      : { code: status === 401 || status === 403 ? 'provider_auth_failed' : 'provider_unavailable', permanent: false, message: text };\n  } else if (!host || !META.test(host)) {\n    failure = { code: 'untrusted_media_url', permanent: true, message: 'provider URL is not an HTTPS Meta media host' };\n  } else if (Number.isFinite(size) && size <= 0) {\n    failure = { code: 'empty_file', permanent: true, message: 'provider reports an empty file' };\n  } else if (Number.isFinite(size) && size > Number(claim.max_bytes)) {\n    failure = { code: 'oversized', permanent: true, message: 'provider reports ' + size + ' bytes' };\n  }\n  out.push({ json: failure ? { ...base, ok: false, ...failure } : {\n    ...base, ok: true, url,\n    provider_sha256: typeof meta.sha256 === 'string' ? meta.sha256 : null,\n    provider_file_size: Number.isFinite(size) ? size : null,\n    provider_mime_type: typeof meta.mime_type === 'string' ? meta.mime_type : (claim.provider_mime_type || null),\n    storage_path: claim.storage_path, max_bytes: Number(claim.max_bytes),\n  } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "URL trusted and size allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1480,
+        -100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "name": "Download media binary (Meta)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1720,
+        -200
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "whatsAppApi": {
+          "name": "VIP Realty WhatsApp Cloud API (access token)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Verify download",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        -200
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// VIP Realty — image binary validation (source of truth: automation/media/validate-image.js).\n//\n// Runs inside n8n Code nodes (embedded verbatim) and in local tests (node --test automation/media).\n// Pure JavaScript: no modules, no network, no image decoding library. It never trusts a declared MIME\n// type or file name: the format is detected from the bytes, and the file's container structure is\n// walked and checked end to end (JPEG segments + end-of-image marker, PNG chunk CRCs, WebP RIFF chunk\n// bounds, AVIF box bounds). Truncated, padded-out, corrupt or disguised files are rejected.\n// Limits (allowed formats, maximum bytes) come from the caller, which reads them from the database\n// (storage.buckets 'property-images'); the database re-checks every reported fact.\n\nconst MEDIA_ALLOWED_DEFAULT = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];\n\n// ------------------------------------------------------------------ SHA-256 (FIPS 180-4)\nconst SHA256_K = new Uint32Array([\n  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,\n]);\n\nfunction sha256Hex(bytes) {\n  const h = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);\n  const w = new Uint32Array(64);\n  const len = bytes.length;\n  const total = Math.ceil((len + 9) / 64) * 64;\n  const tail = new Uint8Array(total - Math.floor(len / 64) * 64);\n  const tailStart = Math.floor(len / 64) * 64;\n  tail.set(bytes.subarray(tailStart));\n  tail[len - tailStart] = 0x80;\n  const bitsHi = Math.floor(len / 0x20000000);\n  const bitsLo = (len * 8) >>> 0;\n  const t = tail.length;\n  tail[t - 8] = bitsHi >>> 24; tail[t - 7] = bitsHi >>> 16; tail[t - 6] = bitsHi >>> 8; tail[t - 5] = bitsHi;\n  tail[t - 4] = bitsLo >>> 24; tail[t - 3] = bitsLo >>> 16; tail[t - 2] = bitsLo >>> 8; tail[t - 1] = bitsLo;\n\n  const block = (src, off) => {\n    for (let i = 0; i < 16; i++) {\n      const j = off + i * 4;\n      w[i] = ((src[j] << 24) | (src[j + 1] << 16) | (src[j + 2] << 8) | src[j + 3]) >>> 0;\n    }\n    for (let i = 16; i < 64; i++) {\n      const a = w[i - 15], b = w[i - 2];\n      const s0 = ((a >>> 7) | (a << 25)) ^ ((a >>> 18) | (a << 14)) ^ (a >>> 3);\n      const s1 = ((b >>> 17) | (b << 15)) ^ ((b >>> 19) | (b << 13)) ^ (b >>> 10);\n      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;\n    }\n    let [a, b, c, d, e, f, g, hh] = h;\n    for (let i = 0; i < 64; i++) {\n      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));\n      const ch = (e & f) ^ (~e & g);\n      const t1 = (hh + S1 + ch + SHA256_K[i] + w[i]) >>> 0;\n      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));\n      const maj = (a & b) ^ (a & c) ^ (b & c);\n      const t2 = (S0 + maj) >>> 0;\n      hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;\n    }\n    h[0] = (h[0] + a) >>> 0; h[1] = (h[1] + b) >>> 0; h[2] = (h[2] + c) >>> 0; h[3] = (h[3] + d) >>> 0;\n    h[4] = (h[4] + e) >>> 0; h[5] = (h[5] + f) >>> 0; h[6] = (h[6] + g) >>> 0; h[7] = (h[7] + hh) >>> 0;\n  };\n\n  for (let off = 0; off < tailStart; off += 64) block(bytes, off);\n  for (let off = 0; off < tail.length; off += 64) block(tail, off);\n  let hex = '';\n  for (let i = 0; i < 8; i++) hex += h[i].toString(16).padStart(8, '0');\n  return hex;\n}\n\n/** Meta reports sha256 as hex or base64; compare either form with our hex digest. */\nfunction sameSha256(hex, reported) {\n  if (typeof reported !== 'string' || reported.trim() === '') return null;\n  const r = reported.trim();\n  if (/^[0-9a-fA-F]{64}$/.test(r)) return r.toLowerCase() === hex;\n  if (/^[A-Za-z0-9+/]{43}=?$/.test(r)) {\n    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';\n    let bits = '';\n    for (const ch of r.replace(/=+$/, '')) bits += alphabet.indexOf(ch).toString(2).padStart(6, '0');\n    let out = '';\n    for (let i = 0; i + 8 <= bits.length && out.length < 64; i += 8) out += parseInt(bits.slice(i, i + 8), 2).toString(16).padStart(2, '0');\n    return out === hex;\n  }\n  return null; // unknown representation: not comparable\n}\n\n// ------------------------------------------------------------------ CRC-32 (PNG)\nconst CRC_TABLE = (() => {\n  const t = new Uint32Array(256);\n  for (let n = 0; n < 256; n++) {\n    let c = n;\n    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;\n    t[n] = c >>> 0;\n  }\n  return t;\n})();\n\nfunction crc32(bytes, start, end) {\n  let c = 0xffffffff;\n  for (let i = start; i < end; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);\n  return (c ^ 0xffffffff) >>> 0;\n}\n\n// ------------------------------------------------------------------ readers\nconst u16be = (b, o) => (b[o] << 8) | b[o + 1];\nconst u32be = (b, o) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;\nconst u16le = (b, o) => b[o] | (b[o + 1] << 8);\nconst u24le = (b, o) => b[o] | (b[o + 1] << 8) | (b[o + 2] << 16);\nconst u32le = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;\nconst ascii = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));\n\nclass Corrupt extends Error {}\nconst need = (cond, why) => { if (!cond) throw new Corrupt(why); };\n\n// ------------------------------------------------------------------ format detection (bytes only)\nfunction detectFormat(b) {\n  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';\n  if (b.length >= 8 && b[0] === 0x89 && ascii(b, 1, 3) === 'PNG' && b[4] === 0x0d && b[5] === 0x0a\n      && b[6] === 0x1a && b[7] === 0x0a) return 'image/png';\n  if (b.length >= 12 && ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP') return 'image/webp';\n  if (b.length >= 12 && ascii(b, 4, 4) === 'ftyp') {\n    const size = u32be(b, 0);\n    if (size >= 16 && size <= b.length) {\n      const brands = [ascii(b, 8, 4)];\n      for (let o = 16; o + 4 <= size; o += 4) brands.push(ascii(b, o, 4));\n      if (brands.includes('avif') || brands.includes('avis')) return 'image/avif';\n    }\n    return null; // other ISO-BMFF (HEIC, MP4, …): not an allowed image format\n  }\n  return null;\n}\n\n// ------------------------------------------------------------------ JPEG\nfunction parseJpeg(b) {\n  let o = 2;\n  let frame = null;\n  for (;;) {\n    need(o < b.length, 'jpeg: truncated before start of scan');\n    need(b[o] === 0xff, 'jpeg: marker expected');\n    while (o < b.length && b[o] === 0xff) o++;\n    need(o < b.length, 'jpeg: truncated marker');\n    const m = b[o++];\n    if (m === 0x01 || (m >= 0xd0 && m <= 0xd7)) continue;\n    need(m !== 0xd9 && m !== 0xd8, 'jpeg: unexpected image boundary');\n    need(o + 2 <= b.length, 'jpeg: truncated segment');\n    const len = u16be(b, o);\n    need(len >= 2 && o + len <= b.length, 'jpeg: segment out of bounds');\n    const isSof = (m >= 0xc0 && m <= 0xcf) && m !== 0xc4 && m !== 0xc8 && m !== 0xcc;\n    if (isSof) {\n      need(len >= 8, 'jpeg: short frame header');\n      const height = u16be(b, o + 3);\n      const width = u16be(b, o + 5);\n      const comps = b[o + 7];\n      need(comps >= 1 && comps <= 4 && len === 8 + 3 * comps, 'jpeg: bad frame components');\n      frame = { width, height };\n    }\n    if (m === 0xda) {\n      need(frame !== null, 'jpeg: scan before frame header');\n      const scanStart = o + len;\n      let eoi = -1;\n      for (let i = b.length - 2; i >= scanStart; i--) {\n        if (b[i] === 0xff && b[i + 1] === 0xd9) { eoi = i; break; }\n      }\n      need(eoi > scanStart, 'jpeg: missing end-of-image marker (truncated)');\n      return frame;\n    }\n    o += len;\n  }\n}\n\n// ------------------------------------------------------------------ PNG\nfunction parsePng(b) {\n  let o = 8;\n  let first = true;\n  let dims = null;\n  let idat = false;\n  for (;;) {\n    need(o + 12 <= b.length, 'png: truncated chunk');\n    const len = u32be(b, o);\n    const type = ascii(b, o + 4, 4);\n    need(/^[A-Za-z]{4}$/.test(type), 'png: invalid chunk type');\n    need(len <= 0x7fffffff && o + 12 + len <= b.length, 'png: chunk out of bounds');\n    const crc = u32be(b, o + 8 + len);\n    need(crc32(b, o + 4, o + 8 + len) === crc, 'png: chunk CRC mismatch (' + type + ')');\n    if (first) {\n      need(type === 'IHDR' && len === 13, 'png: IHDR must come first');\n      const depth = b[o + 16], color = b[o + 17];\n      const ok = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };\n      need(ok[color] !== undefined && ok[color].includes(depth), 'png: invalid bit depth / color type');\n      dims = { width: u32be(b, o + 8), height: u32be(b, o + 12) };\n      first = false;\n    }\n    if (type === 'IDAT') idat = true;\n    o += 12 + len;\n    if (type === 'IEND') {\n      need(len === 0 && idat, 'png: IEND without image data');\n      need(o === b.length, 'png: data after IEND');\n      return dims;\n    }\n  }\n}\n\n// ------------------------------------------------------------------ WebP\nfunction parseWebp(b) {\n  const riff = u32le(b, 4);\n  need(riff + 8 === b.length, 'webp: RIFF size does not match file size');\n  let o = 12;\n  let dims = null;\n  let hasImage = false;\n  let first = true;\n  while (o < b.length) {\n    need(o + 8 <= b.length, 'webp: truncated chunk header');\n    const type = ascii(b, o, 4);\n    const size = u32le(b, o + 4);\n    const d = o + 8;\n    need(d + size <= b.length, 'webp: chunk out of bounds');\n    if (type === 'VP8 ') {\n      need(size >= 10 && b[d + 3] === 0x9d && b[d + 4] === 0x01 && b[d + 5] === 0x2a, 'webp: bad VP8 frame');\n      if (first) dims = { width: u16le(b, d + 6) & 0x3fff, height: u16le(b, d + 8) & 0x3fff };\n      hasImage = true;\n    } else if (type === 'VP8L') {\n      need(size >= 5 && b[d] === 0x2f, 'webp: bad VP8L signature');\n      if (first) {\n        const b1 = b[d + 1], b2 = b[d + 2], b3 = b[d + 3], b4 = b[d + 4];\n        dims = { width: 1 + (b1 | ((b2 & 0x3f) << 8)), height: 1 + ((b2 >> 6) | (b3 << 2) | ((b4 & 0x0f) << 10)) };\n      }\n      hasImage = true;\n    } else if (type === 'VP8X') {\n      need(first && size >= 10, 'webp: bad VP8X');\n      dims = { width: 1 + u24le(b, d + 4), height: 1 + u24le(b, d + 7) };\n    } else if (type === 'ANMF') {\n      hasImage = true;\n    } else {\n      need(!first, 'webp: unknown first chunk');\n    }\n    first = false;\n    o = d + size + (size & 1);\n  }\n  need(o === b.length, 'webp: trailing bytes');\n  need(hasImage && dims !== null, 'webp: no image data');\n  return dims;\n}\n\n// ------------------------------------------------------------------ AVIF (ISO BMFF)\nfunction boxes(b, start, end) {\n  const out = [];\n  let o = start;\n  while (o < end) {\n    need(o + 8 <= end, 'avif: truncated box header');\n    let size = u32be(b, o);\n    const type = ascii(b, o + 4, 4);\n    let header = 8;\n    if (size === 1) {\n      need(o + 16 <= end, 'avif: truncated large box');\n      need(u32be(b, o + 8) === 0, 'avif: box too large');\n      size = u32be(b, o + 12);\n      header = 16;\n    } else if (size === 0) {\n      size = end - o;\n    }\n    need(size >= header && o + size <= end, 'avif: box out of bounds (' + type + ')');\n    out.push({ type, start: o + header, end: o + size });\n    o += size;\n  }\n  need(o === end, 'avif: box sizes do not add up');\n  return out;\n}\n\nfunction parseAvif(b) {\n  const top = boxes(b, 0, b.length);\n  need(top[0] && top[0].type === 'ftyp', 'avif: ftyp must come first');\n  const meta = top.find((x) => x.type === 'meta');\n  need(meta && top.some((x) => x.type === 'mdat'), 'avif: missing meta or mdat');\n  const metaKids = boxes(b, meta.start + 4, meta.end); // meta is a full box (version + flags)\n  const iprp = metaKids.find((x) => x.type === 'iprp');\n  need(iprp, 'avif: missing item properties');\n  const ipco = boxes(b, iprp.start, iprp.end).find((x) => x.type === 'ipco');\n  need(ipco, 'avif: missing property container');\n  const ispe = boxes(b, ipco.start, ipco.end).find((x) => x.type === 'ispe');\n  need(ispe && ispe.end - ispe.start >= 12, 'avif: missing image size');\n  return { width: u32be(b, ispe.start + 4), height: u32be(b, ispe.start + 8) };\n}\n\n// ------------------------------------------------------------------ entry point\n/**\n * @param {Uint8Array} bytes\n * @param {{allowedMimeTypes?: string[], maxBytes: number, maxDimension?: number, maxPixels?: number}} opts\n * @returns {{valid: boolean, code: string|null, detail: string|null, detected_mime_type: string|null,\n *            width: number|null, height: number|null, file_size: number, sha256: string|null}}\n */\nfunction validateImage(bytes, opts) {\n  const allowed = (opts && Array.isArray(opts.allowedMimeTypes) && opts.allowedMimeTypes.length)\n    ? opts.allowedMimeTypes : MEDIA_ALLOWED_DEFAULT;\n  const maxBytes = opts && Number.isFinite(opts.maxBytes) ? opts.maxBytes : 0;\n  const maxDim = (opts && opts.maxDimension) || 20000;\n  const maxPixels = (opts && opts.maxPixels) || 100000000;\n  const size = bytes ? bytes.length : 0;\n  const result = (code, extra) => Object.assign({\n    valid: code === null, code, detail: null, detected_mime_type: null, width: null, height: null,\n    file_size: size, sha256: size > 0 ? sha256Hex(bytes) : null,\n  }, extra || {});\n\n  if (!bytes || size === 0) return result('empty_file');\n  if (!(maxBytes > 0)) return result('limit_unknown');\n  if (size > maxBytes) return result('oversized');\n  const mime = detectFormat(bytes);\n  if (!mime) return result('unsupported_format');\n  let dims;\n  try {\n    dims = mime === 'image/jpeg' ? parseJpeg(bytes)\n      : mime === 'image/png' ? parsePng(bytes)\n      : mime === 'image/webp' ? parseWebp(bytes)\n      : parseAvif(bytes);\n  } catch (e) {\n    if (e instanceof Corrupt) return result('corrupt_image', { detected_mime_type: mime, detail: e.message });\n    return result('corrupt_image', { detected_mime_type: mime, detail: 'parser error' });\n  }\n  const extra = { detected_mime_type: mime, width: dims.width, height: dims.height };\n  if (!(dims.width >= 1 && dims.height >= 1 && dims.width <= maxDim && dims.height <= maxDim\n        && dims.width * dims.height <= maxPixels)) return result('dimensions_out_of_range', extra);\n  if (!allowed.includes(mime)) return result('mime_not_allowed', extra);\n  return result(null, extra);\n}\n\ntry {\n  if (typeof module === 'object' && module && module.exports) {\n    module.exports = { validateImage, detectFormat, sha256Hex, sameSha256, crc32, MEDIA_ALLOWED_DEFAULT };\n  }\n} catch (e) {\n  // not a CommonJS environment (n8n Code node): the functions above are used directly\n}\n\n// ---------------------------------------------------------------- n8n: verify the downloaded original\n// Size and SHA-256 are computed from the bytes and compared with what Meta reported. The file is stored\n// privately as-is; image validation happens in the next stage against the stored copy.\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const c = $('Check media URL').itemMatching(i).json;\n  const base = { media_id: c.media_id, attempt_id: c.attempt_id };\n  let bytes = null;\n  try { bytes = await this.helpers.getBinaryDataBuffer(i, 'data'); } catch (e) { bytes = null; }\n  const size = bytes ? bytes.length : 0;\n  let failure = null;\n  if (size === 0) failure = { code: 'empty_file', permanent: true, message: 'downloaded file is empty' };\n  else if (size > c.max_bytes) failure = { code: 'oversized', permanent: true, message: 'downloaded ' + size + ' bytes' };\n  const sha = size > 0 ? sha256Hex(bytes) : null;\n  if (!failure && c.provider_file_size !== null && c.provider_file_size !== size) {\n    failure = { code: 'download_incomplete', permanent: false, message: 'size ' + size + ' differs from provider ' + c.provider_file_size };\n  }\n  if (!failure && sameSha256(sha, c.provider_sha256) === false) {\n    failure = { code: 'download_corrupted', permanent: false, message: 'sha256 differs from the provider value' };\n  }\n  if (failure) { out.push({ json: { ...base, ok: false, ...failure } }); continue; }\n  const declared = typeof c.provider_mime_type === 'string' && /^image\\/[a-z0-9.+-]+$/i.test(c.provider_mime_type)\n    ? c.provider_mime_type : 'application/octet-stream';\n  out.push({ json: { ...base, ok: true, storage_path: c.storage_path, file_size: size, sha256: sha, content_type: declared },\n             binary: items[i].binary });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Download verified?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2200,
+        -200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "name": "Store original (private whatsapp-media)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2440,
+        -300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://muqfjbkeyvvfvlodzujs.supabase.co/storage/v1/object/whatsapp-media/{{ $json.storage_path }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-upsert",
+              "value": "false"
+            },
+            {
+              "name": "content-type",
+              "value": "={{ $json.content_type }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Classify original upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2680,
+        -300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Storage upload response. x-upsert is false, so an existing object is never overwritten: \"already exists\"\n// is accepted here and the database then verifies that the stored object has the expected size.\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const v = $('Verify download').itemMatching(i).json;\n  const r = items[i].json || {};\n  const status = Number(r.statusCode);\n  const body = JSON.stringify(r.body === undefined ? '' : r.body).slice(0, 300);\n  const exists = status === 409 || /Duplicate|already exists/i.test(body);\n  if ((status >= 200 && status < 300) || exists) {\n    out.push({ json: { media_id: v.media_id, attempt_id: v.attempt_id, ok: true, already_existed: exists, file_size: v.file_size, sha256: v.sha256 } });\n  } else {\n    out.push({ json: { media_id: v.media_id, attempt_id: v.attempt_id, ok: false, code: 'storage_upload_failed',\n                       permanent: false, message: 'HTTP ' + status + ' ' + body } });\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Original stored?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2920,
+        -300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "name": "Confirm download (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3160,
+        -400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/complete_media_download",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_media_id: $json.media_id, p_attempt_id: $json.attempt_id, p_file_size: $json.file_size, p_sha256: $json.sha256, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Original secured (validation next)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3400,
+        -500
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Record download failure (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3160,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_media_failure",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_media_id: $json.media_id, p_attempt_id: $json.attempt_id, p_code: $json.code, p_message: $json.message, p_permanent: $json.permanent === true, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "name": "Claim media validations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/claim_media_validations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_worker: \"n8n:\" + $execution.id, p_limit: 10 }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true
+    },
+    {
+      "name": "Split claimed validations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        700
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Claim RPCs return a JSON array of leased media. Keep only well-formed claims; no claim ends this stage quietly.\nconst out = [];\nfor (const item of $input.all()) {\n  const rows = Array.isArray(item.json) ? item.json : [item.json];\n  for (const row of rows) {\n    if (row && typeof row === 'object' && typeof row.media_id === 'string' && typeof row.attempt_id === 'string') {\n      out.push({ json: row });\n    }\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Read original (private)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1000,
+        700
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://muqfjbkeyvvfvlodzujs.supabase.co/storage/v1/object/whatsapp-media/{{ $json.storage_path }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Validate image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        600
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// VIP Realty — image binary validation (source of truth: automation/media/validate-image.js).\n//\n// Runs inside n8n Code nodes (embedded verbatim) and in local tests (node --test automation/media).\n// Pure JavaScript: no modules, no network, no image decoding library. It never trusts a declared MIME\n// type or file name: the format is detected from the bytes, and the file's container structure is\n// walked and checked end to end (JPEG segments + end-of-image marker, PNG chunk CRCs, WebP RIFF chunk\n// bounds, AVIF box bounds). Truncated, padded-out, corrupt or disguised files are rejected.\n// Limits (allowed formats, maximum bytes) come from the caller, which reads them from the database\n// (storage.buckets 'property-images'); the database re-checks every reported fact.\n\nconst MEDIA_ALLOWED_DEFAULT = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];\n\n// ------------------------------------------------------------------ SHA-256 (FIPS 180-4)\nconst SHA256_K = new Uint32Array([\n  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,\n]);\n\nfunction sha256Hex(bytes) {\n  const h = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);\n  const w = new Uint32Array(64);\n  const len = bytes.length;\n  const total = Math.ceil((len + 9) / 64) * 64;\n  const tail = new Uint8Array(total - Math.floor(len / 64) * 64);\n  const tailStart = Math.floor(len / 64) * 64;\n  tail.set(bytes.subarray(tailStart));\n  tail[len - tailStart] = 0x80;\n  const bitsHi = Math.floor(len / 0x20000000);\n  const bitsLo = (len * 8) >>> 0;\n  const t = tail.length;\n  tail[t - 8] = bitsHi >>> 24; tail[t - 7] = bitsHi >>> 16; tail[t - 6] = bitsHi >>> 8; tail[t - 5] = bitsHi;\n  tail[t - 4] = bitsLo >>> 24; tail[t - 3] = bitsLo >>> 16; tail[t - 2] = bitsLo >>> 8; tail[t - 1] = bitsLo;\n\n  const block = (src, off) => {\n    for (let i = 0; i < 16; i++) {\n      const j = off + i * 4;\n      w[i] = ((src[j] << 24) | (src[j + 1] << 16) | (src[j + 2] << 8) | src[j + 3]) >>> 0;\n    }\n    for (let i = 16; i < 64; i++) {\n      const a = w[i - 15], b = w[i - 2];\n      const s0 = ((a >>> 7) | (a << 25)) ^ ((a >>> 18) | (a << 14)) ^ (a >>> 3);\n      const s1 = ((b >>> 17) | (b << 15)) ^ ((b >>> 19) | (b << 13)) ^ (b >>> 10);\n      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;\n    }\n    let [a, b, c, d, e, f, g, hh] = h;\n    for (let i = 0; i < 64; i++) {\n      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));\n      const ch = (e & f) ^ (~e & g);\n      const t1 = (hh + S1 + ch + SHA256_K[i] + w[i]) >>> 0;\n      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));\n      const maj = (a & b) ^ (a & c) ^ (b & c);\n      const t2 = (S0 + maj) >>> 0;\n      hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;\n    }\n    h[0] = (h[0] + a) >>> 0; h[1] = (h[1] + b) >>> 0; h[2] = (h[2] + c) >>> 0; h[3] = (h[3] + d) >>> 0;\n    h[4] = (h[4] + e) >>> 0; h[5] = (h[5] + f) >>> 0; h[6] = (h[6] + g) >>> 0; h[7] = (h[7] + hh) >>> 0;\n  };\n\n  for (let off = 0; off < tailStart; off += 64) block(bytes, off);\n  for (let off = 0; off < tail.length; off += 64) block(tail, off);\n  let hex = '';\n  for (let i = 0; i < 8; i++) hex += h[i].toString(16).padStart(8, '0');\n  return hex;\n}\n\n/** Meta reports sha256 as hex or base64; compare either form with our hex digest. */\nfunction sameSha256(hex, reported) {\n  if (typeof reported !== 'string' || reported.trim() === '') return null;\n  const r = reported.trim();\n  if (/^[0-9a-fA-F]{64}$/.test(r)) return r.toLowerCase() === hex;\n  if (/^[A-Za-z0-9+/]{43}=?$/.test(r)) {\n    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';\n    let bits = '';\n    for (const ch of r.replace(/=+$/, '')) bits += alphabet.indexOf(ch).toString(2).padStart(6, '0');\n    let out = '';\n    for (let i = 0; i + 8 <= bits.length && out.length < 64; i += 8) out += parseInt(bits.slice(i, i + 8), 2).toString(16).padStart(2, '0');\n    return out === hex;\n  }\n  return null; // unknown representation: not comparable\n}\n\n// ------------------------------------------------------------------ CRC-32 (PNG)\nconst CRC_TABLE = (() => {\n  const t = new Uint32Array(256);\n  for (let n = 0; n < 256; n++) {\n    let c = n;\n    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;\n    t[n] = c >>> 0;\n  }\n  return t;\n})();\n\nfunction crc32(bytes, start, end) {\n  let c = 0xffffffff;\n  for (let i = start; i < end; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);\n  return (c ^ 0xffffffff) >>> 0;\n}\n\n// ------------------------------------------------------------------ readers\nconst u16be = (b, o) => (b[o] << 8) | b[o + 1];\nconst u32be = (b, o) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;\nconst u16le = (b, o) => b[o] | (b[o + 1] << 8);\nconst u24le = (b, o) => b[o] | (b[o + 1] << 8) | (b[o + 2] << 16);\nconst u32le = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;\nconst ascii = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));\n\nclass Corrupt extends Error {}\nconst need = (cond, why) => { if (!cond) throw new Corrupt(why); };\n\n// ------------------------------------------------------------------ format detection (bytes only)\nfunction detectFormat(b) {\n  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';\n  if (b.length >= 8 && b[0] === 0x89 && ascii(b, 1, 3) === 'PNG' && b[4] === 0x0d && b[5] === 0x0a\n      && b[6] === 0x1a && b[7] === 0x0a) return 'image/png';\n  if (b.length >= 12 && ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP') return 'image/webp';\n  if (b.length >= 12 && ascii(b, 4, 4) === 'ftyp') {\n    const size = u32be(b, 0);\n    if (size >= 16 && size <= b.length) {\n      const brands = [ascii(b, 8, 4)];\n      for (let o = 16; o + 4 <= size; o += 4) brands.push(ascii(b, o, 4));\n      if (brands.includes('avif') || brands.includes('avis')) return 'image/avif';\n    }\n    return null; // other ISO-BMFF (HEIC, MP4, …): not an allowed image format\n  }\n  return null;\n}\n\n// ------------------------------------------------------------------ JPEG\nfunction parseJpeg(b) {\n  let o = 2;\n  let frame = null;\n  for (;;) {\n    need(o < b.length, 'jpeg: truncated before start of scan');\n    need(b[o] === 0xff, 'jpeg: marker expected');\n    while (o < b.length && b[o] === 0xff) o++;\n    need(o < b.length, 'jpeg: truncated marker');\n    const m = b[o++];\n    if (m === 0x01 || (m >= 0xd0 && m <= 0xd7)) continue;\n    need(m !== 0xd9 && m !== 0xd8, 'jpeg: unexpected image boundary');\n    need(o + 2 <= b.length, 'jpeg: truncated segment');\n    const len = u16be(b, o);\n    need(len >= 2 && o + len <= b.length, 'jpeg: segment out of bounds');\n    const isSof = (m >= 0xc0 && m <= 0xcf) && m !== 0xc4 && m !== 0xc8 && m !== 0xcc;\n    if (isSof) {\n      need(len >= 8, 'jpeg: short frame header');\n      const height = u16be(b, o + 3);\n      const width = u16be(b, o + 5);\n      const comps = b[o + 7];\n      need(comps >= 1 && comps <= 4 && len === 8 + 3 * comps, 'jpeg: bad frame components');\n      frame = { width, height };\n    }\n    if (m === 0xda) {\n      need(frame !== null, 'jpeg: scan before frame header');\n      const scanStart = o + len;\n      let eoi = -1;\n      for (let i = b.length - 2; i >= scanStart; i--) {\n        if (b[i] === 0xff && b[i + 1] === 0xd9) { eoi = i; break; }\n      }\n      need(eoi > scanStart, 'jpeg: missing end-of-image marker (truncated)');\n      return frame;\n    }\n    o += len;\n  }\n}\n\n// ------------------------------------------------------------------ PNG\nfunction parsePng(b) {\n  let o = 8;\n  let first = true;\n  let dims = null;\n  let idat = false;\n  for (;;) {\n    need(o + 12 <= b.length, 'png: truncated chunk');\n    const len = u32be(b, o);\n    const type = ascii(b, o + 4, 4);\n    need(/^[A-Za-z]{4}$/.test(type), 'png: invalid chunk type');\n    need(len <= 0x7fffffff && o + 12 + len <= b.length, 'png: chunk out of bounds');\n    const crc = u32be(b, o + 8 + len);\n    need(crc32(b, o + 4, o + 8 + len) === crc, 'png: chunk CRC mismatch (' + type + ')');\n    if (first) {\n      need(type === 'IHDR' && len === 13, 'png: IHDR must come first');\n      const depth = b[o + 16], color = b[o + 17];\n      const ok = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };\n      need(ok[color] !== undefined && ok[color].includes(depth), 'png: invalid bit depth / color type');\n      dims = { width: u32be(b, o + 8), height: u32be(b, o + 12) };\n      first = false;\n    }\n    if (type === 'IDAT') idat = true;\n    o += 12 + len;\n    if (type === 'IEND') {\n      need(len === 0 && idat, 'png: IEND without image data');\n      need(o === b.length, 'png: data after IEND');\n      return dims;\n    }\n  }\n}\n\n// ------------------------------------------------------------------ WebP\nfunction parseWebp(b) {\n  const riff = u32le(b, 4);\n  need(riff + 8 === b.length, 'webp: RIFF size does not match file size');\n  let o = 12;\n  let dims = null;\n  let hasImage = false;\n  let first = true;\n  while (o < b.length) {\n    need(o + 8 <= b.length, 'webp: truncated chunk header');\n    const type = ascii(b, o, 4);\n    const size = u32le(b, o + 4);\n    const d = o + 8;\n    need(d + size <= b.length, 'webp: chunk out of bounds');\n    if (type === 'VP8 ') {\n      need(size >= 10 && b[d + 3] === 0x9d && b[d + 4] === 0x01 && b[d + 5] === 0x2a, 'webp: bad VP8 frame');\n      if (first) dims = { width: u16le(b, d + 6) & 0x3fff, height: u16le(b, d + 8) & 0x3fff };\n      hasImage = true;\n    } else if (type === 'VP8L') {\n      need(size >= 5 && b[d] === 0x2f, 'webp: bad VP8L signature');\n      if (first) {\n        const b1 = b[d + 1], b2 = b[d + 2], b3 = b[d + 3], b4 = b[d + 4];\n        dims = { width: 1 + (b1 | ((b2 & 0x3f) << 8)), height: 1 + ((b2 >> 6) | (b3 << 2) | ((b4 & 0x0f) << 10)) };\n      }\n      hasImage = true;\n    } else if (type === 'VP8X') {\n      need(first && size >= 10, 'webp: bad VP8X');\n      dims = { width: 1 + u24le(b, d + 4), height: 1 + u24le(b, d + 7) };\n    } else if (type === 'ANMF') {\n      hasImage = true;\n    } else {\n      need(!first, 'webp: unknown first chunk');\n    }\n    first = false;\n    o = d + size + (size & 1);\n  }\n  need(o === b.length, 'webp: trailing bytes');\n  need(hasImage && dims !== null, 'webp: no image data');\n  return dims;\n}\n\n// ------------------------------------------------------------------ AVIF (ISO BMFF)\nfunction boxes(b, start, end) {\n  const out = [];\n  let o = start;\n  while (o < end) {\n    need(o + 8 <= end, 'avif: truncated box header');\n    let size = u32be(b, o);\n    const type = ascii(b, o + 4, 4);\n    let header = 8;\n    if (size === 1) {\n      need(o + 16 <= end, 'avif: truncated large box');\n      need(u32be(b, o + 8) === 0, 'avif: box too large');\n      size = u32be(b, o + 12);\n      header = 16;\n    } else if (size === 0) {\n      size = end - o;\n    }\n    need(size >= header && o + size <= end, 'avif: box out of bounds (' + type + ')');\n    out.push({ type, start: o + header, end: o + size });\n    o += size;\n  }\n  need(o === end, 'avif: box sizes do not add up');\n  return out;\n}\n\nfunction parseAvif(b) {\n  const top = boxes(b, 0, b.length);\n  need(top[0] && top[0].type === 'ftyp', 'avif: ftyp must come first');\n  const meta = top.find((x) => x.type === 'meta');\n  need(meta && top.some((x) => x.type === 'mdat'), 'avif: missing meta or mdat');\n  const metaKids = boxes(b, meta.start + 4, meta.end); // meta is a full box (version + flags)\n  const iprp = metaKids.find((x) => x.type === 'iprp');\n  need(iprp, 'avif: missing item properties');\n  const ipco = boxes(b, iprp.start, iprp.end).find((x) => x.type === 'ipco');\n  need(ipco, 'avif: missing property container');\n  const ispe = boxes(b, ipco.start, ipco.end).find((x) => x.type === 'ispe');\n  need(ispe && ispe.end - ispe.start >= 12, 'avif: missing image size');\n  return { width: u32be(b, ispe.start + 4), height: u32be(b, ispe.start + 8) };\n}\n\n// ------------------------------------------------------------------ entry point\n/**\n * @param {Uint8Array} bytes\n * @param {{allowedMimeTypes?: string[], maxBytes: number, maxDimension?: number, maxPixels?: number}} opts\n * @returns {{valid: boolean, code: string|null, detail: string|null, detected_mime_type: string|null,\n *            width: number|null, height: number|null, file_size: number, sha256: string|null}}\n */\nfunction validateImage(bytes, opts) {\n  const allowed = (opts && Array.isArray(opts.allowedMimeTypes) && opts.allowedMimeTypes.length)\n    ? opts.allowedMimeTypes : MEDIA_ALLOWED_DEFAULT;\n  const maxBytes = opts && Number.isFinite(opts.maxBytes) ? opts.maxBytes : 0;\n  const maxDim = (opts && opts.maxDimension) || 20000;\n  const maxPixels = (opts && opts.maxPixels) || 100000000;\n  const size = bytes ? bytes.length : 0;\n  const result = (code, extra) => Object.assign({\n    valid: code === null, code, detail: null, detected_mime_type: null, width: null, height: null,\n    file_size: size, sha256: size > 0 ? sha256Hex(bytes) : null,\n  }, extra || {});\n\n  if (!bytes || size === 0) return result('empty_file');\n  if (!(maxBytes > 0)) return result('limit_unknown');\n  if (size > maxBytes) return result('oversized');\n  const mime = detectFormat(bytes);\n  if (!mime) return result('unsupported_format');\n  let dims;\n  try {\n    dims = mime === 'image/jpeg' ? parseJpeg(bytes)\n      : mime === 'image/png' ? parsePng(bytes)\n      : mime === 'image/webp' ? parseWebp(bytes)\n      : parseAvif(bytes);\n  } catch (e) {\n    if (e instanceof Corrupt) return result('corrupt_image', { detected_mime_type: mime, detail: e.message });\n    return result('corrupt_image', { detected_mime_type: mime, detail: 'parser error' });\n  }\n  const extra = { detected_mime_type: mime, width: dims.width, height: dims.height };\n  if (!(dims.width >= 1 && dims.height >= 1 && dims.width <= maxDim && dims.height <= maxDim\n        && dims.width * dims.height <= maxPixels)) return result('dimensions_out_of_range', extra);\n  if (!allowed.includes(mime)) return result('mime_not_allowed', extra);\n  return result(null, extra);\n}\n\ntry {\n  if (typeof module === 'object' && module && module.exports) {\n    module.exports = { validateImage, detectFormat, sha256Hex, sameSha256, crc32, MEDIA_ALLOWED_DEFAULT };\n  }\n} catch (e) {\n  // not a CommonJS environment (n8n Code node): the functions above are used directly\n}\n\n// ---------------------------------------------------------------- n8n: validate the stored original\n// Limits (allowed formats, maximum bytes) come from the claim, i.e. from storage.buckets in the database.\n// The verdict is re-checked by record_media_validation. No AI, no captions, no image analysis.\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const c = $('Split claimed validations').itemMatching(i).json;\n  let bytes = null;\n  try { bytes = await this.helpers.getBinaryDataBuffer(i, 'data'); } catch (e) { bytes = null; }\n  const result = validateImage(bytes || new Uint8Array(0), c.limits || {});\n  out.push({ json: { media_id: c.media_id, attempt_id: c.attempt_id, result } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Record validation (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1480,
+        600
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_media_validation",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_media_id: $json.media_id, p_attempt_id: $json.attempt_id, p_result: $json.result, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Validated or rejected (recorded)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        500
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Claim media attachments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        1250
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/claim_media_attachments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_worker: \"n8n:\" + $execution.id, p_limit: 10, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true
+    },
+    {
+      "name": "Split claimed attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        1250
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Claim RPCs return a JSON array of leased media. Keep only well-formed claims; no claim ends this stage quietly.\nconst out = [];\nfor (const item of $input.all()) {\n  const rows = Array.isArray(item.json) ? item.json : [item.json];\n  for (const row of rows) {\n    if (row && typeof row === 'object' && typeof row.media_id === 'string' && typeof row.attempt_id === 'string') {\n      out.push({ json: row });\n    }\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Read validated original (private)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1000,
+        1250
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://muqfjbkeyvvfvlodzujs.supabase.co/storage/v1/object/whatsapp-media/{{ $json.source_path }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Verify gallery copy source",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        1150
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// VIP Realty — image binary validation (source of truth: automation/media/validate-image.js).\n//\n// Runs inside n8n Code nodes (embedded verbatim) and in local tests (node --test automation/media).\n// Pure JavaScript: no modules, no network, no image decoding library. It never trusts a declared MIME\n// type or file name: the format is detected from the bytes, and the file's container structure is\n// walked and checked end to end (JPEG segments + end-of-image marker, PNG chunk CRCs, WebP RIFF chunk\n// bounds, AVIF box bounds). Truncated, padded-out, corrupt or disguised files are rejected.\n// Limits (allowed formats, maximum bytes) come from the caller, which reads them from the database\n// (storage.buckets 'property-images'); the database re-checks every reported fact.\n\nconst MEDIA_ALLOWED_DEFAULT = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];\n\n// ------------------------------------------------------------------ SHA-256 (FIPS 180-4)\nconst SHA256_K = new Uint32Array([\n  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,\n]);\n\nfunction sha256Hex(bytes) {\n  const h = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);\n  const w = new Uint32Array(64);\n  const len = bytes.length;\n  const total = Math.ceil((len + 9) / 64) * 64;\n  const tail = new Uint8Array(total - Math.floor(len / 64) * 64);\n  const tailStart = Math.floor(len / 64) * 64;\n  tail.set(bytes.subarray(tailStart));\n  tail[len - tailStart] = 0x80;\n  const bitsHi = Math.floor(len / 0x20000000);\n  const bitsLo = (len * 8) >>> 0;\n  const t = tail.length;\n  tail[t - 8] = bitsHi >>> 24; tail[t - 7] = bitsHi >>> 16; tail[t - 6] = bitsHi >>> 8; tail[t - 5] = bitsHi;\n  tail[t - 4] = bitsLo >>> 24; tail[t - 3] = bitsLo >>> 16; tail[t - 2] = bitsLo >>> 8; tail[t - 1] = bitsLo;\n\n  const block = (src, off) => {\n    for (let i = 0; i < 16; i++) {\n      const j = off + i * 4;\n      w[i] = ((src[j] << 24) | (src[j + 1] << 16) | (src[j + 2] << 8) | src[j + 3]) >>> 0;\n    }\n    for (let i = 16; i < 64; i++) {\n      const a = w[i - 15], b = w[i - 2];\n      const s0 = ((a >>> 7) | (a << 25)) ^ ((a >>> 18) | (a << 14)) ^ (a >>> 3);\n      const s1 = ((b >>> 17) | (b << 15)) ^ ((b >>> 19) | (b << 13)) ^ (b >>> 10);\n      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;\n    }\n    let [a, b, c, d, e, f, g, hh] = h;\n    for (let i = 0; i < 64; i++) {\n      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));\n      const ch = (e & f) ^ (~e & g);\n      const t1 = (hh + S1 + ch + SHA256_K[i] + w[i]) >>> 0;\n      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));\n      const maj = (a & b) ^ (a & c) ^ (b & c);\n      const t2 = (S0 + maj) >>> 0;\n      hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;\n    }\n    h[0] = (h[0] + a) >>> 0; h[1] = (h[1] + b) >>> 0; h[2] = (h[2] + c) >>> 0; h[3] = (h[3] + d) >>> 0;\n    h[4] = (h[4] + e) >>> 0; h[5] = (h[5] + f) >>> 0; h[6] = (h[6] + g) >>> 0; h[7] = (h[7] + hh) >>> 0;\n  };\n\n  for (let off = 0; off < tailStart; off += 64) block(bytes, off);\n  for (let off = 0; off < tail.length; off += 64) block(tail, off);\n  let hex = '';\n  for (let i = 0; i < 8; i++) hex += h[i].toString(16).padStart(8, '0');\n  return hex;\n}\n\n/** Meta reports sha256 as hex or base64; compare either form with our hex digest. */\nfunction sameSha256(hex, reported) {\n  if (typeof reported !== 'string' || reported.trim() === '') return null;\n  const r = reported.trim();\n  if (/^[0-9a-fA-F]{64}$/.test(r)) return r.toLowerCase() === hex;\n  if (/^[A-Za-z0-9+/]{43}=?$/.test(r)) {\n    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';\n    let bits = '';\n    for (const ch of r.replace(/=+$/, '')) bits += alphabet.indexOf(ch).toString(2).padStart(6, '0');\n    let out = '';\n    for (let i = 0; i + 8 <= bits.length && out.length < 64; i += 8) out += parseInt(bits.slice(i, i + 8), 2).toString(16).padStart(2, '0');\n    return out === hex;\n  }\n  return null; // unknown representation: not comparable\n}\n\n// ------------------------------------------------------------------ CRC-32 (PNG)\nconst CRC_TABLE = (() => {\n  const t = new Uint32Array(256);\n  for (let n = 0; n < 256; n++) {\n    let c = n;\n    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;\n    t[n] = c >>> 0;\n  }\n  return t;\n})();\n\nfunction crc32(bytes, start, end) {\n  let c = 0xffffffff;\n  for (let i = start; i < end; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);\n  return (c ^ 0xffffffff) >>> 0;\n}\n\n// ------------------------------------------------------------------ readers\nconst u16be = (b, o) => (b[o] << 8) | b[o + 1];\nconst u32be = (b, o) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;\nconst u16le = (b, o) => b[o] | (b[o + 1] << 8);\nconst u24le = (b, o) => b[o] | (b[o + 1] << 8) | (b[o + 2] << 16);\nconst u32le = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;\nconst ascii = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));\n\nclass Corrupt extends Error {}\nconst need = (cond, why) => { if (!cond) throw new Corrupt(why); };\n\n// ------------------------------------------------------------------ format detection (bytes only)\nfunction detectFormat(b) {\n  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';\n  if (b.length >= 8 && b[0] === 0x89 && ascii(b, 1, 3) === 'PNG' && b[4] === 0x0d && b[5] === 0x0a\n      && b[6] === 0x1a && b[7] === 0x0a) return 'image/png';\n  if (b.length >= 12 && ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP') return 'image/webp';\n  if (b.length >= 12 && ascii(b, 4, 4) === 'ftyp') {\n    const size = u32be(b, 0);\n    if (size >= 16 && size <= b.length) {\n      const brands = [ascii(b, 8, 4)];\n      for (let o = 16; o + 4 <= size; o += 4) brands.push(ascii(b, o, 4));\n      if (brands.includes('avif') || brands.includes('avis')) return 'image/avif';\n    }\n    return null; // other ISO-BMFF (HEIC, MP4, …): not an allowed image format\n  }\n  return null;\n}\n\n// ------------------------------------------------------------------ JPEG\nfunction parseJpeg(b) {\n  let o = 2;\n  let frame = null;\n  for (;;) {\n    need(o < b.length, 'jpeg: truncated before start of scan');\n    need(b[o] === 0xff, 'jpeg: marker expected');\n    while (o < b.length && b[o] === 0xff) o++;\n    need(o < b.length, 'jpeg: truncated marker');\n    const m = b[o++];\n    if (m === 0x01 || (m >= 0xd0 && m <= 0xd7)) continue;\n    need(m !== 0xd9 && m !== 0xd8, 'jpeg: unexpected image boundary');\n    need(o + 2 <= b.length, 'jpeg: truncated segment');\n    const len = u16be(b, o);\n    need(len >= 2 && o + len <= b.length, 'jpeg: segment out of bounds');\n    const isSof = (m >= 0xc0 && m <= 0xcf) && m !== 0xc4 && m !== 0xc8 && m !== 0xcc;\n    if (isSof) {\n      need(len >= 8, 'jpeg: short frame header');\n      const height = u16be(b, o + 3);\n      const width = u16be(b, o + 5);\n      const comps = b[o + 7];\n      need(comps >= 1 && comps <= 4 && len === 8 + 3 * comps, 'jpeg: bad frame components');\n      frame = { width, height };\n    }\n    if (m === 0xda) {\n      need(frame !== null, 'jpeg: scan before frame header');\n      const scanStart = o + len;\n      let eoi = -1;\n      for (let i = b.length - 2; i >= scanStart; i--) {\n        if (b[i] === 0xff && b[i + 1] === 0xd9) { eoi = i; break; }\n      }\n      need(eoi > scanStart, 'jpeg: missing end-of-image marker (truncated)');\n      return frame;\n    }\n    o += len;\n  }\n}\n\n// ------------------------------------------------------------------ PNG\nfunction parsePng(b) {\n  let o = 8;\n  let first = true;\n  let dims = null;\n  let idat = false;\n  for (;;) {\n    need(o + 12 <= b.length, 'png: truncated chunk');\n    const len = u32be(b, o);\n    const type = ascii(b, o + 4, 4);\n    need(/^[A-Za-z]{4}$/.test(type), 'png: invalid chunk type');\n    need(len <= 0x7fffffff && o + 12 + len <= b.length, 'png: chunk out of bounds');\n    const crc = u32be(b, o + 8 + len);\n    need(crc32(b, o + 4, o + 8 + len) === crc, 'png: chunk CRC mismatch (' + type + ')');\n    if (first) {\n      need(type === 'IHDR' && len === 13, 'png: IHDR must come first');\n      const depth = b[o + 16], color = b[o + 17];\n      const ok = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };\n      need(ok[color] !== undefined && ok[color].includes(depth), 'png: invalid bit depth / color type');\n      dims = { width: u32be(b, o + 8), height: u32be(b, o + 12) };\n      first = false;\n    }\n    if (type === 'IDAT') idat = true;\n    o += 12 + len;\n    if (type === 'IEND') {\n      need(len === 0 && idat, 'png: IEND without image data');\n      need(o === b.length, 'png: data after IEND');\n      return dims;\n    }\n  }\n}\n\n// ------------------------------------------------------------------ WebP\nfunction parseWebp(b) {\n  const riff = u32le(b, 4);\n  need(riff + 8 === b.length, 'webp: RIFF size does not match file size');\n  let o = 12;\n  let dims = null;\n  let hasImage = false;\n  let first = true;\n  while (o < b.length) {\n    need(o + 8 <= b.length, 'webp: truncated chunk header');\n    const type = ascii(b, o, 4);\n    const size = u32le(b, o + 4);\n    const d = o + 8;\n    need(d + size <= b.length, 'webp: chunk out of bounds');\n    if (type === 'VP8 ') {\n      need(size >= 10 && b[d + 3] === 0x9d && b[d + 4] === 0x01 && b[d + 5] === 0x2a, 'webp: bad VP8 frame');\n      if (first) dims = { width: u16le(b, d + 6) & 0x3fff, height: u16le(b, d + 8) & 0x3fff };\n      hasImage = true;\n    } else if (type === 'VP8L') {\n      need(size >= 5 && b[d] === 0x2f, 'webp: bad VP8L signature');\n      if (first) {\n        const b1 = b[d + 1], b2 = b[d + 2], b3 = b[d + 3], b4 = b[d + 4];\n        dims = { width: 1 + (b1 | ((b2 & 0x3f) << 8)), height: 1 + ((b2 >> 6) | (b3 << 2) | ((b4 & 0x0f) << 10)) };\n      }\n      hasImage = true;\n    } else if (type === 'VP8X') {\n      need(first && size >= 10, 'webp: bad VP8X');\n      dims = { width: 1 + u24le(b, d + 4), height: 1 + u24le(b, d + 7) };\n    } else if (type === 'ANMF') {\n      hasImage = true;\n    } else {\n      need(!first, 'webp: unknown first chunk');\n    }\n    first = false;\n    o = d + size + (size & 1);\n  }\n  need(o === b.length, 'webp: trailing bytes');\n  need(hasImage && dims !== null, 'webp: no image data');\n  return dims;\n}\n\n// ------------------------------------------------------------------ AVIF (ISO BMFF)\nfunction boxes(b, start, end) {\n  const out = [];\n  let o = start;\n  while (o < end) {\n    need(o + 8 <= end, 'avif: truncated box header');\n    let size = u32be(b, o);\n    const type = ascii(b, o + 4, 4);\n    let header = 8;\n    if (size === 1) {\n      need(o + 16 <= end, 'avif: truncated large box');\n      need(u32be(b, o + 8) === 0, 'avif: box too large');\n      size = u32be(b, o + 12);\n      header = 16;\n    } else if (size === 0) {\n      size = end - o;\n    }\n    need(size >= header && o + size <= end, 'avif: box out of bounds (' + type + ')');\n    out.push({ type, start: o + header, end: o + size });\n    o += size;\n  }\n  need(o === end, 'avif: box sizes do not add up');\n  return out;\n}\n\nfunction parseAvif(b) {\n  const top = boxes(b, 0, b.length);\n  need(top[0] && top[0].type === 'ftyp', 'avif: ftyp must come first');\n  const meta = top.find((x) => x.type === 'meta');\n  need(meta && top.some((x) => x.type === 'mdat'), 'avif: missing meta or mdat');\n  const metaKids = boxes(b, meta.start + 4, meta.end); // meta is a full box (version + flags)\n  const iprp = metaKids.find((x) => x.type === 'iprp');\n  need(iprp, 'avif: missing item properties');\n  const ipco = boxes(b, iprp.start, iprp.end).find((x) => x.type === 'ipco');\n  need(ipco, 'avif: missing property container');\n  const ispe = boxes(b, ipco.start, ipco.end).find((x) => x.type === 'ispe');\n  need(ispe && ispe.end - ispe.start >= 12, 'avif: missing image size');\n  return { width: u32be(b, ispe.start + 4), height: u32be(b, ispe.start + 8) };\n}\n\n// ------------------------------------------------------------------ entry point\n/**\n * @param {Uint8Array} bytes\n * @param {{allowedMimeTypes?: string[], maxBytes: number, maxDimension?: number, maxPixels?: number}} opts\n * @returns {{valid: boolean, code: string|null, detail: string|null, detected_mime_type: string|null,\n *            width: number|null, height: number|null, file_size: number, sha256: string|null}}\n */\nfunction validateImage(bytes, opts) {\n  const allowed = (opts && Array.isArray(opts.allowedMimeTypes) && opts.allowedMimeTypes.length)\n    ? opts.allowedMimeTypes : MEDIA_ALLOWED_DEFAULT;\n  const maxBytes = opts && Number.isFinite(opts.maxBytes) ? opts.maxBytes : 0;\n  const maxDim = (opts && opts.maxDimension) || 20000;\n  const maxPixels = (opts && opts.maxPixels) || 100000000;\n  const size = bytes ? bytes.length : 0;\n  const result = (code, extra) => Object.assign({\n    valid: code === null, code, detail: null, detected_mime_type: null, width: null, height: null,\n    file_size: size, sha256: size > 0 ? sha256Hex(bytes) : null,\n  }, extra || {});\n\n  if (!bytes || size === 0) return result('empty_file');\n  if (!(maxBytes > 0)) return result('limit_unknown');\n  if (size > maxBytes) return result('oversized');\n  const mime = detectFormat(bytes);\n  if (!mime) return result('unsupported_format');\n  let dims;\n  try {\n    dims = mime === 'image/jpeg' ? parseJpeg(bytes)\n      : mime === 'image/png' ? parsePng(bytes)\n      : mime === 'image/webp' ? parseWebp(bytes)\n      : parseAvif(bytes);\n  } catch (e) {\n    if (e instanceof Corrupt) return result('corrupt_image', { detected_mime_type: mime, detail: e.message });\n    return result('corrupt_image', { detected_mime_type: mime, detail: 'parser error' });\n  }\n  const extra = { detected_mime_type: mime, width: dims.width, height: dims.height };\n  if (!(dims.width >= 1 && dims.height >= 1 && dims.width <= maxDim && dims.height <= maxDim\n        && dims.width * dims.height <= maxPixels)) return result('dimensions_out_of_range', extra);\n  if (!allowed.includes(mime)) return result('mime_not_allowed', extra);\n  return result(null, extra);\n}\n\ntry {\n  if (typeof module === 'object' && module && module.exports) {\n    module.exports = { validateImage, detectFormat, sha256Hex, sameSha256, crc32, MEDIA_ALLOWED_DEFAULT };\n  }\n} catch (e) {\n  // not a CommonJS environment (n8n Code node): the functions above are used directly\n}\n\n// ---------------------------------------------------------------- n8n: verify the gallery copy source\n// The public copy must be byte-identical to the validated original (size + SHA-256 recorded in the database).\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const c = $('Split claimed attachments').itemMatching(i).json;\n  const base = { media_id: c.media_id, attempt_id: c.attempt_id };\n  let bytes = null;\n  try { bytes = await this.helpers.getBinaryDataBuffer(i, 'data'); } catch (e) { bytes = null; }\n  const size = bytes ? bytes.length : 0;\n  if (size === 0 || size !== Number(c.file_size) || sha256Hex(bytes) !== c.sha256) {\n    out.push({ json: { ...base, ok: false, code: 'source_integrity_mismatch', permanent: true,\n                       message: 'stored original no longer matches the validated size/hash' } });\n    continue;\n  }\n  out.push({ json: { ...base, ok: true, target_path: c.target_path, content_type: c.content_type },\n             binary: items[i].binary });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Source intact?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1480,
+        1150
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "name": "Upload gallery image (property-images)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1720,
+        1050
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://muqfjbkeyvvfvlodzujs.supabase.co/storage/v1/object/property-images/{{ $json.target_path }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-upsert",
+              "value": "false"
+            },
+            {
+              "name": "content-type",
+              "value": "={{ $json.content_type }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Classify gallery upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        1050
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Storage upload response. x-upsert is false, so an existing object is never overwritten: \"already exists\"\n// is accepted here and the database then verifies that the stored object has the expected size.\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const v = $('Verify gallery copy source').itemMatching(i).json;\n  const r = items[i].json || {};\n  const status = Number(r.statusCode);\n  const body = JSON.stringify(r.body === undefined ? '' : r.body).slice(0, 300);\n  const exists = status === 409 || /Duplicate|already exists/i.test(body);\n  if ((status >= 200 && status < 300) || exists) {\n    out.push({ json: { media_id: v.media_id, attempt_id: v.attempt_id, ok: true, already_existed: exists } });\n  } else {\n    out.push({ json: { media_id: v.media_id, attempt_id: v.attempt_id, ok: false, code: 'storage_upload_failed',\n                       permanent: false, message: 'HTTP ' + status + ' ' + body } });\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Gallery image stored?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2200,
+        1050
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "name": "Complete attachment (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2440,
+        950
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/complete_media_attachment",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_media_id: $json.media_id, p_attempt_id: $json.attempt_id, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Attached to draft (not public)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2680,
+        850
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Record attachment failure (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2440,
+        1350
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_media_failure",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_media_id: $json.media_id, p_attempt_id: $json.attempt_id, p_code: $json.code, p_message: $json.message, p_permanent: $json.permanent === true, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "name": "Classify provider failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        150
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Error output of a provider/storage call -> retry classification. Nothing here decides the state:\n// the database applies attempts, backoff, expiry and review states. Signed URL query strings are dropped.\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const claim = $('Split claimed downloads').itemMatching(i).json;\n  const text = JSON.stringify(items[i].json && items[i].json.error ? items[i].json.error : items[i].json || {})\n    .replace(/\\?[^\\s\"']*/g, '?[query removed]').slice(0, 1500);\n  const m = text.match(/\\b(?:status(?:Code)?|httpCode|code)\\W{0,4}([1-5][0-9][0-9])\\b/i) || text.match(/\\b([45][0-9][0-9])\\b/);\n  const status = m ? Number(m[1]) : 0;\n  let code = 'provider_unavailable';\n  let permanent = false;\n  if (status === 404 || status === 410) { code = 'provider_media_not_found'; permanent = true; }\n  else if (status === 400) { code = 'provider_bad_request'; permanent = true; }\n  else if (status === 401 || status === 403) { code = 'provider_auth_failed'; }\n  else if (/timeout|timed out|ETIMEDOUT|ESOCKETTIMEDOUT|ECONNABORTED/i.test(text)) { code = 'provider_timeout'; }\n  else if (status >= 500) { code = 'provider_http_error'; }\n  out.push({ json: { media_id: claim.media_id, attempt_id: claim.attempt_id, ok: false, code, permanent,\n                     message: text.slice(0, 400) } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Classify storage failure (download)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2680,
+        -120
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Error output of a Supabase Storage call -> transient failure (bounded retries in the database).\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const claim = $('Verify download').itemMatching(i).json;\n  const text = JSON.stringify(items[i].json && items[i].json.error ? items[i].json.error : items[i].json || {}).slice(0, 400);\n  out.push({ json: { media_id: claim.media_id, attempt_id: claim.attempt_id, ok: false, code: 'storage_upload_failed', permanent: false,\n                     message: text } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Not confirmed — lease expiry reconciles",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3400,
+        -300
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Classify storage failure (validation)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        820
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Error output of a Supabase Storage call -> transient failure (bounded retries in the database).\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const claim = $('Split claimed validations').itemMatching(i).json;\n  const text = JSON.stringify(items[i].json && items[i].json.error ? items[i].json.error : items[i].json || {}).slice(0, 400);\n  out.push({ json: { media_id: claim.media_id, attempt_id: claim.attempt_id, ok: false, code: 'storage_read_failed', permanent: false,\n                     message: text } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Record validation failure (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1480,
+        820
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_media_failure",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_media_id: $json.media_id, p_attempt_id: $json.attempt_id, p_code: $json.code, p_message: $json.message, p_permanent: $json.permanent === true, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "name": "Not recorded — lease expiry retries",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        660
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Classify storage failure (attachment read)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        1370
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Error output of a Supabase Storage call -> transient failure (bounded retries in the database).\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const claim = $('Split claimed attachments').itemMatching(i).json;\n  const text = JSON.stringify(items[i].json && items[i].json.error ? items[i].json.error : items[i].json || {}).slice(0, 400);\n  out.push({ json: { media_id: claim.media_id, attempt_id: claim.attempt_id, ok: false, code: 'storage_read_failed', permanent: false,\n                     message: text } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Classify storage failure (gallery upload)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        1230
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Error output of a Supabase Storage call -> transient failure (bounded retries in the database).\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const claim = $('Verify gallery copy source').itemMatching(i).json;\n  const text = JSON.stringify(items[i].json && items[i].json.error ? items[i].json.error : items[i].json || {}).slice(0, 400);\n  out.push({ json: { media_id: claim.media_id, attempt_id: claim.attempt_id, ok: false, code: 'storage_upload_failed', permanent: false,\n                     message: text } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "name": "Not recorded — sweep reconciles",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2680,
+        1030
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Sticky Note afb3b153",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -1000
+      ],
+      "parameters": {
+        "content": "## VIP Realty — Media Processing (Phase 7)\nWhatsApp photos → private original → validated → gallery image of the **correct draft**. Every minute, independently retryable, never touches a property's status.\n\n1. **Recovery sweep** — `advance_media_pipeline`: skips never-eligible media (unknown sender, group, not a photo), expires media past Meta's download window, reconciles uploads that were not confirmed, retries/fails expired leases, records missing image rows.\n2. **Download** — lease → Meta media URL (trusted media id) → bytes → size/SHA-256 check → private `whatsapp-media` (no overwrite) → confirmed against `storage.objects`.\n3. **Validation** — stored original → format detected from bytes, structure checked, limits from `storage.buckets` → validated / rejected.\n4. **Attachment** — only when the database finds media → message → session → that session's draft (same agent/agency, valid extraction) → copy to `property-images/properties/{property}/{media}.{ext}` → `property_images` row.\n\nThe database decides states, paths, target property and order. AI output is never used here.",
+        "color": 7,
+        "width": 1100,
+        "height": 560
+      }
+    },
+    {
+      "name": "Sticky Note b3466796",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        -1000
+      ],
+      "parameters": {
+        "content": "## Credentials — PENDING (keep this workflow INACTIVE)\n- **VIP Realty WhatsApp Cloud API (access token)** — `whatsAppApi`: system-user access token of the WhatsApp Business Account + business account id. Used only by *Resolve media URL* and *Download media binary*.\n- **VIP Realty Supabase (service role)** — `supabaseApi`.\n\nNo token appears in node parameters, expressions or Git. Execution timeout (180 s, instance maximum) is shorter than the database lease (300 s), so a worker never outlives its lease.",
+        "color": 3,
+        "width": 620,
+        "height": 380
+      }
+    },
+    {
+      "name": "Sticky Note 74d61fa2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        -1000
+      ],
+      "parameters": {
+        "content": "## Failures\n- Provider 404/410/400 → permanent (reviewable `failed`); timeouts, 5xx, auth, storage errors → retried with backoff by the database (bounded attempts).\n- Empty / oversized / corrupt / unsupported → `rejected` (original kept privately for review).\n- Past Meta's window → `expired`. Nothing is deleted.\n- A worker crash after an upload is reconciled by the sweep from `storage.objects`.",
+        "color": 2,
+        "width": 620,
+        "height": 380
+      }
+    }
+  ],
+  "connections": {
+    "Every minute": {
+      "main": [
+        [
+          {
+            "node": "Advance media pipeline (recovery sweep)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advance media pipeline (recovery sweep)": {
+      "main": [
+        [
+          {
+            "node": "Claim media downloads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Claim media validations",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Claim media attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim media downloads": {
+      "main": [
+        [
+          {
+            "node": "Split claimed downloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split claimed downloads": {
+      "main": [
+        [
+          {
+            "node": "Resolve media URL (Meta)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve media URL (Meta)": {
+      "main": [
+        [
+          {
+            "node": "Check media URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify provider failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check media URL": {
+      "main": [
+        [
+          {
+            "node": "URL trusted and size allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL trusted and size allowed?": {
+      "main": [
+        [
+          {
+            "node": "Download media binary (Meta)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record download failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media binary (Meta)": {
+      "main": [
+        [
+          {
+            "node": "Verify download",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify provider failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify download": {
+      "main": [
+        [
+          {
+            "node": "Download verified?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download verified?": {
+      "main": [
+        [
+          {
+            "node": "Store original (private whatsapp-media)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record download failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store original (private whatsapp-media)": {
+      "main": [
+        [
+          {
+            "node": "Classify original upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify storage failure (download)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify original upload": {
+      "main": [
+        [
+          {
+            "node": "Original stored?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Original stored?": {
+      "main": [
+        [
+          {
+            "node": "Confirm download (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record download failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm download (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Original secured (validation next)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not confirmed — lease expiry reconciles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim media validations": {
+      "main": [
+        [
+          {
+            "node": "Split claimed validations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split claimed validations": {
+      "main": [
+        [
+          {
+            "node": "Read original (private)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read original (private)": {
+      "main": [
+        [
+          {
+            "node": "Validate image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify storage failure (validation)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate image": {
+      "main": [
+        [
+          {
+            "node": "Record validation (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record validation (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Validated or rejected (recorded)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not recorded — lease expiry retries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim media attachments": {
+      "main": [
+        [
+          {
+            "node": "Split claimed attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split claimed attachments": {
+      "main": [
+        [
+          {
+            "node": "Read validated original (private)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read validated original (private)": {
+      "main": [
+        [
+          {
+            "node": "Verify gallery copy source",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify storage failure (attachment read)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify gallery copy source": {
+      "main": [
+        [
+          {
+            "node": "Source intact?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source intact?": {
+      "main": [
+        [
+          {
+            "node": "Upload gallery image (property-images)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record attachment failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload gallery image (property-images)": {
+      "main": [
+        [
+          {
+            "node": "Classify gallery upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify storage failure (gallery upload)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify gallery upload": {
+      "main": [
+        [
+          {
+            "node": "Gallery image stored?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gallery image stored?": {
+      "main": [
+        [
+          {
+            "node": "Complete attachment (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record attachment failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete attachment (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Attached to draft (not public)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not recorded — sweep reconciles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify provider failure": {
+      "main": [
+        [
+          {
+            "node": "Record download failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify storage failure (download)": {
+      "main": [
+        [
+          {
+            "node": "Record download failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify storage failure (validation)": {
+      "main": [
+        [
+          {
+            "node": "Record validation failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify storage failure (attachment read)": {
+      "main": [
+        [
+          {
+            "node": "Record attachment failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify storage failure (gallery upload)": {
+      "main": [
+        [
+          {
+            "node": "Record attachment failure (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 180
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "vip-realty"
+    },
+    {
+      "name": "phase-7"
+    },
+    {
+      "name": "media"
+    }
+  ]
+}
