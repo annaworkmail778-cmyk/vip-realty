@@ -22,9 +22,8 @@ export default async function AdminLoginPage() {
           <div className="mt-8 border border-champagne/30 bg-champagne/5 p-5">
             <p className="label text-champagne">Not configured</p>
             <p className="mt-3 text-[0.88rem] leading-relaxed text-ivory/70">
-              Set <code className="text-champagne">ADMIN_PASSWORD</code> and{" "}
-              <code className="text-champagne">ADMIN_SESSION_SECRET</code> in{" "}
-              <code className="text-champagne">.env.local</code>, then restart the server.
+              Sign-in is disabled until the admin credentials are configured on the server. Run{" "}
+              <code className="text-champagne">npm run check:config</code> for the required settings.
             </p>
           </div>
         )}

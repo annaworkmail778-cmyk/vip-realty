@@ -9,7 +9,12 @@
     "lint": "eslint .",
     "media": "node scripts/media/generate.mjs",
     "media:video": "node scripts/media/install-video.mjs",
-    "test:media": "node --test automation/media/*.test.mjs"
+    "test:media": "node --test automation/media/*.test.mjs",
+    "check:config": "node scripts/config/check-config.mjs",
+    "check:config:production": "node scripts/config/check-config.mjs --production --workflows",
+    "admin:hash-password": "node scripts/admin/hash-password.mjs",
+    "test:config": "node --test scripts/config/*.test.mjs",
+    "test": "npm run test:media && npm run test:config"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

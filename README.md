@@ -38,12 +38,24 @@ Copy `.env.example` to `.env.local`:
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_PUBLISHABLE_KEY` | Server-side public reads of published listings and inquiry submission (RLS-protected) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin listing management only. Server-only — never in client code or `NEXT_PUBLIC_*` |
-| `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET` | Admin sign-in at `/admin` |
+| `ADMIN_PASSWORD_HASH` | scrypt hash of the admin password (`npm run admin:hash-password`). Required in production |
+| `ADMIN_SESSION_SECRET` | Random, 32+ characters; signs admin sessions |
+| `ADMIN_PASSWORD` | Local development only — ignored in production |
 
-**Before any deployment**, set a strong, unique `ADMIN_PASSWORD` (long and
-random) and a random `ADMIN_SESSION_SECRET` of at least 32 characters. The admin
-area uses a single shared password; replacing it with per-user accounts is a
+Production fails closed: without a valid `ADMIN_PASSWORD_HASH` and a 32+ character
+`ADMIN_SESSION_SECRET`, admin sign-in is disabled. Rotating either signs every
+admin out. The admin area uses a single shared password; per-user accounts are a
 planned later improvement.
+
+Check the configuration by variable name (values are never printed):
+
+```bash
+npm run check:config
+npm run check:config:production
+```
+
+The second is the release gate (also checks the committed n8n workflows). See
+`docs/rebuild/production-launch-checklist.md` before going live.
 
 Without the Supabase keys the listing pages show an "unavailable" state and the
 admin shows a configuration notice.
@@ -57,7 +69,9 @@ photos and whether it is publishable. A listing's page shows where every value
 came from (WhatsApp messages, extraction evidence, media) and offers the actions
 the database allows: approve, reject (with a reason), publish, mark sold / rented,
 unpublish, archive and restore. `/admin/pipeline` lists held, rejected, failed and
-expired media and submissions that did not become a clean draft. The database
+expired media and submissions that did not become a clean draft. `/admin/operations`
+shows pipeline health and configuration as counts and yes/no checks (no
+messages, phone numbers or credentials). The database
 enforces every rule; photos are shown through an authenticated admin route, never
 public draft URLs. Agents can also send `sold <listing link>`, `rented <listing
 link>` or `archive <listing link>` on WhatsApp — see
@@ -113,9 +127,9 @@ components/
 lib/
   listings/                 Supabase listing queries, row mapper, types, filters, vocabulary
   inquiries/                inquiry validation (shared by form and API)
-  admin/                    admin auth and admin listing queries
+  admin/                    admin auth (scrypt password, signed sessions), listing queries, diagnostics
   supabase/                 server-only clients (public read, service role)
-  security/                 rate limiting
+  security/                 rate limiting, same-origin check
   media.ts                  brand asset paths
   site.ts                   company copy, contact, stats, navigation
   motion.ts                 GSAP setup, reduced-motion guards, hooks
@@ -125,6 +139,8 @@ supabase/
 automation/n8n/             secret-free exports of the n8n workflows
 automation/prompts/         versioned AI extraction prompt and output schema
 scripts/media/              the placeholder generator and footage installer
+scripts/config/             configuration check (names only) and its tests
+scripts/admin/              admin password hash generator
 docs/rebuild/               rebuild phase records
 ```
 

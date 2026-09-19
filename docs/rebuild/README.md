@@ -12,3 +12,6 @@
 | 6.5 | [phase-06-5-whatsapp-identity.md](phase-06-5-whatsapp-identity.md) | WhatsApp identity model aligned with the Cloud API (BSUID) |
 | 7 | [phase-07-media-storage.md](phase-07-media-storage.md) | WhatsApp media download, validation, storage and property images |
 | 8 | [phase-08-review-publish-status.md](phase-08-review-publish-status.md) | Admin review and publication, lifecycle status, deterministic WhatsApp status commands |
+| 9 | [phase-09-production-hardening-e2e.md](phase-09-production-hardening-e2e.md) | Production hardening: config validation, admin auth, diagnostics, E2E status, rollback |
+
+Before going live: [production-launch-checklist.md](production-launch-checklist.md).

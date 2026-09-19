@@ -1,26 +1,38 @@
 import "server-only";
-import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
-import { env, hasAdminAuth } from "@/lib/env";
+import { verifyPassword } from "@/lib/admin/password";
+import { adminCredential, env, hasAdminAuth, isProduction } from "@/lib/env";
 
 /* ----------------------------------------------------------------------------
-   Admin authentication.
+   Admin authentication (single shared admin credential).
 
-   A signed, HttpOnly session cookie issued against ADMIN_PASSWORD. No admin
-   credential is ever sent to the browser, and the cookie carries only an
-   issue time and a signature, so it cannot be edited into a longer session.
+   * Credential: ADMIN_PASSWORD_HASH (scrypt) — required in production; a
+     plaintext ADMIN_PASSWORD is accepted only in local development.
+   * Session: a signed, HttpOnly, SameSite=Lax cookie carrying only an issue
+     time and a random nonce. `__Host-` prefixed and Secure in production.
+     Absolute lifetime 12 h; future-dated tokens are refused.
+   * The signing key is derived from ADMIN_SESSION_SECRET **and** a fingerprint
+     of the credential: rotating either the secret or the password invalidates
+     every existing session (the documented "sign everyone out" procedure).
+   * Fails closed: without a production-grade configuration nobody can sign in.
 
-   This is deliberately small. To move to Supabase Auth later, replace
-   `signIn` and `readSession`; everything else calls `requireAdmin()`.
+   To move to per-user accounts later, replace `passwordMatches`,
+   `issueSession` and `verifySession`; callers only use the helpers below.
 ---------------------------------------------------------------------------- */
 
-export const ADMIN_COOKIE = "vip_admin";
+export const ADMIN_COOKIE = isProduction ? "__Host-vip_admin" : "vip_admin";
 const MAX_AGE_SECONDS = 60 * 60 * 12;
+const CLOCK_SKEW_MS = 60_000;
 
-const secret = () => env.adminSessionSecret ?? "";
+function signingKey(): string {
+  const credential = adminCredential();
+  const fingerprint = credential ? createHash("sha256").update(`${credential.kind}:${credential.value}`).digest("base64url") : "";
+  return `${env.adminSessionSecret ?? ""}|${fingerprint}`;
+}
 
 function sign(payload: string): string {
-  return createHmac("sha256", secret()).update(payload).digest("base64url");
+  return createHmac("sha256", signingKey()).update(payload).digest("base64url");
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -31,12 +43,12 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 export function issueSession(): string {
-  const payload = `${Date.now()}.${randomBytes(9).toString("base64url")}`;
+  const payload = `${Date.now()}.${randomBytes(16).toString("base64url")}`;
   return `${payload}.${sign(payload)}`;
 }
 
 export function verifySession(token: string | undefined): boolean {
-  if (!token || !hasAdminAuth()) return false;
+  if (!token || token.length > 300 || !hasAdminAuth()) return false;
   const idx = token.lastIndexOf(".");
   if (idx < 0) return false;
   const payload = token.slice(0, idx);
@@ -45,22 +57,23 @@ export function verifySession(token: string | undefined): boolean {
 
   const issued = Number(payload.split(".")[0]);
   if (!Number.isFinite(issued)) return false;
-  return Date.now() - issued < MAX_AGE_SECONDS * 1000;
+  const age = Date.now() - issued;
+  return age > -CLOCK_SKEW_MS && age < MAX_AGE_SECONDS * 1000;
 }
 
-/** Constant-time password check, so a wrong guess leaks no timing signal. */
+/** Constant-time password check against the configured credential. Never logs the candidate. */
 export function passwordMatches(candidate: string): boolean {
-  if (!hasAdminAuth()) return false;
-  const expected = env.adminPassword!;
-  // Hash both sides first: timingSafeEqual needs equal lengths, and hashing
-  // avoids leaking the password's length through the comparison.
-  return safeEqual(sign(`pw:${candidate}`), sign(`pw:${expected}`));
+  if (!hasAdminAuth() || candidate.length === 0 || candidate.length > 1024) return false;
+  const credential = adminCredential()!;
+  if (credential.kind === "hash") return verifyPassword(candidate, credential.value);
+  // development only: hash both sides so the comparison is constant-time and length-independent
+  return safeEqual(sign(`pw:${candidate}`), sign(`pw:${credential.value}`));
 }
 
 export const sessionCookieOptions = {
   httpOnly: true as const,
   sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
+  secure: isProduction,
   path: "/",
   maxAge: MAX_AGE_SECONDS,
 };

@@ -8,8 +8,10 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 .data
 
-# Secrets and local tooling state (Phase 0 hardening)
+# Secrets and local tooling state (Phase 0 hardening; Phase 9: every .env file except the example)
 .env
+.env.*
+!.env.example
 *.pem
 .vercel/
 supabase/.temp/
