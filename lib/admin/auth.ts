@@ -71,6 +71,17 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   return verifySession(jar.get(ADMIN_COOKIE)?.value);
 }
 
+/**
+ * Audit reference of the current admin session: a short one-way hash of the session cookie, so events can tell
+ * sessions apart without storing anything that could be replayed. Null when not signed in.
+ */
+export async function adminActorRef(): Promise<string | null> {
+  const jar = await cookies();
+  const token = jar.get(ADMIN_COOKIE)?.value;
+  if (!token || !verifySession(token)) return null;
+  return `admin:${createHmac("sha256", "vip-admin-actor").update(token).digest("hex").slice(0, 12)}`;
+}
+
 /** For route handlers, which read the cookie off the request. */
 export function isAdminRequest(req: Request): boolean {
   const header = req.headers.get("cookie") ?? "";

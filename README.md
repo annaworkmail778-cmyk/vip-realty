@@ -50,11 +50,18 @@ admin shows a configuration notice.
 
 ## Admin
 
-`/admin` is password-protected listing management. `/admin/properties` lists
-every listing in the database with its listing status (draft, published, sold,
-rented, archived) and review state (pending, approved, rejected); each listing
-has a read-only detail page with its fields and images. Editing and the WhatsApp
-review workflow come in later phases.
+`/admin` is password-protected listing management. `/admin/properties` is the
+review queue (pending review, approved and rejected drafts, then published, sold,
+rented and archived listings) with each draft's agent, agency, extraction state,
+photos and whether it is publishable. A listing's page shows where every value
+came from (WhatsApp messages, extraction evidence, media) and offers the actions
+the database allows: approve, reject (with a reason), publish, mark sold / rented,
+unpublish, archive and restore. `/admin/pipeline` lists held, rejected, failed and
+expired media and submissions that did not become a clean draft. The database
+enforces every rule; photos are shown through an authenticated admin route, never
+public draft URLs. Agents can also send `sold <listing link>`, `rented <listing
+link>` or `archive <listing link>` on WhatsApp — see
+`docs/rebuild/phase-08-review-publish-status.md`.
 
 ## What is real and what is placeholder
 

@@ -11,7 +11,8 @@ import { Logo } from "@/components/ui/Logo";
 ---------------------------------------------------------------------------- */
 
 const NAV = [
-  { href: "/admin/properties", label: "Properties" },
+  { href: "/admin/properties", label: "Listings" },
+  { href: "/admin/pipeline", label: "Pipeline" },
 ];
 
 export function AdminShell({
