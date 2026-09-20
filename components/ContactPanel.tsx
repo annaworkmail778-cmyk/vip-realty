@@ -2,20 +2,25 @@
 
 import { InquiryButton } from "@/components/inquiry/InquiryButton";
 import type { InquiryListing } from "@/components/inquiry/InquiryDialog";
-import { site, WHATSAPP_URL } from "@/lib/site";
+import { useSiteProfile } from "@/components/site/SiteProfileProvider";
+import { telHref, whatsappUrl } from "@/lib/site/profile";
 import { formatPrice } from "@/lib/listings/format";
 import type { Listing } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
    Sticky contact panel: request information, agent, call and WhatsApp.
 
-   Contact details come from the site configuration (lib/site.ts). The WhatsApp
-   message is prefilled with the listing title and its public reference (slug)
-   only — nothing internal.
+   Contact details come from the configured agency (lib/site/profile.ts); each
+   action is shown only when that detail exists. The WhatsApp message is
+   prefilled with the listing title and its public reference (slug) only —
+   nothing internal.
 ---------------------------------------------------------------------------- */
 
 export function ContactPanel({ listing, inquiry }: { listing: Listing; inquiry: InquiryListing }) {
-  const enquiry = `Hello VIP Realty — I'd like to know more about ${listing.name} (${listing.districtLabel ?? listing.city}), listed at ${formatPrice(listing)}. Ref: ${listing.slug}`;
+  const profile = useSiteProfile();
+  const enquiry = `Hello ${profile.brandName} — I'd like to know more about ${listing.name} (${listing.districtLabel ?? listing.city}), listed at ${formatPrice(listing)}. Ref: ${listing.slug}`;
+  const tel = telHref(profile);
+  const whatsapp = whatsappUrl(profile, enquiry);
 
   return (
     <aside className="lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)]">
@@ -31,29 +36,32 @@ export function ContactPanel({ listing, inquiry }: { listing: Listing; inquiry: 
         </div>
 
         <div className="mt-7 border-t border-ivory/12 pt-6">
-          <p className="label text-ivory/40">Your agent</p>
-          {/* PLACEHOLDER agent — replace with the real contact for this listing. */}
-          <p className="mt-3 font-display text-[1.35rem] leading-tight text-ivory">VIP Realty Agency</p>
-          <p className="label mt-2 text-ivory/50">{site.contact.hours}</p>
+          <p className="label text-ivory/40">Contact</p>
+          <p className="mt-3 font-display text-[1.35rem] leading-tight text-ivory">{profile.legalName}</p>
+          {profile.officeHours && <p className="label mt-2 text-ivory/50">{profile.officeHours}</p>}
 
           <div className="mt-5 space-y-2.5">
-            <a href={site.contact.phoneHref} className="label link-underline block text-ivory/80 hover:text-ivory">
-              {site.contact.phone}
-            </a>
-            <a href={`mailto:${site.contact.email}`} className="label link-underline block text-ivory/80 hover:text-ivory">
-              {site.contact.email}
-            </a>
+            {tel && (
+              <a href={tel} className="label link-underline block text-ivory/80 hover:text-ivory">{profile.phone}</a>
+            )}
+            {profile.email && (
+              <a href={`mailto:${profile.email}`} className="label link-underline block text-ivory/80 hover:text-ivory">
+                {profile.email}
+              </a>
+            )}
           </div>
 
-          <a
-            href={WHATSAPP_URL(enquiry)}
-            target="_blank"
-            rel="noreferrer"
-            className="label-lg mt-6 flex w-full items-center justify-center gap-3 bg-ivory px-6 py-4 text-ink transition-colors duration-500 hover:bg-champagne"
-          >
-            <WhatsAppIcon />
-            Message on WhatsApp
-          </a>
+          {whatsapp && (
+            <a
+              href={whatsapp}
+              target="_blank"
+              rel="noreferrer"
+              className="label-lg mt-6 flex w-full items-center justify-center gap-3 bg-ivory px-6 py-4 text-ink transition-colors duration-500 hover:bg-champagne"
+            >
+              <WhatsAppIcon />
+              Message on WhatsApp
+            </a>
+          )}
         </div>
 
       </div>

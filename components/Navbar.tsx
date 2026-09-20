@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { PropertyFilters, EMPTY_FILTERS, filtersToQuery, type FilterState } from "@/components/PropertyFilters";
 import { site } from "@/lib/site";
+import { useSiteProfile } from "@/components/site/SiteProfileProvider";
+import { telHref } from "@/lib/site/profile";
 import type { DistrictOption } from "@/lib/listings/types";
 
 type Tone = "dark" | "light";
@@ -185,10 +187,7 @@ function MobileMenu({ open, onSearch }: { open: boolean; onSearch: () => void })
             Search properties →
           </button>
           <div className="rule" />
-          <div className="label space-y-1 text-ivory/55">
-            <p>{site.contact.address}</p>
-            <a href={site.contact.phoneHref} className="block">{site.contact.phone}</a>
-          </div>
+          <MenuContact />
         </div>
       </div>
     </div>
@@ -252,6 +251,19 @@ function SearchOverlay({
           </form>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* Office address and phone of the configured agency; nothing is shown until it is set up. */
+function MenuContact() {
+  const profile = useSiteProfile();
+  const tel = telHref(profile);
+  if (!profile.officeAddress && !tel) return null;
+  return (
+    <div className="label space-y-1 text-ivory/55">
+      {profile.officeAddress && <p>{profile.officeAddress}</p>}
+      {tel && <a href={tel} className="block">{profile.phone}</a>}
     </div>
   );
 }

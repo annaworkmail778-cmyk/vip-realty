@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { site } from "@/lib/site";
+import { getSiteProfile } from "@/lib/site/profile.server";
+import { telHref } from "@/lib/site/profile";
 import { MEDIA_IS_PLACEHOLDER } from "@/lib/media";
 import { CATEGORIES } from "@/lib/listings/taxonomy";
 import type { DistrictOption } from "@/lib/listings/types";
 
 /* `districts` are the neighbourhoods that currently have published listings. */
-export function Footer({ districts }: { districts: DistrictOption[] }) {
+export async function Footer({ districts }: { districts: DistrictOption[] }) {
   const year = new Date().getFullYear();
+  const profile = await getSiteProfile();
+  const tel = telHref(profile);
 
   return (
     <footer data-nav-tone="dark" className="border-t border-ivory/10 bg-ink text-ivory">
@@ -49,10 +53,13 @@ export function Footer({ districts }: { districts: DistrictOption[] }) {
           <div id="footer-contact">
             <p className="label text-ivory/35">Contact</p>
             <ul className="mt-5 space-y-2.5 label text-ivory/75">
-              <li><a href={site.contact.phoneHref} className="link-underline">{site.contact.phone}</a></li>
-              <li><a href={`mailto:${site.contact.email}`} className="link-underline">{site.contact.email}</a></li>
-              <li className="text-ivory/55">{site.contact.address}</li>
-              <li className="text-ivory/55">{site.contact.hours}</li>
+              {tel && <li><a href={tel} className="link-underline">{profile.phone}</a></li>}
+              {profile.email && (
+                <li><a href={`mailto:${profile.email}`} className="link-underline">{profile.email}</a></li>
+              )}
+              {profile.officeAddress && <li className="text-ivory/55">{profile.officeAddress}</li>}
+              {profile.officeHours && <li className="text-ivory/55">{profile.officeHours}</li>}
+              {!profile.configured && <li className="text-ivory/55">Contact details are being set up.</li>}
             </ul>
             <ul className="mt-6 flex gap-5">
               {site.social.map((s) => (
@@ -65,7 +72,7 @@ export function Footer({ districts }: { districts: DistrictOption[] }) {
         </div>
 
         <div className="mt-14 flex flex-col gap-4 border-t border-ivory/10 pt-7 sm:flex-row sm:items-center sm:justify-between">
-          <p className="label text-ivory/35">© {year} {site.legalName}</p>
+          <p className="label text-ivory/35">© {year} {profile.legalName}</p>
           <p className="label text-ivory/35">
             {MEDIA_IS_PLACEHOLDER
               ? "Placeholder imagery, contact details and statistics"

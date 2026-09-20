@@ -11,7 +11,7 @@
     "media:video": "node scripts/media/install-video.mjs",
     "test:media": "node --test automation/media/*.test.mjs",
     "check:config": "node scripts/config/check-config.mjs",
-    "check:config:production": "node scripts/config/check-config.mjs --production --workflows",
+    "check:config:production": "node scripts/config/check-config.mjs --production --workflows --site",
     "admin:hash-password": "node scripts/admin/hash-password.mjs",
     "test:config": "node --test scripts/config/*.test.mjs",
     "test": "npm run test:media && npm run test:config"

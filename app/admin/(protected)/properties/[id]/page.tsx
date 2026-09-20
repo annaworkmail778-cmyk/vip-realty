@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DataNotice, ListingStatusPill, PageHeader, ReviewStatusPill } from "@/components/admin/pieces";
 import { ReviewActions } from "@/components/admin/ReviewActions";
+import { ImageArranger } from "@/components/admin/ManagementForms";
 import { BLOCKER_LABELS, MEDIA_REASON_LABELS, WARNING_LABELS, label } from "@/lib/admin/labels";
 import { adminMediaUrl, getReviewDetail } from "@/lib/admin/properties";
 
@@ -72,6 +73,12 @@ export default async function AdminPropertyPage({ params }: { params: Promise<{ 
         <PageHeader title={p.title ?? "Untitled draft"} subtitle={p.slug}>
           <ListingStatusPill status={p.listingStatus} />
           <ReviewStatusPill status={p.reviewStatus} />
+          {reviewable && p.listingStatus !== "sold" && p.listingStatus !== "rented" && p.listingStatus !== "archived" && (
+            <Link href={`/admin/properties/${p.id}/edit`}
+                  className="label border border-ivory/25 px-4 py-2.5 hover:border-champagne">
+              Edit details
+            </Link>
+          )}
           {p.listingStatus === "published" && (
             <Link href={`/properties/${p.slug}`} target="_blank" className="label link-underline text-champagne">
               View on website ↗
@@ -273,10 +280,15 @@ export default async function AdminPropertyPage({ params }: { params: Promise<{ 
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.url} alt="" className="h-full w-full object-cover" loading="lazy" />
                     </div>
-                    <p className="label px-3 py-2 text-ivory/50">#{img.sortOrder}{img.fromWhatsApp ? " · WhatsApp" : ""}</p>
+                    <p className="label px-3 py-2 text-ivory/50">
+                      #{img.sortOrder}{img.isPrimary ? " · cover" : ""}{img.fromWhatsApp ? " · WhatsApp" : ""}
+                    </p>
                   </li>
                 ))}
               </ul>
+            )}
+            {reviewable && (p.listingStatus === "draft" || p.listingStatus === "published") && p.images.length > 1 && (
+              <ImageArranger propertyId={p.id} version={p.stateVersion} images={p.images} />
             )}
           </Section>
 

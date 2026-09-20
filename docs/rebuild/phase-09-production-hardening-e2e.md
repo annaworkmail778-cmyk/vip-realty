@@ -47,6 +47,7 @@ Verified in this phase:
 
 Removed from `.env.example` and flagged by the checker if still set: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
 `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL` (booking era, no code reads them).
+*(Superseded in Phase 10: `NEXT_PUBLIC_SITE_URL` is used again, for page metadata, and is production-required.)*
 
 `.gitignore` now ignores **every** `.env*` file except `.env.example` (previously `.env.production` /
 `.env.development` were not ignored). `.env.example` contains placeholders only, grouped public / server / secret.

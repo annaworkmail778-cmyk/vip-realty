@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 
 /* ----------------------------------------------------------------------------
@@ -10,8 +10,13 @@ import { Logo } from "@/components/ui/Logo";
    third-party dashboard.
 ---------------------------------------------------------------------------- */
 
+/* "Review" is the pending-review queue; "Properties" is every listing. Both are the same route with a
+   different filter, so the active item is decided by the query string as well as the path. */
 const NAV = [
-  { href: "/admin/properties", label: "Listings" },
+  { href: "/admin/properties?status=review", label: "Review", match: "review" },
+  { href: "/admin/properties?status=all", label: "Properties", match: "properties" },
+  { href: "/admin/agents", label: "Agents" },
+  { href: "/admin/agency", label: "Agency" },
   { href: "/admin/pipeline", label: "Pipeline" },
   { href: "/admin/operations", label: "Operations" },
 ];
@@ -24,7 +29,17 @@ export function AdminShell({
   databaseReady: boolean;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const status = searchParams.get("status");
+
+  const isActive = (item: (typeof NAV)[number]) => {
+    if (item.match === "review") return pathname === "/admin/properties" && (status === null || status === "review");
+    if (item.match === "properties") {
+      return pathname.startsWith("/admin/properties") && !(pathname === "/admin/properties" && (status === null || status === "review"));
+    }
+    return pathname.startsWith(item.href);
+  };
 
   const signOut = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -46,7 +61,7 @@ export function AdminShell({
 
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:mt-4 lg:flex-col lg:overflow-visible lg:px-3 lg:pb-0">
             {NAV.map((item) => {
-              const active = pathname.startsWith(item.href);
+              const active = isActive(item);
               return (
                 <Link
                   key={item.href}

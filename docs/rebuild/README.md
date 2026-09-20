@@ -13,5 +13,6 @@
 | 7 | [phase-07-media-storage.md](phase-07-media-storage.md) | WhatsApp media download, validation, storage and property images |
 | 8 | [phase-08-review-publish-status.md](phase-08-review-publish-status.md) | Admin review and publication, lifecycle status, deterministic WhatsApp status commands |
 | 9 | [phase-09-production-hardening-e2e.md](phase-09-production-hardening-e2e.md) | Production hardening: config validation, admin auth, diagnostics, E2E status, rollback |
+| 10 | [phase-10-agency-agent-listing-management.md](phase-10-agency-agent-listing-management.md) | Agency and agent management, listing editing, gallery order, configured brand and contacts |
 
 Before going live: [production-launch-checklist.md](production-launch-checklist.md).

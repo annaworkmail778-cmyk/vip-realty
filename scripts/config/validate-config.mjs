@@ -15,6 +15,48 @@ function jwtClaims(value) {
   }
 }
 
+/** Mirrors public.contact_is_placeholder(): example/test domains and 00000000-style numbers. */
+export function isPlaceholderContact(value) {
+  if (typeof value !== "string" || value.trim() === "") return false;
+  if (value.includes("@")) return isPlaceholderHost(value.trim().split("@")[1] ?? "");
+  const digits = value.replace(/\D/g, "").slice(-8);
+  return ["00000000", "11111111", "22222222", "33333333", "44444444", "55555555", "66666666", "77777777",
+          "88888888", "99999999", "12345678", "23456789", "87654321"].includes(digits);
+}
+
+export function isPlaceholderHost(host) {
+  const h = String(host).toLowerCase();
+  return /(^|\.)(example\.(com|org|net)|example|invalid|test|localhost)$/.test(h);
+}
+
+/**
+ * The website's brand and contact details come from the site agency (public_site_profile).
+ * @param {Record<string, unknown> | null} profile
+ */
+export function validateSiteProfile(profile, { production }) {
+  const errors = [];
+  const warnings = [];
+  const level = production ? errors : warnings;
+
+  if (!profile) {
+    level.push("no site agency is configured — the website shows the working name and no contact details "
+               + "(set one at /admin/agency)");
+    return { ok: errors.length === 0, errors, warnings, fields: [] };
+  }
+  const required = ["display_name", "public_phone", "public_whatsapp"];
+  const fields = [];
+  for (const [key, value] of Object.entries(profile)) {
+    const text = typeof value === "string" ? value.trim() : "";
+    if (text === "") {
+      if (required.includes(key)) level.push(`site profile: ${key} is not set`);
+      continue;
+    }
+    fields.push(key);
+    if (isPlaceholderContact(text)) errors.push(`site profile: ${key} still looks like a placeholder value`);
+  }
+  return { ok: errors.length === 0, errors, warnings, fields };
+}
+
 const SCRYPT_HASH = /^scrypt:(\d{4,7}):(\d{1,2}):(\d{1,2}):[A-Za-z0-9_-]{16,}:[A-Za-z0-9_-]{40,}$/;
 
 export const VARIABLES = [
@@ -24,10 +66,11 @@ export const VARIABLES = [
   { name: "ADMIN_SESSION_SECRET", scope: "server-secret", required: true, purpose: "signs admin sessions (32+ chars)" },
   { name: "ADMIN_PASSWORD_HASH", scope: "server-secret", required: "production", purpose: "scrypt hash of the admin password" },
   { name: "ADMIN_PASSWORD", scope: "server-secret", required: false, purpose: "plaintext admin password — local development only" },
+  { name: "NEXT_PUBLIC_SITE_URL", scope: "public", required: "production", purpose: "canonical site URL (page metadata)" },
 ];
 
 /** Names that used to exist (booking era) and are no longer read by any code. */
-export const UNUSED = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "CRON_SECRET", "NEXT_PUBLIC_SITE_URL"];
+export const UNUSED = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "CRON_SECRET"];
 
 /** Credentials the n8n workflows reference by name (they live in n8n, never in this repo). */
 export const N8N_CREDENTIALS = [
@@ -123,6 +166,21 @@ export function validateConfig(env, { production }) {
     const value = get(name);
     if (value && (value === serviceKey || value.startsWith("sb_secret_") || jwtClaims(value)?.role === "service_role")) {
       errors.push(`${name} contains a secret key and would be bundled for the browser`);
+    }
+  }
+
+  // Canonical public URL (metadata). A placeholder domain must never ship.
+  const siteUrl = get("NEXT_PUBLIC_SITE_URL");
+  if (!siteUrl) {
+    if (production) need("NEXT_PUBLIC_SITE_URL", "page metadata");
+  } else {
+    let parsed = null;
+    try { parsed = new URL(siteUrl); } catch { parsed = null; }
+    if (!parsed) errors.push("NEXT_PUBLIC_SITE_URL is not a valid URL");
+    else if (isPlaceholderHost(parsed.hostname)) {
+      (production ? errors : warnings).push("NEXT_PUBLIC_SITE_URL still points at a placeholder domain");
+    } else if (production && parsed.protocol !== "https:") {
+      errors.push("NEXT_PUBLIC_SITE_URL must use https in production");
     }
   }
 

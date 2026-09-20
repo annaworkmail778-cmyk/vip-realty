@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap } from "@/lib/motion";
 import { media } from "@/lib/media";
 import { site } from "@/lib/site";
+import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 
 /* ----------------------------------------------------------------------------
    01 — Hero.
@@ -13,6 +14,7 @@ import { site } from "@/lib/site";
 ---------------------------------------------------------------------------- */
 
 export function Hero() {
+  const { brandName } = useSiteProfile();
   const root = useRef<HTMLElement>(null);
 
   useGsap(() => {
@@ -68,7 +70,7 @@ export function Hero() {
 
       <div className="shell relative flex h-full flex-col pb-[clamp(2rem,6vh,4rem)]" data-hero="content">
         <p data-hero="label" className="label pt-[calc(var(--nav-h)+clamp(1.5rem,7vh,4rem))] text-ivory/70">
-          <span className="text-champagne">{site.name.toUpperCase()}</span>
+          <span className="text-champagne">{brandName.toUpperCase()}</span>
           <span className="mx-3 opacity-40">/</span>
           {site.tagline.toUpperCase()}
         </p>

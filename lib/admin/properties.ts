@@ -106,6 +106,7 @@ export interface AdminImage {
   /** Authenticated admin route — never the public Storage URL. */
   url: string;
   sortOrder: number;
+  isPrimary: boolean;
   width: number | null;
   height: number | null;
   fromWhatsApp: boolean;
@@ -308,7 +309,7 @@ export async function getReviewDetail(id: string): Promise<AdminResult<AdminRevi
   const [queue, extra, images, events] = await Promise.all([
     db.from("admin_property_review").select(QUEUE_COLUMNS).eq("id", id).maybeSingle(),
     db.from("properties").select(DETAIL_COLUMNS).eq("id", id).maybeSingle(),
-    db.from("property_images").select("id, sort_order, width, height, media_id").eq("property_id", id)
+    db.from("property_images").select("id, sort_order, is_primary, width, height, media_id").eq("property_id", id)
       .order("sort_order", { ascending: true }),
     db.from("automation_events").select("event_type, severity, created_at, details").eq("property_id", id)
       .order("created_at", { ascending: false }).limit(40),
@@ -431,6 +432,7 @@ export async function getReviewDetail(id: string): Promise<AdminResult<AdminRevi
         id: String(img.id),
         url: adminImageUrl(String(img.id)),
         sortOrder: int(img.sort_order),
+        isPrimary: img.is_primary === true,
         width: num(img.width),
         height: num(img.height),
         fromWhatsApp: typeof img.media_id === "string",

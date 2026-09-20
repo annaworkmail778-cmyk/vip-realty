@@ -6,6 +6,7 @@ import { PropertyCollection } from "@/components/PropertyCollection";
 import { AboutSection } from "@/components/AboutSection";
 import { PropertyMap } from "@/components/PropertyMap";
 import { FeaturedProperty } from "@/components/FeaturedProperty";
+import { getSiteProfile } from "@/lib/site/profile.server";
 import { FinalCTA } from "@/components/FinalCTA";
 import {
   getCategoryCounts,
@@ -23,11 +24,12 @@ const SEQUENCE_LENGTH = 6;
    Supabase is unavailable the listing sections show their empty states and the
    rest of the page is unaffected. */
 export default async function HomePage() {
-  const [recent, featured, counts, facets] = await Promise.all([
+  const [recent, featured, counts, facets, profile] = await Promise.all([
     listRecentListings(MAP_LIMIT),
     listFeaturedListings(1),
     getCategoryCounts(),
     getFacetOptions(),
+    getSiteProfile(),
   ]);
 
   const listings = recent.ok ? recent.data : [];
@@ -43,7 +45,7 @@ export default async function HomePage() {
       <AboutSection />
       <PropertyMap properties={listings} />
       {featuredListing && <FeaturedProperty listing={featuredListing} />}
-      <FinalCTA />
+      <FinalCTA brandName={profile.brandName} />
     </>
   );
 }

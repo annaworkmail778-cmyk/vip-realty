@@ -62,7 +62,8 @@ admin shows a configuration notice.
 
 ## Admin
 
-`/admin` is password-protected listing management. `/admin/properties` is the
+`/admin` is password-protected operations management: **Review**, **Properties**,
+**Agents**, **Agency**, **Pipeline** and **Operations**. `/admin/properties` is the
 review queue (pending review, approved and rejected drafts, then published, sold,
 rented and archived listings) with each draft's agent, agency, extraction state,
 photos and whether it is publishable. A listing's page shows where every value
@@ -71,7 +72,13 @@ the database allows: approve, reject (with a reason), publish, mark sold / rente
 unpublish, archive and restore. `/admin/pipeline` lists held, rejected, failed and
 expired media and submissions that did not become a clean draft. `/admin/operations`
 shows pipeline health and configuration as counts and yes/no checks (no
-messages, phone numbers or credentials). The database
+messages, phone numbers or credentials). A listing's content can be corrected at
+`/admin/properties/<id>/edit` (a human edit: ownership, provenance, lifecycle and
+review state are never editable, an approved draft returns to review, and a live
+listing is only changed if it stays publishable), and its photos reordered.
+`/admin/agency` holds the agency's public profile — **the brand name and every
+contact detail the website shows come from there**, not from the code — and
+`/admin/agents` registers agents and their WhatsApp identities. The database
 enforces every rule; photos are shown through an authenticated admin route, never
 public draft URLs. Agents can also send `sold <listing link>`, `rented <listing
 link>` or `archive <listing link>` on WhatsApp — see
@@ -86,7 +93,7 @@ production:
 | --- | --- |
 | Collection images, team photo, map | `public/media/**` — see `public/media/README.md` |
 | Company statistics (1,500+ etc.) | `site.stats` in `lib/site.ts` — flagged with `placeholder: true`, shown with a `*` and a footnote |
-| Phone, WhatsApp, email, address | `site.contact` in `lib/site.ts` |
+| Phone, WhatsApp, email, address, brand name | `/admin/agency` (stored in the database, not in the code) |
 | District map geometry | `MAP_SHAPES` in `components/YerevanMap.tsx` — abstract shapes, not real outlines |
 | Logo lockup | `components/ui/Logo.tsx` — inline SVG drawn to the brand; swap in the agency's artwork |
 
@@ -131,7 +138,8 @@ lib/
   supabase/                 server-only clients (public read, service role)
   security/                 rate limiting, same-origin check
   media.ts                  brand asset paths
-  site.ts                   company copy, contact, stats, navigation
+  site.ts                   company copy, stats, navigation (no brand or contacts)
+  site/                     the configured agency's brand and contact details
   motion.ts                 GSAP setup, reduced-motion guards, hooks
   env.ts                    server-only configuration
 supabase/

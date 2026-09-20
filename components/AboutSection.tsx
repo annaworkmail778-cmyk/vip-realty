@@ -7,9 +7,10 @@ import { ArrowLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap } from "@/lib/motion";
 import { media } from "@/lib/media";
 import { site } from "@/lib/site";
+import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 
 /* ----------------------------------------------------------------------------
-   06 — About VIP Realty.
+   06 — About the agency.
    The one ivory section on the page; the navigation inverts across it.
 ---------------------------------------------------------------------------- */
 
@@ -24,6 +25,7 @@ export function AboutSection() {
     });
   }, root, []);
 
+  const { brandName } = useSiteProfile();
   const anyPlaceholder = site.stats.some((s) => s.placeholder);
 
   return (
@@ -34,7 +36,7 @@ export function AboutSection() {
       className="relative bg-ivory py-[var(--spacing-section)] text-espresso"
     >
       <div className="shell">
-        <SectionLabel index="06" tone="ink">About VIP Realty</SectionLabel>
+        <SectionLabel index="06" tone="ink">About {brandName}</SectionLabel>
 
         <div className="mt-8 grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-20">
           <h2 data-reveal="up" className="display-lg text-espresso">
@@ -43,7 +45,7 @@ export function AboutSection() {
           </h2>
 
           <div className="max-w-[46ch] space-y-6 self-end">
-            {site.about.body.map((para) => (
+            {site.about.body.map((raw) => raw.replace("{brand}", brandName)).map((para) => (
               <p key={para} data-reveal="up" className="text-[0.98rem] font-light leading-relaxed text-espresso/75">
                 {para}
               </p>
@@ -59,7 +61,7 @@ export function AboutSection() {
         <Image
           data-about-img
           src={media.about.team}
-          alt="The VIP Realty team"
+          alt={`The ${brandName} team`}
           fill
           sizes="100vw"
           loading="lazy"

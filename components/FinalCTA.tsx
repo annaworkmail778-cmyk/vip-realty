@@ -6,7 +6,7 @@ import { media } from "@/lib/media";
    09 — Closing. One image, one sentence, two ways forward.
 ---------------------------------------------------------------------------- */
 
-export function FinalCTA() {
+export function FinalCTA({ brandName }: { brandName: string }) {
   return (
     <section
       id="contact"
@@ -34,7 +34,7 @@ export function FinalCTA() {
 
         <div data-reveal="up" className="mt-12 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
           <ButtonLink href="/properties">Explore properties</ButtonLink>
-          <ButtonLink href="/#footer-contact" variant="outline">Contact VIP Realty</ButtonLink>
+          <ButtonLink href="/#footer-contact" variant="outline">Contact {brandName}</ButtonLink>
         </div>
       </div>
     </section>

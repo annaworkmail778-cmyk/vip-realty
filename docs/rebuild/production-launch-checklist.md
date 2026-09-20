@@ -1,30 +1,39 @@
 # Production launch checklist
 
 Work top to bottom. Every step is an explicit operator action; nothing here happens automatically. Details and the
-reasoning behind each gate: [phase-09-production-hardening-e2e.md](phase-09-production-hardening-e2e.md).
+reasoning behind each gate: [phase-09-production-hardening-e2e.md](phase-09-production-hardening-e2e.md) and
+[phase-10-agency-agent-listing-management.md](phase-10-agency-agent-listing-management.md).
 
-## 1. Content (blocks public launch)
+## 1. Brand, contacts and content (blocks public launch)
 
-- [ ] Real phone, WhatsApp and email in `site.contact` (`lib/site.ts`) — currently placeholders `+37400000000`.
+- [ ] Confirm the **production brand name** with the client. Until it is set the site shows the project working name
+      (`VIP Realty`) — that is a launch item, not a chosen brand.
+- [ ] Create the agency at **`/admin/agency`** and tick "This is the website agency". Fill in: display name (brand),
+      legal name, public phone, public WhatsApp number, public email, office address, opening hours.
+      These are the only source of the site's brand and contact details; placeholder-looking values are refused.
 - [ ] Real imagery and statistics; set `MEDIA_IS_PLACEHOLDER = false` in `lib/media.ts` (see `README.md`).
+- [ ] `npm run check:config -- --site` → the profile is complete with no placeholder values.
 
 ## 2. Website configuration (hosting environment, never in Git)
 
 - [ ] `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (publishable/anon key).
+- [ ] `NEXT_PUBLIC_SITE_URL` — the real https site URL (page metadata); no `*.example` domain.
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` — server-only, same project.
 - [ ] `ADMIN_PASSWORD_HASH` from `npm run admin:hash-password` (password ≥ 16 chars, stored in a password manager).
 - [ ] `ADMIN_SESSION_SECRET` — random, ≥ 32 chars (`openssl rand -base64 48`).
-- [ ] No `ADMIN_PASSWORD`, no legacy `TELEGRAM_*` / `CRON_SECRET` / `NEXT_PUBLIC_SITE_URL`, nothing secret under `NEXT_PUBLIC_`.
-- [ ] `npm run check:config -- --production --no-dotenv` with the production environment → `RESULT: OK`.
+- [ ] No `ADMIN_PASSWORD`, no legacy `TELEGRAM_*` / `CRON_SECRET`, nothing secret under `NEXT_PUBLIC_`.
+- [ ] `npm run check:config:production` (and `-- --no-dotenv` in CI) → `RESULT: OK`.
 - [ ] Deploy; sign in at `/admin`; `/admin/operations` shows OK for public DB, admin DB, hashed password, production build.
 
 ## 3. Database
 
-- [ ] All migrations in `supabase/migrations/` applied (latest `20260919170806_operations_status`).
+- [ ] All migrations in `supabase/migrations/` applied (latest `20260919215136_listing_editing`).
 - [ ] Backup/PITR point confirmed before the release.
 - [ ] Security advisors show no new findings.
-- [ ] Agency row with the real `whatsapp_phone_number_id`; agents registered (BSUID and/or phone), `is_active`.
-- [ ] `/admin/operations` → Routing readiness both OK.
+- [ ] In **`/admin/agency`**: the agency's real WhatsApp Business number id (Meta's `phone_number_id`), agency active.
+- [ ] In **`/admin/agents`**: create each real agent (name, agency, active). Register their WhatsApp identity from
+      their first message under "Unregistered senders" — never type or invent a BSUID.
+- [ ] `/admin/operations` → Routing readiness both OK, site profile complete.
 
 ## 4. n8n credentials (workflows stay INACTIVE)
 
@@ -46,7 +55,16 @@ reasoning behind each gate: [phase-09-production-hardening-e2e.md](phase-09-prod
 - [ ] `/admin/operations`: nothing unexpected under "Needs attention"; no error events.
 - [ ] Remove the test listing, media and fixtures.
 
-## 6. Activation (explicit)
+## 6. Admin workflow verification (before handover)
+
+- [ ] Sign in; each section loads: Review, Properties, Agents, Agency, Pipeline, Operations.
+- [ ] Open a draft → **Edit details** → correct a field → saved; an approved draft returns to pending review.
+- [ ] Approve → Publish → the listing appears on the website; edit its title → the change is live without a redeploy.
+- [ ] Reorder photos and set a cover → the website gallery follows.
+- [ ] Mark sold → it leaves the website; restore/relist works.
+- [ ] Deactivate a test agent → their messages are stored but create nothing; reactivate.
+
+## 7. Activation (explicit)
 
 - [ ] Activate Submission Extraction, then Media Processing (Inbound already active).
 - [ ] `check:config -- --production --workflows --n8n --allow-active` → OK.
@@ -60,5 +78,7 @@ reactivation. A wrong status change is reversed in the admin. Rollback details: 
 ## Known accepted risks at launch
 
 - Draft photos are reachable by anyone who knows their exact URL (random UUID paths, not listable) — Phase 9 §11.
-- Single shared admin password; in-memory rate limiting per instance — consider an edge rate limiter.
+- Single shared admin password (every action is audited as a session reference, not a person); in-memory rate limiting
+  per instance — consider an edge rate limiter.
 - No WhatsApp replies are sent to agents (Phase 9 §8).
+- Listings are created only from WhatsApp submissions; the admin corrects them but cannot create one (Phase 10 §12).
