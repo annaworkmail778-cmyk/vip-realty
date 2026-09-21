@@ -15,5 +15,6 @@
 | 9 | [phase-09-production-hardening-e2e.md](phase-09-production-hardening-e2e.md) | Production hardening: config validation, admin auth, diagnostics, E2E status, rollback |
 | 10 | [phase-10-agency-agent-listing-management.md](phase-10-agency-agent-listing-management.md) | Agency and agent management, listing editing, gallery order, configured brand and contacts |
 | 11 | [phase-11-production-environment-and-e2e.md](phase-11-production-environment-and-e2e.md) | Dedicated realty Supabase project (separated from RSVP), project pinning, integration/E2E status and activation gate |
+| 12 | [phase-12-production-deployment.md](phase-12-production-deployment.md) | Deployment preparation: hosting settings, security headers, local production verification (deployment blocked: no platform/domain yet) |
 
 Before going live: [production-launch-checklist.md](production-launch-checklist.md).

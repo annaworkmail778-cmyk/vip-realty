@@ -17,6 +17,7 @@ and do not delete it — it is the rollback source until the new environment has
       legal name, public phone, public WhatsApp number, public email, office address, opening hours.
       These are the only source of the site's brand and contact details; placeholder-looking values are refused.
 - [ ] Real imagery and statistics; set `MEDIA_IS_PLACEHOLDER = false` in `lib/media.ts` (see `README.md`).
+- [ ] Real social links in the footer (currently `href="#"` placeholders) or remove them.
 - [ ] `npm run check:config -- --site` → the profile is complete with no placeholder values.
 
 ## 2. Website configuration (hosting environment, never in Git)
@@ -29,7 +30,15 @@ and do not delete it — it is the rollback source until the new environment has
 - [ ] `ADMIN_SESSION_SECRET` — random, ≥ 32 chars (`openssl rand -base64 48`).
 - [ ] No `ADMIN_PASSWORD`, no legacy `TELEGRAM_*` / `CRON_SECRET`, nothing secret under `NEXT_PUBLIC_`.
 - [ ] `npm run check:config:production` (and `-- --no-dotenv` in CI) → `RESULT: OK`.
-- [ ] Deploy; sign in at `/admin`; `/admin/operations` shows OK for public DB, admin DB, hashed password, production build.
+- [ ] Hosting platform chosen and project created (Phase 12 §3: `npm ci` · `npm run build` · `npm start`, Node ≥ 20.9);
+      pre-build gate `node scripts/config/check-config.mjs --production --no-dotenv --workflows` must not FAIL.
+- [ ] Deploy; public smoke test on the provider URL (Phase 12 §6: `/`, `/properties`, draft 404, inquiry 409 for
+      non-published, security headers, no `X-Powered-By`).
+- [ ] Sign in at `/admin` (cookie `Secure; HttpOnly; SameSite=Lax`); `/admin/operations` shows OK for public DB, admin DB,
+      hashed password, production build.
+- [ ] Domain attached with HTTPS; `NEXT_PUBLIC_SITE_URL=https://<domain>`; **redeploy** (build-time value); `og:image`
+      starts with the domain.
+- [x] Local production verification from a clean checkout against the dedicated project (Phase 12 §4–§8).
 
 ## 3. Database
 
