@@ -17,5 +17,6 @@
 | 11 | [phase-11-production-environment-and-e2e.md](phase-11-production-environment-and-e2e.md) | Dedicated realty Supabase project (separated from RSVP), project pinning, integration/E2E status and activation gate |
 | 12 | [phase-12-production-deployment.md](phase-12-production-deployment.md) | Deployment preparation: hosting settings, security headers, local production verification (deployment blocked: no platform/domain yet) |
 | 13 | [phase-13-production-launch-setup.md](phase-13-production-launch-setup.md) | Launch setup: placeholder-content gate, dead links removed, `npm run smoke` suite, exact launch blockers |
+| 14 | [phase-14-connect-production-infrastructure.md](phase-14-connect-production-infrastructure.md) | Production connection attempt: every resource still unavailable (blocked, nothing simulated) |
 
 Before going live: [production-launch-checklist.md](production-launch-checklist.md).
