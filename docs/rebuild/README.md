@@ -19,4 +19,4 @@
 | 13 | [phase-13-production-launch-setup.md](phase-13-production-launch-setup.md) | Launch setup: placeholder-content gate, dead links removed, `npm run smoke` suite, exact launch blockers |
 | 14 | [phase-14-connect-production-infrastructure.md](phase-14-connect-production-infrastructure.md) | Production connection attempt: every resource still unavailable (blocked, nothing simulated) |
 
-Before going live: [production-launch-checklist.md](production-launch-checklist.md).
+Current status: [final-launch-readiness.md](final-launch-readiness.md). Going live (operator steps): [production-launch-checklist.md](production-launch-checklist.md).
