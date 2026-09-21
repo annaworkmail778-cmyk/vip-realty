@@ -30,7 +30,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/advance_media_pipeline",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/advance_media_pipeline",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -61,7 +61,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/claim_media_downloads",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/claim_media_downloads",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -248,7 +248,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "=https://muqfjbkeyvvfvlodzujs.supabase.co/storage/v1/object/whatsapp-media/{{ $json.storage_path }}",
+        "url": "=https://vqdxqqsvlkddgkzulaxv.supabase.co/storage/v1/object/whatsapp-media/{{ $json.storage_path }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
@@ -340,7 +340,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/complete_media_download",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/complete_media_download",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -381,7 +381,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_media_failure",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/record_media_failure",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -412,7 +412,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/claim_media_validations",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/claim_media_validations",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -457,7 +457,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "=https://muqfjbkeyvvfvlodzujs.supabase.co/storage/v1/object/whatsapp-media/{{ $json.storage_path }}",
+        "url": "=https://vqdxqqsvlkddgkzulaxv.supabase.co/storage/v1/object/whatsapp-media/{{ $json.storage_path }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -504,7 +504,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_media_validation",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/record_media_validation",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -545,7 +545,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/claim_media_attachments",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/claim_media_attachments",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -590,7 +590,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "=https://muqfjbkeyvvfvlodzujs.supabase.co/storage/v1/object/whatsapp-media/{{ $json.source_path }}",
+        "url": "=https://vqdxqqsvlkddgkzulaxv.supabase.co/storage/v1/object/whatsapp-media/{{ $json.source_path }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "options": {
@@ -666,7 +666,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "=https://muqfjbkeyvvfvlodzujs.supabase.co/storage/v1/object/property-images/{{ $json.target_path }}",
+        "url": "=https://vqdxqqsvlkddgkzulaxv.supabase.co/storage/v1/object/property-images/{{ $json.target_path }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
@@ -758,7 +758,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/complete_media_attachment",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/complete_media_attachment",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -799,7 +799,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_media_failure",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/record_media_failure",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -882,7 +882,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_media_failure",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/record_media_failure",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,

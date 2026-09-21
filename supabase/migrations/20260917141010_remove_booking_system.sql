@@ -34,8 +34,11 @@ begin
   if exists (select 1 from public.viewing_availability) or exists (select 1 from public.viewing_blackouts) then
     raise exception 'viewing availability data exists; refusing to remove the booking system';
   end if;
-  if to_regclass('public.rsvps') is null then
-    raise exception 'public.rsvps not found; unexpected project state, aborting';
+  -- Phase 11: the original shared-project sanity check (public.rsvps must exist) is removed so this history also
+  -- replays on the dedicated realty project, which by design has no RSVP tables.
+  if to_regclass('public.notification_events') is not null
+     and exists (select 1 from public.notification_events) then
+    raise exception 'notification_events is not empty; refusing to remove the booking system';
   end if;
   if exists (
     select 1
@@ -65,6 +68,11 @@ drop function public.queue_viewing_reminders(integer);
 drop function public.expire_viewing_confirmations();
 drop function public.viewing_open_slots(uuid, date, date);
 drop function public.viewing_slots_for_date(uuid, date);
+
+-- Booking notification outbox (created by the viewing schema; FK to viewing_bookings). In the original shared project
+-- it had already been dropped outside the migration history before this ran; Phase 11 adds the drop here so a fresh
+-- database converges to the same end state. `if exists` keeps it a no-op where it is already gone.
+drop table if exists public.notification_events;
 
 -- Booking tables (their indexes, constraints, trigger and FKs to properties go with them).
 drop table public.viewing_bookings;

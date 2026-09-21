@@ -36,6 +36,7 @@ Copy `.env.example` to `.env.local`:
 | Variable | Used for |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_PROJECT_REF` | Expected project ref (required in production; the config gate refuses any other project, including the one shared with the RSVP app) |
 | `SUPABASE_PUBLISHABLE_KEY` | Server-side public reads of published listings and inquiry submission (RLS-protected) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin listing management only. Server-only — never in client code or `NEXT_PUBLIC_*` |
 | `ADMIN_PASSWORD_HASH` | scrypt hash of the admin password (`npm run admin:hash-password`). Required in production |

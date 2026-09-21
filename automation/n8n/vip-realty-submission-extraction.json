@@ -30,7 +30,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/advance_submission_sessions",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/advance_submission_sessions",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -60,7 +60,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/claim_submission_session",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/claim_submission_session",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -173,7 +173,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_extraction_result",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/record_extraction_result",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -218,7 +218,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/record_extraction_failure",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/record_extraction_failure",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -281,7 +281,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/generate_pending_property_drafts",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/generate_pending_property_drafts",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,
@@ -344,7 +344,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/generate_property_draft",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/generate_property_draft",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,

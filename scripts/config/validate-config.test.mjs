@@ -13,12 +13,13 @@ const jwt = (claims) => `eyJ${b64({ alg: "HS256" }).slice(3)}.${b64(claims)}.zzs
 
 const HASH = "scrypt:16384:8:1:AAAAAAAAAAAAAAAAAAAAAA:" + "B".repeat(43);
 const good = {
-  NEXT_PUBLIC_SUPABASE_URL: "https://zzproject.supabase.co",
+  NEXT_PUBLIC_SUPABASE_URL: "https://zzzzphase11testrefzz.supabase.co",
   NEXT_PUBLIC_SITE_URL: "https://zz-phase10-test.am",
-  SUPABASE_PUBLISHABLE_KEY: jwt({ role: "anon", ref: "zzproject" }),
-  SUPABASE_SERVICE_ROLE_KEY: jwt({ role: "service_role", ref: "zzproject" }),
+  SUPABASE_PUBLISHABLE_KEY: jwt({ role: "anon", ref: "zzzzphase11testrefzz" }),
+  SUPABASE_SERVICE_ROLE_KEY: jwt({ role: "service_role", ref: "zzzzphase11testrefzz" }),
   ADMIN_SESSION_SECRET: "x".repeat(40),
   ADMIN_PASSWORD_HASH: HASH,
+  SUPABASE_PROJECT_REF: "zzzzphase11testrefzz",
 };
 
 test("complete production configuration passes", () => {
@@ -67,18 +68,18 @@ test("secrets exposed through NEXT_PUBLIC_ variables are errors", () => {
   assert.equal(validateConfig({ ...good, NEXT_PUBLIC_API_KEY: good.SUPABASE_SERVICE_ROLE_KEY }, { production: false }).ok, false);
 });
 
-test("committed n8n exports: inactive, one Supabase project, no hard-coded credentials", () => {
+test("committed n8n exports: inactive, the dedicated realty Supabase project only, no hard-coded credentials", () => {
   const dir = join(here, "..", "..", "automation", "n8n");
   const workflows = readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")));
   assert.equal(workflows.length, 4);
-  const r = validateWorkflows(workflows, { supabaseHost: "muqfjbkeyvvfvlodzujs.supabase.co" });
+  const r = validateWorkflows(workflows, { supabaseHost: "vqdxqqsvlkddgkzulaxv.supabase.co" });
   assert.equal(r.ok, true, r.errors.join("; "));
   assert.ok(r.workflows.every((w) => !w.active));
 });
 
 test("workflow checks catch activation, wrong project and hard-coded tokens", () => {
   const wf = (over) => ({ name: "VIP Realty — zz", active: false, nodes: [{ name: "n", type: "n8n-nodes-base.httpRequest",
-    parameters: { url: "https://zzproject.supabase.co/rest/v1/rpc/x", authentication: "predefinedCredentialType" },
+    parameters: { url: "https://zzzzphase11testrefzz.supabase.co/rest/v1/rpc/x", authentication: "predefinedCredentialType" },
     credentials: { supabaseApi: { name: "VIP Realty Supabase (service role)" } } }], ...over });
   assert.equal(validateWorkflows([wf({ active: true })]).ok, false);
   assert.equal(validateWorkflows([wf({})], { supabaseHost: "zzother.supabase.co" }).ok, false);
@@ -126,4 +127,24 @@ test("the site profile must exist and carry real brand and contact values in pro
   assert.ok(placeholder.errors.some((e) => e.includes("public_phone")));
   // a placeholder is an error even outside production: it must never reach the site
   assert.equal(validateSiteProfile({ ...complete, public_email: "a@example.com" }, { production: false }).ok, false);
+});
+
+test("the Supabase project is pinned: wrong project, missing pin and malformed pin are refused", () => {
+  const wrong = validateConfig({ ...good, SUPABASE_PROJECT_REF: "zzzzzzzzzzzzotherref" }, { production: true });
+  assert.ok(wrong.errors.some((e) => e.includes("SUPABASE_PROJECT_REF pins")), wrong.errors.join("; "));
+  const unpinned = validateConfig({ ...good, SUPABASE_PROJECT_REF: "" }, { production: true });
+  assert.ok(unpinned.errors.some((e) => e.includes("SUPABASE_PROJECT_REF")));
+  assert.equal(validateConfig({ ...good, SUPABASE_PROJECT_REF: "Not-A-Ref" }, { production: true }).ok, false);
+});
+
+test("the Supabase project shared with the RSVP app is refused in production unless explicitly pinned", () => {
+  const shared = "muqfjbkeyvvfvlodzujs";
+  const env = { ...good, NEXT_PUBLIC_SUPABASE_URL: `https://${shared}.supabase.co`,
+    SUPABASE_PUBLISHABLE_KEY: jwt({ role: "anon", ref: shared }), SUPABASE_SERVICE_ROLE_KEY: jwt({ role: "service_role", ref: shared }) };
+  const refused = validateConfig(env, { production: true });
+  assert.ok(refused.errors.some((e) => e.includes("shared with the RSVP app")), refused.errors.join("; "));
+  const rollback = validateConfig({ ...env, SUPABASE_PROJECT_REF: shared }, { production: true });
+  assert.equal(rollback.ok, true, rollback.errors.join("; "));
+  assert.ok(rollback.warnings.some((w) => w.includes("rollback")));
+  assert.ok(validateConfig(env, { production: false }).warnings.some((w) => w.includes("shared with the RSVP app")));
 });

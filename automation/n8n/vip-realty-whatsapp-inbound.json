@@ -63,7 +63,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://muqfjbkeyvvfvlodzujs.supabase.co/rest/v1/rpc/ingest_whatsapp_message",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/ingest_whatsapp_message",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendBody": true,

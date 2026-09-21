@@ -61,6 +61,7 @@ const SCRYPT_HASH = /^scrypt:(\d{4,7}):(\d{1,2}):(\d{1,2}):[A-Za-z0-9_-]{16,}:[A
 
 export const VARIABLES = [
   { name: "NEXT_PUBLIC_SUPABASE_URL", scope: "public", required: true, purpose: "Supabase project URL (browser-safe)" },
+  { name: "SUPABASE_PROJECT_REF", scope: "server", required: "production", purpose: "expected Supabase project ref; URL and keys must match it" },
   { name: "SUPABASE_PUBLISHABLE_KEY", scope: "server", required: true, purpose: "RLS-limited public reads + inquiries" },
   { name: "SUPABASE_SERVICE_ROLE_KEY", scope: "server-secret", required: true, purpose: "admin area (drafts, review, publish)" },
   { name: "ADMIN_SESSION_SECRET", scope: "server-secret", required: true, purpose: "signs admin sessions (32+ chars)" },
@@ -68,6 +69,12 @@ export const VARIABLES = [
   { name: "ADMIN_PASSWORD", scope: "server-secret", required: false, purpose: "plaintext admin password — local development only" },
   { name: "NEXT_PUBLIC_SITE_URL", scope: "public", required: "production", purpose: "canonical site URL (page metadata)" },
 ];
+
+/**
+ * Supabase projects shared with unrelated applications (the wedding RSVP app). Production must run on the dedicated
+ * realty project; pointing at a shared project is refused unless SUPABASE_PROJECT_REF pins it explicitly (rollback).
+ */
+export const SHARED_PROJECT_REFS = ["muqfjbkeyvvfvlodzujs"];
 
 /** Names that used to exist (booking era) and are no longer read by any code. */
 export const UNUSED = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "CRON_SECRET"];
@@ -113,6 +120,22 @@ export function validateConfig(env, { production }) {
   const projectRef = (() => {
     try { return new URL(get("NEXT_PUBLIC_SUPABASE_URL") ?? "").hostname.split(".")[0]; } catch { return null; }
   })();
+
+  // Project pinning: the URL must be the project the operator intends, not merely a consistent one.
+  const expectedRef = get("SUPABASE_PROJECT_REF");
+  if (!expectedRef) {
+    if (production) need("SUPABASE_PROJECT_REF", "pins the dedicated realty Supabase project");
+  } else if (!/^[a-z0-9]{20}$/.test(expectedRef)) {
+    errors.push("SUPABASE_PROJECT_REF is not a Supabase project ref (20 lowercase letters/digits)");
+  } else if (projectRef && projectRef !== expectedRef) {
+    errors.push(`NEXT_PUBLIC_SUPABASE_URL points to project ${projectRef}, but SUPABASE_PROJECT_REF pins ${expectedRef}`);
+  }
+  if (projectRef && SHARED_PROJECT_REFS.includes(projectRef)) {
+    const message = `NEXT_PUBLIC_SUPABASE_URL points to ${projectRef}, the Supabase project shared with the RSVP app — `
+      + "production must use the dedicated realty project";
+    if (production && expectedRef !== projectRef) errors.push(message);
+    else warnings.push(expectedRef === projectRef ? `${message} (explicitly pinned: rollback configuration)` : message);
+  }
 
   if (need("SUPABASE_PUBLISHABLE_KEY", "public listing reads and inquiries")) {
     const key = get("SUPABASE_PUBLISHABLE_KEY");
