@@ -11,11 +11,13 @@ export const site = {
   country: "Armenia",
 
 
+  /** Social profiles. `href: null` = not configured: the link is not rendered (never a dead "#" link). Set the
+   *  agency's real profile URLs before launch; the production config gate reports unset ones. */
   social: [
-    { label: "Instagram", href: "#" },
-    { label: "Facebook", href: "#" },
-    { label: "LinkedIn", href: "#" },
-  ],
+    { label: "Instagram", href: null },
+    { label: "Facebook", href: null },
+    { label: "LinkedIn", href: null },
+  ] as { label: string; href: string | null }[],
 
   nav: [
     { label: "Properties", href: "/properties" },

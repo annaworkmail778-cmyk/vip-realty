@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isPlaceholderContact, validateConfig, validateSiteProfile, validateWorkflows } from "./validate-config.mjs";
+import { isPlaceholderContact, validateConfig, validateContent, validateSiteProfile, validateWorkflows } from "./validate-config.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
@@ -147,4 +147,25 @@ test("the Supabase project shared with the RSVP app is refused in production unl
   assert.equal(rollback.ok, true, rollback.errors.join("; "));
   assert.ok(rollback.warnings.some((w) => w.includes("rollback")));
   assert.ok(validateConfig(env, { production: false }).warnings.some((w) => w.includes("shared with the RSVP app")));
+});
+
+test("placeholder public content blocks production and is only a warning in development", () => {
+  const dirty = { media: "export const MEDIA_IS_PLACEHOLDER = true;",
+    site: '{ value: "1+", label: "X", placeholder: true }, { label: "Instagram", href: "#" }' };
+  const prod = validateContent(dirty, { production: true });
+  assert.equal(prod.ok, false);
+  assert.equal(prod.errors.length, 3);
+  const dev = validateContent(dirty, { production: false });
+  assert.equal(dev.ok, true);
+  assert.equal(dev.warnings.length, 3);
+  const clean = validateContent({ media: "export const MEDIA_IS_PLACEHOLDER = false;",
+    site: '{ label: "Instagram", href: null }' }, { production: true });
+  assert.equal(clean.ok, true, clean.errors.join("; "));
+  assert.ok(clean.warnings.some((w) => w.includes("not configured")));
+});
+
+test("the committed site content is reported honestly (placeholders flagged, no dead links)", () => {
+  const read = (f) => readFileSync(join(here, "..", "..", "lib", f), "utf8");
+  const r = validateContent({ media: read("media.ts"), site: read("site.ts") }, { production: true });
+  assert.ok(!r.errors.some((e) => e.includes("dead")), "no dead links remain");
 });

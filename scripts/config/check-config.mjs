@@ -4,15 +4,16 @@
 //   npm run check:config -- --production release gate: exits 1 on any missing/unsafe production setting
 //   add --workflows                      also check the committed n8n exports (automation/n8n/*.json)
 //   add --n8n                            also check the LIVE n8n instance (needs N8N_API_URL + N8N_API_KEY)
-//   add --site                           also check the site agency's public brand/contact profile (reads the
-//                                        database with the publishable key; values are never printed)
+//   add --site                           also check public content placeholders (lib/media.ts, lib/site.ts) and the
+//                                        site agency's brand/contact profile (reads the database with the
+//                                        publishable key; values are never printed)
 //
 // Environment: process.env, plus .env / .env.local / .env.production(.local) loaded the same way Next.js does
 // (skip with --no-dotenv, e.g. in CI where the platform injects variables).
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import nextEnv from "@next/env";
-import { N8N_CREDENTIALS, VARIABLES, validateConfig, validateSiteProfile, validateWorkflows } from "./validate-config.mjs";
+import { N8N_CREDENTIALS, VARIABLES, validateConfig, validateContent, validateSiteProfile, validateWorkflows } from "./validate-config.mjs";
 
 const args = new Set(process.argv.slice(2));
 const production = args.has("--production") || process.env.NODE_ENV === "production";
@@ -51,6 +52,17 @@ if (args.has("--workflows")) {
 }
 
 if (args.has("--site")) {
+  out("");
+  out("Public content (lib/media.ts, lib/site.ts):");
+  const content = validateContent({
+    media: readFileSync(join(process.cwd(), "lib", "media.ts"), "utf8"),
+    site: readFileSync(join(process.cwd(), "lib", "site.ts"), "utf8"),
+  }, { production });
+  for (const e of content.errors) out(`  ERROR    ${e}`);
+  for (const w of content.warnings) out(`  warning  ${w}`);
+  if (content.errors.length + content.warnings.length === 0) out("  no placeholder content");
+  failed ||= !content.ok;
+
   out("");
   out("Website brand and contact profile (database):");
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");

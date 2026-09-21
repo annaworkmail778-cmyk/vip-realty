@@ -249,3 +249,26 @@ export function validateWorkflows(workflows, { allowActive = false, supabaseHost
   }
   return { ok: errors.length === 0, errors, warnings, workflows: vip.map((w) => ({ name: w.name, active: Boolean(w.active) })) };
 }
+
+/**
+ * Public-content readiness, from the source files that hold non-agency content (the agency's brand and contacts are
+ * checked from the database by validateSiteProfile). Production: every placeholder is an error; development: warning.
+ * @param {{ media: string, site: string }} sources  contents of lib/media.ts and lib/site.ts
+ */
+export function validateContent({ media, site }, { production }) {
+  const problems = [];
+  if (/MEDIA_IS_PLACEHOLDER\s*=\s*true/.test(media)) {
+    problems.push("placeholder imagery is still on the site (lib/media.ts MEDIA_IS_PLACEHOLDER = true)");
+  }
+  const stats = (site.match(/placeholder:\s*true/g) ?? []).length;
+  if (stats > 0) problems.push(`${stats} placeholder statistic(s) in lib/site.ts (replace with audited figures or remove)`);
+  const dead = (site.match(/href:\s*"#"/g) ?? []).length;
+  if (dead > 0) problems.push(`${dead} dead "#" link(s) in lib/site.ts`);
+  const unsetSocial = (site.match(/label:\s*"[^"]+",\s*href:\s*null/g) ?? []).length;
+  const warnings = unsetSocial > 0 ? [`${unsetSocial} social link(s) not configured in lib/site.ts (hidden on the site)`] : [];
+  return {
+    ok: !production || problems.length === 0,
+    errors: production ? problems : [],
+    warnings: production ? warnings : [...problems, ...warnings],
+  };
+}

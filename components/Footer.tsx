@@ -11,6 +11,7 @@ import type { DistrictOption } from "@/lib/listings/types";
 export async function Footer({ districts }: { districts: DistrictOption[] }) {
   const year = new Date().getFullYear();
   const profile = await getSiteProfile();
+  const socialLinks = site.social.flatMap((s) => (s.href ? [{ label: s.label, href: s.href }] : []));
   const tel = telHref(profile);
 
   return (
@@ -61,13 +62,16 @@ export async function Footer({ districts }: { districts: DistrictOption[] }) {
               {profile.officeHours && <li className="text-ivory/55">{profile.officeHours}</li>}
               {!profile.configured && <li className="text-ivory/55">Contact details are being set up.</li>}
             </ul>
-            <ul className="mt-6 flex gap-5">
-              {site.social.map((s) => (
-                <li key={s.label}>
-                  <a href={s.href} className="label link-underline text-ivory/60 hover:text-ivory">{s.label}</a>
-                </li>
-              ))}
-            </ul>
+            {socialLinks.length > 0 && (
+              <ul className="mt-6 flex gap-5">
+                {socialLinks.map((s) => (
+                  <li key={s.label}>
+                    <a href={s.href} rel="noopener noreferrer" target="_blank"
+                       className="label link-underline text-ivory/60 hover:text-ivory">{s.label}</a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -75,7 +79,7 @@ export async function Footer({ districts }: { districts: DistrictOption[] }) {
           <p className="label text-ivory/35">© {year} {profile.legalName}</p>
           <p className="label text-ivory/35">
             {MEDIA_IS_PLACEHOLDER
-              ? "Placeholder imagery, contact details and statistics"
+              ? "Placeholder imagery and statistics"
               : `${site.city}, ${site.country}`}
           </p>
         </div>
