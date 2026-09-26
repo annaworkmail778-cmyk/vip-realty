@@ -1,12 +1,16 @@
 import Image from "next/image";
 import { ButtonLink } from "@/components/ui/ArrowLink";
 import { media } from "@/lib/media";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { fill } from "@/lib/i18n/fill";
 
 /* ----------------------------------------------------------------------------
    09 — Closing. One image, one sentence, two ways forward.
 ---------------------------------------------------------------------------- */
 
-export function FinalCTA({ brandName }: { brandName: string }) {
+export async function FinalCTA({ brandName }: { brandName: string }) {
+  const { dict } = await getDictionary();
+
   return (
     <section
       id="contact"
@@ -26,15 +30,17 @@ export function FinalCTA({ brandName }: { brandName: string }) {
       <div className="pointer-events-none absolute inset-0 bg-black/45" aria-hidden />
 
       <div className="shell relative py-[var(--spacing-section)]">
-        <p data-reveal="fade" className="label text-champagne">Find your place. Own your next chapter.</p>
+        <p data-reveal="fade" className="label text-champagne">{dict.cta.eyebrow}</p>
 
         <h2 data-reveal="up" className="display-lg mx-auto mt-8 max-w-[16ch]">
-          Your next address is closer than you think.
+          {dict.cta.title}
         </h2>
 
         <div data-reveal="up" className="mt-12 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-          <ButtonLink href="/properties">Explore properties</ButtonLink>
-          <ButtonLink href="/#footer-contact" variant="outline">Contact {brandName}</ButtonLink>
+          <ButtonLink href="/properties">{dict.hero.explore}</ButtonLink>
+          <ButtonLink href="/#footer-contact" variant="outline">
+            {fill(dict.contact.contactBrand, { brand: brandName })}
+          </ButtonLink>
         </div>
       </div>
     </section>

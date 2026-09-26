@@ -2,48 +2,44 @@
 
    The brand name, legal name and every contact detail come from the configured
    agency in the database (lib/site/profile.ts) — never from this file, so the
-   site can never ship placeholder contact details. */
+   site can never ship placeholder contact details.
+
+   Visitor-facing WORDING lives in lib/i18n/dictionaries/* so it can switch
+   language. What remains here is structure: routes, social profiles, and the
+   numeric statistics. Each entry carries a `key` that selects its translated
+   label from the dictionary; the routes and figures themselves never change
+   with the language. */
 
 export const site = {
-  tagline: "Premium Property Solutions",
-  concept: "The Art of Finding Home",
-  city: "Yerevan",
-  country: "Armenia",
-
-
   /** Social profiles. `href: null` = not configured: the link is not rendered (never a dead "#" link). Set the
-   *  agency's real profile URLs before launch; the production config gate reports unset ones. */
+   *  agency's real profile URLs before launch; the production config gate reports unset ones.
+   *  Network names are brand names and are deliberately not translated. */
   social: [
     { label: "Instagram", href: null },
     { label: "Facebook", href: null },
     { label: "LinkedIn", href: null },
   ] as { label: string; href: string | null }[],
 
+  /* `key` selects the translated label from the dictionary (dict.nav[key]); the
+     `href` is the route and is never translated. `label` remains the English
+     fallback and the stable React key. */
   nav: [
-    { label: "Properties", href: "/properties" },
-    { label: "Buy", href: "/properties?intent=buy" },
-    { label: "Rent", href: "/properties?intent=rent" },
-    { label: "Land", href: "/properties?intent=land" },
-    { label: "About", href: "/#about" },
-    { label: "Contact", href: "/#contact" },
-  ],
+    { key: "properties", label: "Properties", href: "/properties" },
+    { key: "buy", label: "Buy", href: "/properties?intent=buy" },
+    { key: "rent", label: "Rent", href: "/properties?intent=rent" },
+    { key: "land", label: "Land", href: "/properties?intent=land" },
+    { key: "about", label: "About", href: "/#about" },
+    { key: "contact", label: "Contact", href: "/#contact" },
+  ] as { key: "properties" | "buy" | "rent" | "land" | "about" | "contact"; label: string; href: string }[],
 
   /**
    * PLACEHOLDER statistics. These are illustrative only — replace `value`
    * with audited figures before publishing, or drop entries entirely.
+   * `key` selects the translated caption (dict.about[key]).
    */
   stats: [
-    { value: "1,500+", label: "Properties", placeholder: true },
-    { value: "10+", label: "Years Experience", placeholder: true },
-    { value: "500+", label: "Clients", placeholder: true },
-  ],
-
-  about: {
-    headline: ["More than property.", "A better way home."],
-    /** `{brand}` is replaced with the configured agency's display name. */
-    body: [
-      "{brand} works at the intersection of architecture and everyday life. We look at light, proportion, orientation and neighbourhood before we look at square metres — because those are the things you live with.",
-      "Every listing we take on is visited, photographed and understood before it reaches this page. What you see here is a selected view of the market, not all of it.",
-    ],
-  },
+    { key: "statProperties", value: "1,500+", placeholder: true },
+    { key: "statYears", value: "10+", placeholder: true },
+    { key: "statClients", value: "500+", placeholder: true },
+  ] as { key: "statProperties" | "statYears" | "statClients"; value: string; placeholder: boolean }[],
 } as const;

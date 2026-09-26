@@ -7,6 +7,8 @@ import { Logo } from "@/components/ui/Logo";
 import { PropertyFilters, EMPTY_FILTERS, filtersToQuery, type FilterState } from "@/components/PropertyFilters";
 import { site } from "@/lib/site";
 import { useSiteProfile } from "@/components/site/SiteProfileProvider";
+import { useDict } from "@/components/site/LocaleProvider";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { telHref } from "@/lib/site/profile";
 import type { DistrictOption } from "@/lib/listings/types";
 
@@ -22,6 +24,7 @@ type Tone = "dark" | "light";
 ---------------------------------------------------------------------------- */
 
 export function Navbar({ districts }: { districts: DistrictOption[] }) {
+  const dict = useDict();
   const [scrolled, setScrolled] = useState(false);
   const [tone, setTone] = useState<Tone>("dark");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -71,7 +74,10 @@ export function Navbar({ districts }: { districts: DistrictOption[] }) {
     return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
   }, [menuOpen, searchOpen]);
 
-  const light = scrolled && tone === "light" && !menuOpen;
+  // The text colour follows the section under the bar even before the page is
+  // scrolled: a light section at scroll-top would otherwise render ivory on ivory.
+  // The translucent background is still only applied once scrolled.
+  const light = tone === "light" && !menuOpen;
   const text = light ? "text-espresso" : "text-ivory";
 
   return (
@@ -88,7 +94,7 @@ export function Navbar({ districts }: { districts: DistrictOption[] }) {
         }`}
       >
         <nav
-          aria-label="Primary"
+          aria-label={dict.nav.primary}
           className="shell-wide flex h-[var(--nav-h)] items-center justify-between gap-6"
         >
           <Logo />
@@ -101,7 +107,7 @@ export function Navbar({ districts }: { districts: DistrictOption[] }) {
                   className="label link-underline opacity-80 transition-opacity duration-300 hover:opacity-100"
                   data-active={pathname === item.href ? "true" : undefined}
                 >
-                  {item.label}
+                  {dict.nav[item.key]}
                 </Link>
               </li>
             ))}
@@ -115,8 +121,10 @@ export function Navbar({ districts }: { districts: DistrictOption[] }) {
               aria-haspopup="dialog"
             >
               <SearchIcon />
-              <span className="link-underline">Search</span>
+              <span className="link-underline">{dict.nav.search}</span>
             </button>
+
+            <LanguageSwitcher className="hidden sm:flex" />
 
             <button
               type="button"
@@ -124,9 +132,9 @@ export function Navbar({ districts }: { districts: DistrictOption[] }) {
               className="label flex items-center gap-3 lg:hidden"
               aria-expanded={menuOpen}
               aria-controls="mobile-menu"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-label={menuOpen ? dict.nav.close : dict.nav.menu}
             >
-              <span className="hidden sm:inline">{menuOpen ? "Close" : "Menu"}</span>
+              <span className="hidden sm:inline">{menuOpen ? dict.nav.close : dict.nav.menu}</span>
               <span className="relative block h-3 w-6" aria-hidden>
                 <span
                   className={`absolute left-0 block h-px w-6 bg-current transition-transform duration-500 ${
@@ -160,6 +168,7 @@ function SearchIcon() {
 }
 
 function MobileMenu({ open, onSearch }: { open: boolean; onSearch: () => void }) {
+  const dict = useDict();
   return (
     <div
       id="mobile-menu"
@@ -176,16 +185,28 @@ function MobileMenu({ open, onSearch }: { open: boolean; onSearch: () => void })
               style={{ transitionDelay: open ? `${120 + i * 60}ms` : "0ms" }}
               className={`transition-all duration-700 ${open ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
             >
-              <Link href={item.href} className="block py-2 font-display text-[13vw] leading-[1.05] text-ivory sm:text-6xl">
-                {item.label}
+              <Link
+                href={item.href}
+                /* The floor is below 2rem so a long Armenian nav word
+                   ("Վարձակալություն") still fits on a very narrow phone; the
+                   vw term governs from ~355px up, so 375 and wider are
+                   unchanged. */
+                className="block py-2 font-display text-[clamp(1.55rem,9vw,3.25rem)] leading-[1.08] text-ivory"
+              >
+                {dict.nav[item.key]}
               </Link>
             </li>
           ))}
         </ul>
         <div className="space-y-6">
           <button type="button" onClick={onSearch} className="label-lg text-champagne">
-            Search properties →
+            {dict.nav.searchTitle} →
           </button>
+          <div className="rule" />
+          <div>
+            <p className="label text-ivory/35">{dict.locale.label}</p>
+            <LanguageSwitcher size="stacked" className="mt-3 text-ivory" />
+          </div>
           <div className="rule" />
           <MenuContact />
         </div>
@@ -197,6 +218,7 @@ function MobileMenu({ open, onSearch }: { open: boolean; onSearch: () => void })
 function SearchOverlay({
   open, onClose, districts,
 }: { open: boolean; onClose: () => void; districts: DistrictOption[] }) {
+  const dict = useDict();
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const router = useRouter();
 
@@ -204,7 +226,7 @@ function SearchOverlay({
     <div
       role="dialog"
       aria-modal={open}
-      aria-label="Search properties"
+      aria-label={dict.nav.searchTitle}
       aria-hidden={!open}
       className={`fixed inset-0 z-[95] transition-[opacity,visibility] duration-500 ${
         open ? "visible opacity-100" : "invisible opacity-0"
@@ -212,7 +234,7 @@ function SearchOverlay({
     >
       <button
         type="button"
-        aria-label="Close search"
+        aria-label={dict.nav.close}
         onClick={onClose}
         className="absolute inset-0 h-full w-full cursor-default bg-black/75 backdrop-blur-sm"
       />
@@ -224,11 +246,11 @@ function SearchOverlay({
         <div className="shell pb-14 pt-[calc(var(--nav-h)+2.5rem)]">
           <div className="flex items-start justify-between gap-8">
             <div>
-              <p className="label text-champagne">Search</p>
-              <h2 className="display-sm mt-3 text-ivory">What are you looking for?</h2>
+              <p className="label text-champagne">{dict.nav.search}</p>
+              <h2 className="display-sm mt-3 text-ivory">{dict.nav.searchTitle}</h2>
             </div>
             <button type="button" onClick={onClose} className="label text-ivory/60 hover:text-ivory">
-              Close ✕
+              {dict.nav.close} ✕
             </button>
           </div>
 
@@ -245,7 +267,7 @@ function SearchOverlay({
               type="submit"
               className="label-lg group mt-8 inline-flex items-center gap-3 bg-ivory px-8 py-4 text-ink transition-colors duration-500 hover:bg-champagne"
             >
-              Search properties
+              {dict.filters.showResults}
               <span className="arrow-slide" aria-hidden>→</span>
             </button>
           </form>

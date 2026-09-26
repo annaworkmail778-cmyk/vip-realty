@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { ButtonLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap } from "@/lib/motion";
 import { media } from "@/lib/media";
-import { site } from "@/lib/site";
+import { useDict } from "@/components/site/LocaleProvider";
 import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 
 /* ----------------------------------------------------------------------------
@@ -15,6 +15,7 @@ import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 
 export function Hero() {
   const { brandName } = useSiteProfile();
+  const dict = useDict();
   const root = useRef<HTMLElement>(null);
 
   useGsap(() => {
@@ -72,11 +73,11 @@ export function Hero() {
         <p data-hero="label" className="label pt-[calc(var(--nav-h)+clamp(1.5rem,7vh,4rem))] text-ivory/70">
           <span className="text-champagne">{brandName.toUpperCase()}</span>
           <span className="mx-3 opacity-40">/</span>
-          {site.tagline.toUpperCase()}
+          {dict.brand.tagline}
         </p>
 
         <h1 className="display-xl mt-auto text-ivory">
-          {["Find", "your place."].map((line) => (
+          {dict.hero.headline.map((line) => (
             <span key={line} className="block overflow-hidden">
               <span data-hero="line" className="block">
                 {line}
@@ -87,21 +88,21 @@ export function Hero() {
 
         <div className="mt-8 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <p data-hero="copy" className="measure text-[1.02rem] font-light leading-relaxed text-ivory/75">
-            Discover properties selected for the way you want to live.
+            {dict.hero.copy}
           </p>
 
           <div data-hero="cta" className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <ButtonLink href="/properties">Explore properties</ButtonLink>
-            <ButtonLink href="/#contact" variant="outline">Contact us</ButtonLink>
+            <ButtonLink href="/properties">{dict.hero.explore}</ButtonLink>
+            <ButtonLink href="/#contact" variant="outline">{dict.contact.contactUs}</ButtonLink>
           </div>
         </div>
 
         <div className="mt-8 flex items-center justify-between border-t border-ivory/12 pt-5" data-hero="scroll">
           <a href="#search" className="label group flex items-center gap-3 text-ivory/60 transition-colors hover:text-ivory">
-            Scroll to explore
+            {dict.hero.scroll}
             <span className="inline-block animate-[bounce_2.8s_ease-in-out_infinite] text-champagne" aria-hidden>↓</span>
           </a>
-          <p className="label hidden text-ivory/40 sm:block">{site.city}, {site.country}</p>
+          <p className="label hidden text-ivory/40 sm:block">{dict.brand.city}, {dict.brand.country}</p>
         </div>
       </div>
     </section>

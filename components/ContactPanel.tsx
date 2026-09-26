@@ -3,8 +3,9 @@
 import { InquiryButton } from "@/components/inquiry/InquiryButton";
 import type { InquiryListing } from "@/components/inquiry/InquiryDialog";
 import { useSiteProfile } from "@/components/site/SiteProfileProvider";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
+import { fill } from "@/lib/i18n/fill";
 import { telHref, whatsappUrl } from "@/lib/site/profile";
-import { formatPrice } from "@/lib/listings/format";
 import type { Listing } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
@@ -14,38 +15,73 @@ import type { Listing } from "@/lib/listings/types";
    action is shown only when that detail exists. The WhatsApp message is
    prefilled with the listing title and its public reference (slug) only —
    nothing internal.
+
+   `tone` follows the house convention (see ArrowLink, SectionLabel,
+   PropertyFilters): "light" for the ivory inventory surfaces, "dark" for the
+   cinematic brand sections.
 ---------------------------------------------------------------------------- */
 
-export function ContactPanel({ listing, inquiry }: { listing: Listing; inquiry: InquiryListing }) {
+export function ContactPanel({
+  listing,
+  inquiry,
+  tone = "dark",
+}: {
+  listing: Listing;
+  inquiry: InquiryListing;
+  tone?: "dark" | "light";
+}) {
   const profile = useSiteProfile();
-  const enquiry = `Hello ${profile.brandName} — I'd like to know more about ${listing.name} (${listing.districtLabel ?? listing.city}), listed at ${formatPrice(listing)}. Ref: ${listing.slug}`;
+  const dict = useDict();
+  const fmt = useFormat();
+  /* The listing title, place and price are inserted exactly as stored /
+     formatted; only the sentence around them is translated. */
+  const enquiry = fill(dict.contact.whatsappListing, {
+    brand: profile.brandName,
+    name: listing.name,
+    place: listing.districtLabel ?? listing.city,
+    price: fmt.price(listing),
+    slug: listing.slug,
+  });
   const tel = telHref(profile);
   const whatsapp = whatsappUrl(profile, enquiry);
+  const light = tone === "light";
+
+  const t = {
+    shell: light ? "card p-7" : "border border-ivory/12 bg-espresso/30 p-7",
+    muted: light ? "text-espresso/50" : "text-ivory/40",
+    faint: light ? "text-espresso/45" : "text-ivory/35",
+    price: light ? "text-ink" : "text-champagne",
+    name: light ? "text-ink" : "text-ivory",
+    hours: light ? "text-cocoa" : "text-ivory/50",
+    link: light ? "text-espresso/80 hover:text-ink" : "text-ivory/80 hover:text-ivory",
+    divider: light ? "border-espresso/12" : "border-ivory/12",
+    whatsapp: light
+      ? "bg-ink text-parchment hover:bg-espresso"
+      : "bg-ivory text-ink hover:bg-champagne",
+  };
 
   return (
     <aside className="lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)]">
-      <div className="border border-ivory/12 bg-espresso/30 p-7">
-        <p className="label text-ivory/40">Price</p>
-        <p className="mt-2 font-display text-[2.1rem] leading-none text-champagne">{formatPrice(listing)}</p>
+      <div className={t.shell}>
+        <p className={`label ${t.muted}`}>{dict.contact.price}</p>
+        <p className={`price price-lg mt-2 ${t.price}`}>{fmt.price(listing)}</p>
 
         <div className="mt-6">
-          <InquiryButton listing={inquiry} />
-          <p className="label mt-3 text-ivory/35">
-            Leave your details and we&rsquo;ll get back to you.
-          </p>
+          <InquiryButton listing={inquiry} variant={light ? "ink" : "primary"} />
+          <p className={`label mt-3 ${t.faint}`}>{dict.contact.leaveDetails}</p>
         </div>
 
-        <div className="mt-7 border-t border-ivory/12 pt-6">
-          <p className="label text-ivory/40">Contact</p>
-          <p className="mt-3 font-display text-[1.35rem] leading-tight text-ivory">{profile.legalName}</p>
-          {profile.officeHours && <p className="label mt-2 text-ivory/50">{profile.officeHours}</p>}
+        <div className={`mt-7 border-t pt-6 ${t.divider}`}>
+          <p className={`label ${t.muted}`}>{dict.contact.contact}</p>
+          <p className={`mt-3 font-display text-[1.35rem] leading-tight ${t.name}`}>{profile.legalName}</p>
+          {profile.officeHours && <p className={`label mt-2 ${t.hours}`}>{profile.officeHours}</p>}
 
           <div className="mt-5 space-y-2.5">
             {tel && (
-              <a href={tel} className="label link-underline block text-ivory/80 hover:text-ivory">{profile.phone}</a>
+              <a href={tel} className={`label link-underline block ${t.link}`}>{profile.phone}</a>
             )}
             {profile.email && (
-              <a href={`mailto:${profile.email}`} className="label link-underline block text-ivory/80 hover:text-ivory">
+              <a href={`mailto:${profile.email}`} className={`label link-underline block ${t.link}`}>
                 {profile.email}
               </a>
             )}
@@ -56,10 +92,10 @@ export function ContactPanel({ listing, inquiry }: { listing: Listing; inquiry: 
               href={whatsapp}
               target="_blank"
               rel="noreferrer"
-              className="label-lg mt-6 flex w-full items-center justify-center gap-3 bg-ivory px-6 py-4 text-ink transition-colors duration-500 hover:bg-champagne"
+              className={`label-lg mt-6 flex w-full items-center justify-center gap-3 px-6 py-4 transition-colors duration-500 ${t.whatsapp}`}
             >
               <WhatsAppIcon />
-              Message on WhatsApp
+              {dict.contact.whatsapp}
             </a>
           )}
         </div>

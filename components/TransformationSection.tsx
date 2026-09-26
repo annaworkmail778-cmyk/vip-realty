@@ -6,6 +6,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { gsap, prefersReducedMotion, useIsoLayoutEffect } from "@/lib/motion";
 import { media } from "@/lib/media";
+import { useDict } from "@/components/site/LocaleProvider";
 
 /* ----------------------------------------------------------------------------
    04 — From space to possibility.
@@ -25,9 +26,9 @@ import { media } from "@/lib/media";
    the section is roughly a viewport away.
 ---------------------------------------------------------------------------- */
 
-const STAGES = ["Empty space", "Structure", "Materials", "Furniture", "Light", "Home"];
-
 export function TransformationSection() {
+  const dict = useDict();
+  const stages = dict.transformation.stages;
   const root = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const duration = useRef(0);
@@ -65,6 +66,9 @@ export function TransformationSection() {
     };
   }, []);
 
+  // Read once so the scroll timeline does not depend on the dictionary object.
+  const stageCount = stages.length;
+
   useIsoLayoutEffect(() => {
     const el = root.current;
     if (!el || prefersReducedMotion()) return;
@@ -94,14 +98,14 @@ export function TransformationSection() {
           // the last frame and show black.
           v.currentTime = Math.min(progress.t * d, d - 0.05);
 
-          const next = Math.min(STAGES.length - 1, Math.floor(progress.t * STAGES.length));
+          const next = Math.min(stageCount - 1, Math.floor(progress.t * stageCount));
           setStage((prev) => (prev === next ? prev : next));
         },
       });
     }, el);
 
     return () => ctx.revert();
-  }, []);
+  }, [stageCount]);
 
   return (
     <section
@@ -138,18 +142,18 @@ export function TransformationSection() {
 
       <div className="shell relative flex h-full flex-col pb-[clamp(1.5rem,4vh,3rem)] pt-[calc(var(--nav-h)+clamp(1.5rem,6vh,4rem))]">
         <div>
-          <SectionLabel index="04">Transformation</SectionLabel>
+          <SectionLabel index="04">{dict.transformation.label}</SectionLabel>
           <h2 className="display-md mt-6 max-w-[12ch]">
-            From space<br />to possibility.
+            {dict.transformation.title[0]}<br />{dict.transformation.title[1]}
           </h2>
         </div>
 
         <div className="mt-auto">
-          <p className="display-sm text-ivory">See what&rsquo;s possible.</p>
+          <p className="display-sm text-ivory">{dict.transformation.lead}</p>
 
           <div className="mt-6 flex flex-wrap items-end justify-between gap-x-10 gap-y-5 border-t border-ivory/12 pt-5">
             <ol className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              {STAGES.map((s, i) => (
+              {stages.map((s, i) => (
                 <li key={s} className="flex items-center gap-4">
                   <span
                     className={`label whitespace-nowrap transition-colors duration-500 ${
@@ -158,7 +162,7 @@ export function TransformationSection() {
                   >
                     {s}
                   </span>
-                  {i < STAGES.length - 1 && (
+                  {i < stages.length - 1 && (
                     <span
                       aria-hidden
                       className={`hidden h-px w-5 transition-colors duration-500 sm:block ${
@@ -171,13 +175,11 @@ export function TransformationSection() {
             </ol>
 
             <ArrowLink href="/properties" className="hidden lg:inline-flex">
-              Explore properties
+              {dict.hero.explore}
             </ArrowLink>
           </div>
 
-          <p className="label mt-4 text-ivory/35">
-            Scroll to move through the space · scroll back to reverse it
-          </p>
+          <p className="label mt-4 text-ivory/35">{dict.transformation.hint}</p>
         </div>
       </div>
     </section>

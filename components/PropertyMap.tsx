@@ -5,9 +5,11 @@ import Image from "next/image";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { YerevanMap } from "@/components/YerevanMap";
 import { ArrowLink } from "@/components/ui/ArrowLink";
-import { formatArea, formatPrice, metaLine, positionLabel } from "@/lib/listings/format";
+import { positionLabel } from "@/lib/listings/format";
 import { MAP_DISTRICTS as DISTRICTS } from "@/lib/listings/taxonomy";
 import type { Listing, MapDistrictId as District } from "@/lib/listings/types";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
+import { fill } from "@/lib/i18n/fill";
 
 /* ----------------------------------------------------------------------------
    07 — Find your place in Yerevan.
@@ -29,6 +31,8 @@ export function PropertyMap({
   properties: Listing[];
   className?: string;
 }) {
+  const dict = useDict();
+  const fmt = useFormat();
   const [district, setDistrict] = useState<District | null>(null);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
 
@@ -55,15 +59,14 @@ export function PropertyMap({
       className={`relative bg-ink py-[var(--spacing-section)] text-ivory ${className}`}
     >
       <div className="shell">
-        <SectionLabel index="07">Neighbourhoods</SectionLabel>
+        <SectionLabel index="07">{dict.map.label}</SectionLabel>
 
         <div className="mt-7 flex flex-wrap items-end justify-between gap-8">
           <h2 data-reveal="up" className="display-lg max-w-[15ch]">
-            Find your place<br />in Yerevan.
+            {dict.map.title[0]}<br />{dict.map.title[1]}
           </h2>
           <p data-reveal="up" className="measure pb-2 text-sm font-light leading-relaxed text-ivory/55">
-            Five districts, five different ways to live in the same city. Select one to see
-            what is available.
+            {dict.map.note}
           </p>
         </div>
 
@@ -75,7 +78,7 @@ export function PropertyMap({
             className={`label transition-colors duration-500 ${district === null ? "text-champagne" : "text-ivory/45 hover:text-ivory"}`}
             aria-pressed={district === null}
           >
-            All Yerevan
+            {dict.map.all}
           </button>
           {DISTRICTS.map((d) => (
             <button
@@ -87,7 +90,7 @@ export function PropertyMap({
                 district === d.id ? "text-champagne" : "text-ivory/45 hover:text-ivory"
               }`}
             >
-              {d.label}
+              {fmt.district(d.id)}
             </button>
           ))}
         </div>
@@ -106,20 +109,18 @@ export function PropertyMap({
               onSelectPin={setActiveSlug}
             />
 
-            <p className="label mt-4 text-ivory/30">
-              Stylized map · placeholder geometry
-            </p>
+            <p className="label mt-4 text-ivory/30">{dict.map.placeholderNote}</p>
           </div>
 
           {/* preview panel */}
           <div data-reveal="up" className="lg:sticky lg:top-[calc(var(--nav-h)+2rem)] lg:self-start">
             <p className="label text-ivory/45">
-              {district ? DISTRICTS.find((d) => d.id === district)?.label : "All Yerevan"} ·{" "}
-              <span className="text-champagne">{visible.length} available</span>
+              {district ? fmt.district(district) : dict.map.all} ·{" "}
+              <span className="text-champagne">{fill(dict.map.available, { count: visible.length })}</span>
             </p>
             {district && (
               <p className="mt-3 max-w-[36ch] text-sm font-light leading-relaxed text-ivory/55">
-                {DISTRICTS.find((d) => d.id === district)?.blurb}
+                {fmt.districtBlurb(district)}
               </p>
             )}
 
@@ -139,19 +140,19 @@ export function PropertyMap({
                 </div>
                 <h3 className="display-sm mt-5">{preview.name}</h3>
                 <p className="label mt-3 text-ivory/50">
-                  {preview.districtLabel ?? preview.city} · {preview.typeLabel}
+                  {preview.districtLabel ?? preview.city} · {fmt.type(preview)}
                 </p>
-                <p className="label mt-2 text-champagne">{formatPrice(preview)}</p>
-                {metaLine(preview).length > 0 && (
-                  <p className="label mt-4 text-ivory/45">{metaLine(preview).join(" · ")}</p>
+                <p className="label mt-2 text-champagne">{fmt.price(preview)}</p>
+                {fmt.meta(preview).length > 0 && (
+                  <p className="label mt-4 text-ivory/45">{fmt.meta(preview).join(" · ")}</p>
                 )}
                 <div className="mt-6">
-                  <ArrowLink href={`/properties/${preview.slug}`}>View property</ArrowLink>
+                  <ArrowLink href={`/properties/${preview.slug}`}>{dict.property.view}</ArrowLink>
                 </div>
               </article>
             ) : (
               <p className="mt-6 border-t border-ivory/12 pt-6 text-sm text-ivory/50">
-                Nothing listed here at the moment. Try another neighbourhood.
+                {dict.map.empty}
               </p>
             )}
 
@@ -168,7 +169,7 @@ export function PropertyMap({
                     >
                       <span className="label">{positionLabel(i)} · {p.name}</span>
                       {(p.area ?? p.landArea) !== null && (
-                        <span className="label shrink-0 opacity-60">{formatArea((p.area ?? p.landArea)!)}</span>
+                        <span className="label shrink-0 opacity-60">{fmt.area((p.area ?? p.landArea)!)}</span>
                       )}
                     </button>
                   </li>

@@ -19,19 +19,58 @@
   --color-gold: #c9a227;
   --color-champagne: #d9be7a;
 
-  --font-display: var(--font-serif), "Cormorant Garamond", "Times New Roman", serif;
-  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, "Helvetica Neue", sans-serif;
+  /* Font stacks are spelled out by family name rather than through next/font's
+     CSS variables, because each variable expands to `"Family", "Family Fallback"`
+     and that Fallback is an unrestricted local face (size-adjusted Times New
+     Roman / Arial) that matches EVERY script. Behind its own family it would
+     swallow Cyrillic and Armenian before the cascade could reach the other real
+     family, which is how a Russian listing title on an Armenian page ended up in
+     Georgia.
+
+     Order, per position:
+       1  the UI locale's own face      — the UI and most content
+       2  the other script's face       — a listing stored in another language
+       3  the metric-adjusted fallback  — the swap window, before webfonts load
+       4  a generic
+
+     Listing content arrives from brokers in Armenian, Russian, a mix, or
+     occasionally English and is rendered exactly as stored, so every locale has
+     to cover every script with a BRAND face. Families are subset with
+     unicode-range, so position 2 is only downloaded when content needs it. */
+  --font-display: "Cormorant Garamond", "Noto Serif Armenian", "Cormorant Garamond Fallback", "Times New Roman", serif;
+  --font-sans: Jost, "Noto Sans Armenian", "Jost Fallback", ui-sans-serif, system-ui, "Helvetica Neue", sans-serif;
 
   --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-cinematic: cubic-bezier(0.65, 0.05, 0.36, 1);
 
   --spacing-section: clamp(5.5rem, 11vw, 11rem);
+
+  /* Inventory surfaces. The brand sections stay dark; the pages that exist to be
+     SCANNED — the index, the listing cards, the facts on a property page — sit on
+     ivory, which is what property photography needs. Both belong to the same palette. */
+  --color-parchment: #fffdf9;
+  --color-ivory-3: #e8dcc8;
+
+  --radius-card: 2px;
+  --shadow-card: 0 1px 2px rgb(20 17 15 / 0.05), 0 10px 28px -14px rgb(20 17 15 / 0.16);
+  --shadow-card-hover: 0 2px 4px rgb(20 17 15 / 0.06), 0 18px 40px -16px rgb(20 17 15 / 0.22);
+
+  /* Inventory rhythm: tighter than the cinematic --spacing-section. */
+  --spacing-inventory: clamp(3rem, 6vw, 5rem);
 }
 
 @layer base {
   :root {
     color-scheme: dark;
     --nav-h: 4.5rem;
+  }
+
+  /* Armenian leads with the Noto Armenian pair and keeps Cormorant/Jost at
+     position 2, so a Russian or mixed-script listing title on an Armenian page
+     still renders in a brand face. Same ordering rule as above. */
+  html[lang^="hy"] {
+    --font-display: "Noto Serif Armenian", "Cormorant Garamond", "Noto Serif Armenian Fallback", Georgia, serif;
+    --font-sans: "Noto Sans Armenian", Jost, "Noto Sans Armenian Fallback", ui-sans-serif, system-ui, sans-serif;
   }
 
   html {
@@ -55,12 +94,35 @@
     color: var(--color-black);
   }
 
+  /* Display type is where wrapping actually matters: Armenian and Russian form
+     long compound words that cannot break at a space, and at hero sizes on a
+     narrow phone one word can be wider than the viewport. `break-word` only
+     breaks a word that has no other way to fit, so ordinary lines are untouched.
+     Deliberately NOT applied to the whole document: phone numbers, e-mail
+     addresses, prices and `.label` metadata would then break mid-token. */
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     font-weight: 300;
     letter-spacing: -0.015em;
     line-height: 0.95;
     text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  /* Long-form body copy: the same reasoning, applied to paragraphs and list
+     items rather than to every element on the page. */
+  p, li, dd, dt, figcaption, blockquote {
+    overflow-wrap: break-word;
+  }
+
+  /* Never break inside a value a visitor may need to read or copy. */
+  a[href^="tel:"],
+  a[href^="mailto:"],
+  .price,
+  .badge,
+  code {
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   /* Thin, brand-toned scrollbar rather than the OS default. */
@@ -129,6 +191,138 @@
 
   .gold-rule {
     background: linear-gradient(to right, var(--color-gold), rgb(201 162 39 / 0));
+  }
+
+  /* ------------------------------------------------------------------ inventory
+     Card titles sit below the editorial display scale: a grid of 60 listings must
+     not be 60 headlines. */
+  .display-xs { font-size: clamp(1.12rem, 1.5vw, 1.35rem); line-height: 1.18; }
+
+  /* Price is the one number a buyer scans for, so it is set in the grotesk at a
+     heavier weight with tabular figures — not in the light display serif. */
+  .price {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: clamp(1.28rem, 1.7vw, 1.55rem);
+    line-height: 1;
+    letter-spacing: -0.012em;
+    font-variant-numeric: tabular-nums;
+  }
+  .price-lg { font-size: clamp(1.7rem, 2.6vw, 2.35rem); }
+
+  /* Sale / rent marker. Brand-toned, never a traffic-light colour. */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.34rem 0.72rem;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.6rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* Listing card. 2px radius keeps the hard-edged editorial language while still
+     reading as an object you can click, rather than a bare image. */
+  .card {
+    background: var(--color-parchment);
+    border: 1px solid rgb(20 17 15 / 0.08);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    transition:
+      box-shadow 0.5s var(--ease-editorial),
+      transform 0.5s var(--ease-editorial),
+      border-color 0.5s var(--ease-editorial);
+  }
+  .group:hover .card {
+    box-shadow: var(--shadow-card-hover);
+    border-color: rgb(20 17 15 / 0.14);
+    transform: translateY(-2px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .group:hover .card { transform: none; }
+  }
+
+  /* Hairline used to separate facts on a light surface. */
+  .rule-ink { height: 1px; background: rgb(20 17 15 / 0.1); }
+
+  /* District names on the stylized map. Uppercased in CSS rather than in JS so
+     the Armenian override below can opt out. */
+  .map-district-label { text-transform: uppercase; }
+
+  /* Latin brand lettering: the wordmark lockup and the gate's eyebrow. It is the
+     agency's mark, not UI copy, so it keeps its uppercase and wide tracking in
+     every locale — which is why it does NOT use `.label` (that class is retuned
+     for Armenian below). Tracking is set per use with a utility. */
+  .wordmark {
+    font-family: var(--font-sans);
+    font-weight: 400;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Armenian typography
+
+   The small-caps metadata style (.label, .label-lg, .badge) is a Latin
+   convention: wide tracking plus an uppercase transform. Armenian is a
+   bicameral script with tall, narrow letterforms and its own capitals, and
+   all-caps Armenian at 0.26em reads as shouting rather than as quiet metadata —
+   it also costs roughly a third more width, which is what pushed headings off a
+   narrow phone. So for Armenian the transform is dropped and the tracking is
+   reduced to something the script actually wants, with a little more leading for
+   its ascenders and descenders.
+
+   English and Russian keep the original spacing exactly.
+--------------------------------------------------------------------------- */
+html[lang^="hy"] .label,
+html[lang^="hy"] .label-lg,
+html[lang^="hy"] .badge,
+html[lang^="hy"] .map-district-label,
+html[lang^="hy"] .admin-select {
+  text-transform: none;
+}
+
+html[lang^="hy"] .label {
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+html[lang^="hy"] .label-lg {
+  letter-spacing: 0.07em;
+  line-height: 1.5;
+}
+
+html[lang^="hy"] .badge {
+  letter-spacing: 0.05em;
+}
+
+/* Noto Serif Armenian sits on a larger apparent x-height than Cormorant and
+   carries real descenders (ը, ղ, ջ, պ), so the tight display leading that suits
+   the serif clips or crowds Armenian. */
+html[lang^="hy"] .display-xl,
+html[lang^="hy"] .display-lg,
+html[lang^="hy"] .display-md {
+  letter-spacing: -0.005em;
+  line-height: 1;
+}
+
+html[lang^="hy"] .display-sm,
+html[lang^="hy"] .display-xs {
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+/* The mobile sticky contact bar is fixed, and the footer is rendered outside the
+   page that owns the bar, so the page cannot reserve the space itself. Give the
+   footer that room only on the pages where the bar exists, and only below `lg`
+   where the bar is visible. */
+@media (max-width: 1023.98px) {
+  body:has([data-sticky-cta]) footer {
+    padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
   }
 }
 

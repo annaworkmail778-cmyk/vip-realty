@@ -1,5 +1,6 @@
 import { Hero } from "@/components/Hero";
 import { PropertySearch } from "@/components/PropertySearch";
+import { LatestProperties } from "@/components/LatestProperties";
 import { NextAddress } from "@/components/NextAddress";
 import { TransformationSection } from "@/components/TransformationSection";
 import { PropertyCollection } from "@/components/PropertyCollection";
@@ -19,6 +20,8 @@ import {
 const MAP_LIMIT = 100;
 /** Length of the scrubbed "next address" sequence. */
 const SEQUENCE_LENGTH = 6;
+/** Listings shown in the "latest properties" grid, directly under the search. */
+const LATEST_LIMIT = 6;
 
 /* Rendered per request so newly published listings appear immediately. If
    Supabase is unavailable the listing sections show their empty states and the
@@ -39,6 +42,9 @@ export default async function HomePage() {
     <>
       <Hero />
       <PropertySearch districts={facets.districts} />
+      {/* Real inventory before the brand storytelling: a visitor should not have to
+          scroll past several full-height sections to see a property. */}
+      <LatestProperties listings={listings.slice(0, LATEST_LIMIT)} />
       <NextAddress listings={listings.slice(0, SEQUENCE_LENGTH)} />
       <TransformationSection />
       <PropertyCollection counts={counts.ok ? counts.data : null} />

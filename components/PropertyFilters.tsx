@@ -1,6 +1,7 @@
 "use client";
 
-import { useId } from "react";
+import { Select, type SelectOption } from "@/components/ui/Select";
+import { useDict } from "@/components/site/LocaleProvider";
 import {
   BEDROOM_OPTIONS,
   PRICE_BANDS,
@@ -31,6 +32,11 @@ export const EMPTY_FILTERS: FilterState = {
    search overlay, and the properties index. Presentation switches on `tone`;
    the data and the state shape never change. District options come from the
    districts that currently have published listings in Supabase.
+
+   The option ids are the frozen taxonomy ids that travel in the query string.
+   Only the labels are translated, and district labels are rendered exactly as
+   the database stores them — never translated, because `placeId()` derives the
+   district's URL id from that same stored text.
 ---------------------------------------------------------------------------- */
 
 export function PropertyFilters({
@@ -46,6 +52,8 @@ export function PropertyFilters({
   tone?: "dark" | "light";
   className?: string;
 }) {
+  const dict = useDict();
+
   // Keep a selected district visible even when it no longer has listings.
   const districtOptions =
     value.district !== "any" && !districts.some((d) => d.id === value.district)
@@ -55,96 +63,55 @@ export function PropertyFilters({
   const set = <K extends keyof FilterState>(key: K, v: FilterState[K]) =>
     onChange({ ...value, [key]: v });
 
+  /* A stable identity per field per surface. The properties index remounts this
+     whole subtree when a filter changes, so the Select needs a name that
+     survives that in order to restore keyboard focus to the right trigger; the
+     two surfaces (navigation overlay and index) must not collide. */
+  const field = (key: keyof FilterState) => `${tone}:${key}`;
+
+  const localised = (
+    source: readonly { id: string }[],
+    labels: Record<string, string>,
+  ): SelectOption[] => source.map((o) => ({ id: o.id, label: labels[o.id] ?? o.id }));
+
   return (
     <div className={`grid gap-px sm:grid-cols-2 lg:grid-cols-4 ${className}`}>
-      <Field
+      <Select
         tone={tone}
-        label="Location"
+        name={field("district")}
+        label={dict.filters.location}
         value={value.district}
-        onChange={(v) => set("district", v as FilterState["district"])}
+        onChange={(v) => set("district", v)}
         options={[
-          { id: "any", label: "All Yerevan" },
+          { id: "any", label: dict.filters.allDistricts },
+          // District names come from the database and are shown as stored.
           ...districtOptions.map((d) => ({ id: d.id, label: d.label })),
         ]}
       />
-      <Field
+      <Select
         tone={tone}
-        label="Property Type"
+        name={field("type")}
+        label={dict.filters.propertyType}
         value={value.type}
         onChange={(v) => set("type", v as FilterState["type"])}
-        options={PROPERTY_TYPES.map((t) => ({ id: t.id, label: t.label }))}
+        options={localised(PROPERTY_TYPES, dict.taxonomy.types)}
       />
-      <Field
+      <Select
         tone={tone}
-        label="Price"
+        name={field("price")}
+        label={dict.filters.price}
         value={value.price}
         onChange={(v) => set("price", v as FilterState["price"])}
-        options={PRICE_BANDS.map((b) => ({ id: b.id, label: b.label }))}
+        options={localised(PRICE_BANDS, dict.taxonomy.price)}
       />
-      <Field
+      <Select
         tone={tone}
-        label="Bedrooms"
+        name={field("bedrooms")}
+        label={dict.filters.bedrooms}
         value={value.bedrooms}
         onChange={(v) => set("bedrooms", v as FilterState["bedrooms"])}
-        options={BEDROOM_OPTIONS.map((b) => ({ id: b.id, label: b.label }))}
+        options={localised(BEDROOM_OPTIONS, dict.taxonomy.bedrooms)}
       />
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  options,
-  tone,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { id: string; label: string }[];
-  tone: "dark" | "light";
-}) {
-  const id = useId();
-  const dark = tone === "dark";
-  return (
-    <div
-      className={`group relative border-t px-1 pb-4 pt-5 transition-colors duration-500 sm:px-2 ${
-        dark
-          ? "border-ivory/15 hover:border-champagne/60"
-          : "border-espresso/15 hover:border-gold/70"
-      }`}
-    >
-      <label
-        htmlFor={id}
-        className={`label block ${dark ? "text-ivory/45" : "text-espresso/55"}`}
-      >
-        {label}
-      </label>
-      <div className="relative mt-2 flex items-center">
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={`w-full appearance-none bg-transparent pr-7 font-display text-[1.35rem] leading-tight tracking-tight outline-none sm:text-[1.6rem] ${
-            dark ? "text-ivory" : "text-espresso"
-          } focus-visible:text-champagne`}
-        >
-          {options.map((o) => (
-            <option key={o.id} value={o.id} className="bg-ink text-ivory">
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <span
-          aria-hidden
-          className={`pointer-events-none absolute right-1 text-[0.7rem] transition-transform duration-500 group-hover:translate-y-0.5 ${
-            dark ? "text-champagne" : "text-gold"
-          }`}
-        >
-          ▼
-        </span>
-      </div>
     </div>
   );
 }

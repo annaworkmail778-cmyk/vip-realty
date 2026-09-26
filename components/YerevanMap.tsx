@@ -1,6 +1,8 @@
 "use client";
 
 import { MAP_DISTRICTS as DISTRICTS } from "@/lib/listings/taxonomy";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
+import { fill } from "@/lib/i18n/fill";
 import type { MapDistrictId as District } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
@@ -43,13 +45,15 @@ export function YerevanMap({
   onSelectPin?: (slug: string) => void;
   className?: string;
 }) {
+  const dict = useDict();
+  const fmt = useFormat();
   const interactive = Boolean(onSelectDistrict);
 
   return (
     <svg
       viewBox="0 0 100 85"
       role="img"
-      aria-label="Stylized map of Yerevan districts"
+      aria-label={dict.map.alt}
       className={`w-full ${className}`}
     >
       <defs>
@@ -78,6 +82,7 @@ export function YerevanMap({
       {DISTRICTS.map((d) => {
         const on = selected === d.id;
         const count = counts?.[d.id];
+        const label = fmt.district(d.id);
         const Shape = (
           <>
             <path
@@ -92,10 +97,12 @@ export function YerevanMap({
               x={d.map.x} y={d.map.y} textAnchor="middle"
               fill={on ? "#d9be7a" : "#c9b79f"}
               opacity={selected && !on ? 0.45 : 0.85}
-              className="pointer-events-none select-none"
+              /* Uppercased by CSS, not in JS, so the Armenian override in
+                 globals.css can opt out of Latin small-caps convention. */
+              className="map-district-label pointer-events-none select-none"
               style={{ fontSize: 2.6, letterSpacing: 0.55, fontFamily: "var(--font-sans)" }}
             >
-              {d.label.toUpperCase()}
+              {label}
             </text>
             {count !== undefined && (
               <text
@@ -116,7 +123,9 @@ export function YerevanMap({
             role="button"
             tabIndex={0}
             aria-pressed={on}
-            aria-label={`${d.label}${count !== undefined ? `, ${count} properties` : ""}`}
+            aria-label={
+              count === undefined ? label : fill(dict.map.districtCount, { district: label, count })
+            }
             className="cursor-pointer outline-none focus-visible:[&>path]:stroke-champagne"
             onClick={() => onSelectDistrict?.(d.id)}
             onKeyDown={(e) => {

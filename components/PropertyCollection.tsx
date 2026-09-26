@@ -7,6 +7,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { gsap, useGsap, DESKTOP } from "@/lib/motion";
 import { media } from "@/lib/media";
 import { CATEGORIES } from "@/lib/listings/taxonomy";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import type { CategoryCounts } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
@@ -21,9 +22,13 @@ import type { CategoryCounts } from "@/lib/listings/types";
 ---------------------------------------------------------------------------- */
 
 export function PropertyCollection({ counts }: { counts: CategoryCounts | null }) {
+  const dict = useDict();
+  const fmt = useFormat();
   const root = useRef<HTMLElement>(null);
   const cards = CATEGORIES.map((c) => ({
-    ...c,
+    id: c.id,
+    label: dict.taxonomy.categories[c.id],
+    blurb: dict.taxonomy.categoryBlurbs[c.id],
     image: media.collection[c.id],
     count: counts ? counts[c.id] : null,
   }));
@@ -80,10 +85,10 @@ export function PropertyCollection({ counts }: { counts: CategoryCounts | null }
     <section ref={root} data-nav-tone="dark" className="relative overflow-hidden bg-espresso text-ivory">
       <div className="flex h-[100svh] flex-col pb-10 pt-[calc(var(--nav-h)+clamp(2rem,7vh,4.5rem))]">
         <div className="shell shrink-0">
-          <SectionLabel index="05">Categories</SectionLabel>
+          <SectionLabel index="05">{dict.collection.label}</SectionLabel>
           <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
-            <h2 data-reveal="up" className="display-md">The VIP Collection</h2>
-            <p className="label hidden text-ivory/40 lg:block">Scroll to move across →</p>
+            <h2 data-reveal="up" className="display-md">{dict.collection.title}</h2>
+            <p className="label hidden text-ivory/40 lg:block">{dict.collection.scrollHint}</p>
           </div>
         </div>
 
@@ -116,14 +121,15 @@ export function PropertyCollection({ counts }: { counts: CategoryCounts | null }
 
                   <div className="relative flex h-full flex-col justify-end p-7">
                     <p className="label text-champagne">
-                      0{i + 1}{c.count !== null ? ` · ${c.count} listed` : ""}
+                      0{i + 1}
+                      {c.count !== null ? ` · ${fmt.count(c.count, "listed")}` : ""}
                     </p>
                     <h3 className="display-sm mt-3">{c.label}</h3>
                     <p className="mt-3 max-w-[30ch] text-sm font-light leading-relaxed text-ivory/65">
                       {c.blurb}
                     </p>
                     <span className="label-lg mt-6 inline-flex items-center gap-3 text-ivory">
-                      <span className="link-underline">Explore</span>
+                      <span className="link-underline">{dict.collection.explore}</span>
                       <span className="arrow-slide" aria-hidden>→</span>
                     </span>
                   </div>

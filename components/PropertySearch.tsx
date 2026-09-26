@@ -7,7 +7,9 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { PropertyFilters, EMPTY_FILTERS, filtersToQuery, type FilterState } from "@/components/PropertyFilters";
 import { media } from "@/lib/media";
 import { DESKTOP, useMediaQuery, useReducedMotion } from "@/lib/motion";
-import { site } from "@/lib/site";
+import { useDict } from "@/components/site/LocaleProvider";
+import { fill } from "@/lib/i18n/fill";
+import type { Dictionary } from "@/lib/i18n/types";
 import type { DistrictOption, SearchIntent as Intent } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
@@ -17,10 +19,17 @@ import type { DistrictOption, SearchIntent as Intent } from "@/lib/listings/type
    intent carries a short ambient loop; only the one on screen plays.
 ---------------------------------------------------------------------------- */
 
-const INTENTS: { id: Intent; label: string; blurb: string; media: { poster: string; video: string } }[] = [
-  { id: "buy",  label: "Buy",  blurb: "Apartments, houses and penthouses held for the long term.", media: media.intent.buy },
-  { id: "rent", label: "Rent", blurb: "Furnished and unfurnished homes on six- and twelve-month terms.", media: media.intent.rent },
-  { id: "land", label: "Land", blurb: "Plots with permissions, services and an orientation worth building on.", media: media.intent.land },
+/* Intent ids are frozen (they travel in `?intent=`); the label and blurb are
+   looked up per locale from the dictionary. */
+const INTENTS: {
+  id: Intent;
+  label: keyof Dictionary["filters"];
+  blurb: keyof Dictionary["search"];
+  media: { poster: string; video: string };
+}[] = [
+  { id: "buy",  label: "intentBuy",  blurb: "buyBlurb",  media: media.intent.buy },
+  { id: "rent", label: "intentRent", blurb: "rentBlurb", media: media.intent.rent },
+  { id: "land", label: "intentLand", blurb: "landBlurb", media: media.intent.land },
 ];
 
 /**
@@ -80,6 +89,7 @@ function IntentLoop({ poster, video, active }: {
 export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
   // The intent frame and the per-option strip are alternatives, not both: only
   // the one actually on screen is allowed to load its clip.
+  const dict = useDict();
   const isDesktop = useMediaQuery(DESKTOP);
   const [intent, setIntent] = useState<Intent>("buy");
   const [hovered, setHovered] = useState<Intent | null>(null);
@@ -87,6 +97,11 @@ export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
   const router = useRouter();
 
   const shown = hovered ?? intent;
+  const shownLabel = dict.filters[INTENTS.find((x) => x.id === shown)!.label];
+  const intentLabel = dict.filters[INTENTS.find((x) => x.id === intent)!.label];
+  // Split around {intent} so the chosen intent keeps its champagne accent while
+  // the sentence order stays whatever the translation needs.
+  const searching = dict.search.searching.split("{intent}");
 
   return (
     <section
@@ -95,10 +110,10 @@ export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
       className="relative bg-ink py-[var(--spacing-section)] text-ivory"
     >
       <div className="shell">
-        <SectionLabel index="02">Property Search</SectionLabel>
+        <SectionLabel index="02">{dict.search.label}</SectionLabel>
 
         <h2 data-reveal="up" className="display-lg mt-7 max-w-[14ch]">
-          What are you<br />looking for?
+          {dict.search.title[0]}<br />{dict.search.title[1]}
         </h2>
 
         <div className="mt-14 grid gap-10 lg:mt-20 lg:grid-cols-[1fr_minmax(20rem,34%)] lg:gap-16">
@@ -129,7 +144,7 @@ export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
                           lit ? "translate-x-2 text-ivory" : "translate-x-0 text-ivory/55"
                         }`}
                       >
-                        {item.label}
+                        {dict.filters[item.label]}
                       </span>
                       <span
                         aria-hidden
@@ -148,7 +163,7 @@ export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
                     </span>
 
                     <span className="col-start-2 mt-3 block max-w-[42ch] text-sm font-light leading-relaxed text-ivory/50">
-                      {item.blurb}
+                      {dict.search[item.blurb]}
                     </span>
 
                     {/* mobile keeps a small frame with each option */}
@@ -175,7 +190,7 @@ export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
             ))}
             <div className="pointer-events-none absolute inset-0 scrim-bottom" aria-hidden />
             <p className="label absolute bottom-6 left-6 text-ivory/80">
-              {INTENTS.find((x) => x.id === shown)?.label} in {site.city}
+              {fill(dict.search.inPlace, { intent: shownLabel, cityIn: dict.brand.cityIn, cityOf: dict.brand.cityOf })}
             </p>
           </div>
         </div>
@@ -191,13 +206,15 @@ export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
           <PropertyFilters value={filters} onChange={setFilters} districts={districts} />
           <div className="mt-10 flex flex-wrap items-center justify-between gap-6 border-t border-ivory/12 pt-8">
             <p className="label text-ivory/40">
-              Searching <span className="text-champagne">{intent}</span> · {site.city}
+              {fill(searching[0] ?? "", { city: dict.brand.city })}
+              <span className="text-champagne">{intentLabel}</span>
+              {fill(searching[1] ?? "", { city: dict.brand.city })}
             </p>
             <button
               type="submit"
               className="label-lg group inline-flex items-center gap-3 bg-ivory px-9 py-4 text-ink transition-colors duration-500 hover:bg-champagne"
             >
-              Search properties
+              {dict.search.submit}
               <span className="arrow-slide" aria-hidden>→</span>
             </button>
           </div>

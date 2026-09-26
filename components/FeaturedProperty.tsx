@@ -4,7 +4,9 @@ import { useRef } from "react";
 import Image from "next/image";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap } from "@/lib/motion";
-import { formatArea, formatPrice, locationLine } from "@/lib/listings/format";
+import { locationLine } from "@/lib/listings/format";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
+import { fill } from "@/lib/i18n/fill";
 import type { Listing } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
@@ -15,6 +17,8 @@ import type { Listing } from "@/lib/listings/types";
 ---------------------------------------------------------------------------- */
 
 export function FeaturedProperty({ listing: property }: { listing: Listing }) {
+  const dict = useDict();
+  const fmt = useFormat();
   const root = useRef<HTMLElement>(null);
   const cover = property.media.cover;
 
@@ -33,10 +37,12 @@ export function FeaturedProperty({ listing: property }: { listing: Listing }) {
 
   const size = property.area ?? property.landArea;
   const facts = [
-    { label: "Location", value: locationLine(property) },
-    { label: "Price", value: formatPrice(property) },
-    ...(size !== null ? [{ label: "Size", value: formatArea(size) }] : []),
-    ...(property.bedrooms !== null ? [{ label: "Bedrooms", value: String(property.bedrooms) }] : []),
+    { label: dict.property.location, value: locationLine(property) },
+    { label: dict.property.price, value: fmt.price(property) },
+    ...(size !== null ? [{ label: dict.property.size, value: fmt.area(size) }] : []),
+    ...(property.bedrooms !== null
+      ? [{ label: dict.property.bedrooms, value: String(property.bedrooms) }]
+      : []),
   ];
 
   return (
@@ -50,7 +56,7 @@ export function FeaturedProperty({ listing: property }: { listing: Listing }) {
           <Image
             data-featured-img
             src={cover.url}
-            alt={`${property.name} — featured property`}
+            alt={fill(dict.featured.alt, { name: property.name })}
             fill
             sizes="100vw"
             loading="lazy"
@@ -63,7 +69,7 @@ export function FeaturedProperty({ listing: property }: { listing: Listing }) {
       <div className="shell relative w-full pb-[clamp(2.5rem,8vh,5rem)]">
         <div className="flex items-center gap-4">
           <span className="h-px w-10 gold-rule" aria-hidden />
-          <p className="label text-champagne">Featured property</p>
+          <p className="label text-champagne">{dict.featured.label}</p>
         </div>
 
         <h2 data-reveal="up" className="display-lg mt-6 max-w-[13ch]">{property.name}</h2>
@@ -78,7 +84,7 @@ export function FeaturedProperty({ listing: property }: { listing: Listing }) {
         </dl>
 
         <div className="mt-9">
-          <ArrowLink href={`/properties/${property.slug}`}>View property</ArrowLink>
+          <ArrowLink href={`/properties/${property.slug}`}>{dict.property.view}</ArrowLink>
         </div>
       </div>
     </section>

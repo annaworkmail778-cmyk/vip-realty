@@ -6,6 +6,8 @@ import { PropertyFeature } from "@/components/PropertyFeature";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap, DESKTOP } from "@/lib/motion";
 import { positionLabel } from "@/lib/listings/format";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
+import { fill } from "@/lib/i18n/fill";
 import type { Listing } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
@@ -21,9 +23,9 @@ import type { Listing } from "@/lib/listings/types";
    `listings` are the most recently published listings, queried on the server.
 ---------------------------------------------------------------------------- */
 
-const COUNT_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six"];
-
 export function NextAddress({ listings: items }: { listings: Listing[] }) {
+  const dict = useDict();
+  const fmt = useFormat();
   const root = useRef<HTMLElement>(null);
   const [current, setCurrent] = useState(0);
 
@@ -75,14 +77,13 @@ export function NextAddress({ listings: items }: { listings: Listing[] }) {
   return (
     <section ref={root} data-nav-tone="dark" id="properties" className="relative bg-ink text-ivory">
       <div className="shell pt-[var(--spacing-section)]">
-        <SectionLabel index="03">The Selection</SectionLabel>
+        <SectionLabel index="03">{dict.selection.label}</SectionLabel>
         <div className="mt-7 flex flex-wrap items-end justify-between gap-8">
           <h2 data-reveal="up" className="display-lg max-w-[16ch]">
-            Select your<br />next address.
+            {dict.selection.title[0]}<br />{dict.selection.title[1]}
           </h2>
           <p data-reveal="up" className="measure pb-2 text-sm font-light leading-relaxed text-ivory/55">
-            {COUNT_WORDS[items.length] ?? items.length} {items.length === 1 ? "property" : "properties"}, currently.
-            Each one visited, measured and photographed before it reaches this page.
+            {fill(dict.selection.note, { count: fmt.count(items.length, "properties") })}
           </p>
         </div>
       </div>
@@ -90,7 +91,7 @@ export function NextAddress({ listings: items }: { listings: Listing[] }) {
       {items.length === 0 && (
         <div className="shell mt-14">
           <p className="border-t border-ivory/12 pt-8 text-sm text-ivory/50">
-            Nothing listed at the moment.
+            {dict.selection.empty}
           </p>
         </div>
       )}
@@ -136,8 +137,10 @@ export function NextAddress({ listings: items }: { listings: Listing[] }) {
       </div>
 
       <div className="shell mt-16 flex justify-between border-t border-ivory/12 pt-8 lg:mt-24">
-        <p className="label text-ivory/40">{items.length} of {items.length} shown</p>
-        <ArrowLink href="/properties">See all properties</ArrowLink>
+        <p className="label text-ivory/40">
+          {fill(dict.selection.shown, { shown: items.length, total: items.length })}
+        </p>
+        <ArrowLink href="/properties">{dict.selection.seeAll}</ArrowLink>
       </div>
     </section>
   );

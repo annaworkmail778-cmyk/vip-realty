@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { validateInquiryFields, type InquiryFieldErrors } from "@/lib/inquiries/validation";
+import {
+  INQUIRY_LIMITS,
+  validateInquiryFields,
+  type InquiryField,
+  type InquiryFieldErrors,
+} from "@/lib/inquiries/validation";
+import { useDict } from "@/components/site/LocaleProvider";
+import { fill } from "@/lib/i18n/fill";
 
 export interface InquiryListing {
   slug: string;
@@ -24,7 +31,32 @@ const newSubmissionId = () => crypto.randomUUID();
 export function InquiryDialog({
   listing, open, onClose,
 }: { listing: InquiryListing; open: boolean; onClose: () => void }) {
-  const defaultMessage = `I'd like more information about ${listing.name}.`;
+  const dict = useDict();
+  const defaultMessage = fill(dict.inquiry.defaultMessage, { name: listing.name });
+
+  /* `validateInquiryFields` is the rule source shared with the API route and the
+     database function, and its own messages are English. It is used here only to
+     learn WHICH fields failed; the wording shown to the visitor comes from the
+     dictionary, keyed by field. The same mapping is applied to field errors the
+     server returns, so nothing English can reach the form. */
+  const fieldError: Record<InquiryField, string> = {
+    name: dict.inquiry.errName,
+    phone: dict.inquiry.errPhone,
+    email: dict.inquiry.errEmail,
+    message: fill(dict.inquiry.errMessage, { max: INQUIRY_LIMITS.messageMax }),
+  };
+
+  /* The API answers with a machine-readable `error` code alongside its English
+     `message`; the code is what gets translated, so app/api stays untouched. */
+  const noticeFor = (code: string | undefined) =>
+    code === "rate_limited"
+      ? dict.inquiry.errRateLimited
+      : code === "invalid_input"
+        ? dict.inquiry.errInvalid
+        : code === "property_unavailable"
+          ? dict.inquiry.errPropertyUnavailable
+          : dict.inquiry.errUnavailable;
+
   const [form, setForm] = useState({ name: "", phone: "", email: "", message: defaultMessage, company: "" });
   const [errors, setErrors] = useState<InquiryFieldErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -75,7 +107,7 @@ export function InquiryDialog({
         body: JSON.stringify({ propertySlug: listing.slug, submissionId, ...form }),
       });
       const body = (await res.json().catch(() => ({}))) as {
-        ok?: boolean; message?: string; fields?: InquiryFieldErrors;
+        ok?: boolean; error?: string; fields?: InquiryFieldErrors;
       };
 
       if (res.ok && body.ok) {
@@ -84,19 +116,19 @@ export function InquiryDialog({
         return;
       }
       setErrors(body.fields ?? {});
-      setNotice(body.message ?? "We couldn't send your request. Please try again.");
+      setNotice(noticeFor(body.error));
       setStatus("idle");
     } catch {
-      setNotice("We couldn't send your request. Please check your connection and try again.");
+      setNotice(dict.inquiry.errNetwork);
       setStatus("idle");
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label="Request more information">
+    <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label={dict.contact.requestInfo}>
       <button
         type="button"
-        aria-label="Close"
+        aria-label={dict.nav.close}
         onClick={close}
         className="absolute inset-0 bg-black/70 backdrop-blur-[2px] animate-[fade_.4s_ease]"
       />
@@ -106,12 +138,12 @@ export function InquiryDialog({
           <button
             type="button"
             onClick={close}
-            aria-label="Close"
+            aria-label={dict.nav.close}
             className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center border border-ivory/25 text-ivory transition-colors duration-300 hover:border-champagne hover:text-champagne"
           >
             ✕
           </button>
-          <p className="label text-champagne">Request more information</p>
+          <p className="label text-champagne">{dict.contact.requestInfo}</p>
           <h2 ref={headingRef} tabIndex={-1} className="display-sm mt-2 pr-12 outline-none">{listing.name}</h2>
           <p className="label mt-2 text-ivory/55">{listing.location} — {listing.price}</p>
         </header>
@@ -119,26 +151,30 @@ export function InquiryDialog({
         <div className="shell-wide flex-1 pb-10">
           {status === "sent" ? (
             <div className="pt-10" role="status">
-              <p className="label text-champagne">Request sent</p>
-              <p className="display-sm mt-3">Thank you. We&rsquo;ll be in touch shortly.</p>
+              <p className="label text-champagne">{dict.inquiry.sentLabel}</p>
+              <p className="display-sm mt-3">{dict.inquiry.sentTitle}</p>
               <button
                 type="button"
                 onClick={close}
                 className="label-lg mt-8 flex w-full items-center justify-center gap-3 bg-ivory px-6 py-4 text-ink transition-colors duration-500 hover:bg-champagne"
               >
-                Close
+                {dict.nav.close}
               </button>
             </div>
           ) : (
             <form onSubmit={submit} noValidate className="mt-8">
               <div className="space-y-5">
-                <Field label="Full name" value={form.name} error={errors.name} autoComplete="name"
+                <Field label={dict.inquiry.fieldName} value={form.name}
+                  error={errors.name && fieldError.name} autoComplete="name"
                   onChange={(v) => setForm({ ...form, name: v })} required />
-                <Field label="Phone number" value={form.phone} error={errors.phone} type="tel" autoComplete="tel"
+                <Field label={dict.inquiry.fieldPhone} value={form.phone}
+                  error={errors.phone && fieldError.phone} type="tel" autoComplete="tel"
                   onChange={(v) => setForm({ ...form, phone: v })} required />
-                <Field label="Email address (optional)" value={form.email} error={errors.email} type="email" autoComplete="email"
+                <Field label={dict.inquiry.fieldEmail} value={form.email}
+                  error={errors.email && fieldError.email} type="email" autoComplete="email"
                   onChange={(v) => setForm({ ...form, email: v })} />
-                <Field label="Message" value={form.message} error={errors.message}
+                <Field label={dict.inquiry.fieldMessage} value={form.message}
+                  error={errors.message && fieldError.message}
                   onChange={(v) => setForm({ ...form, message: v })} multiline />
               </div>
 
@@ -162,13 +198,11 @@ export function InquiryDialog({
                 disabled={status === "submitting"}
                 className="label-lg group mt-8 flex w-full items-center justify-center gap-3 bg-ivory px-6 py-4 text-ink transition-colors duration-500 hover:bg-champagne disabled:opacity-50"
               >
-                {status === "submitting" ? "Sending…" : "Send request"}
+                {status === "submitting" ? dict.inquiry.sending : dict.inquiry.send}
                 {status !== "submitting" && <span className="arrow-slide" aria-hidden>→</span>}
               </button>
 
-              <p className="label mt-4 text-ivory/30">
-                We use these details only to answer your request.
-              </p>
+              <p className="label mt-4 text-ivory/30">{dict.inquiry.privacy}</p>
             </form>
           )}
         </div>

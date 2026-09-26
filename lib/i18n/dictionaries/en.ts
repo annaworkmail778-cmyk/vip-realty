@@ -1,0 +1,366 @@
+import type { Dictionary } from "../types";
+
+/* English. Typed against the Armenian shape: a missing key is a compile error. */
+
+export const en: Dictionary = {
+  locale: {
+    label: "Language",
+    change: "Change language",
+  },
+
+  gate: {
+    eyebrow: "VIP REALTY",
+    headings: ["Ընտրեք լեզուն", "Выберите язык", "Choose your language"],
+    note: "You can change it at any time.",
+  },
+
+  nav: {
+    home: "Home",
+    properties: "Properties",
+    buy: "Buy",
+    rent: "Rent",
+    land: "Land",
+    about: "About",
+    contact: "Contact",
+    menu: "Menu",
+    close: "Close",
+    search: "Search",
+    searchTitle: "Search properties",
+    skipToContent: "Skip to content",
+    primary: "Primary",
+  },
+
+  brand: {
+    tagline: "Premium Property Solutions",
+    concept: "The Art of Finding Home",
+    city: "Yerevan",
+    cityOf: "Yerevan",
+    cityIn: "Yerevan",
+    country: "Armenia",
+  },
+
+  filters: {
+    location: "Location",
+    propertyType: "Property type",
+    price: "Price",
+    bedrooms: "Bedrooms",
+    allDistricts: "All Yerevan",
+    intentAll: "All",
+    intentBuy: "Buy",
+    intentRent: "Rent",
+    intentLand: "Land",
+    showResults: "Show results",
+    clear: "Clear",
+    openMenu: "Open list",
+  },
+
+  results: {
+    empty: "Nothing matches those filters.",
+    emptyNote: "Widen the price band or choose another neighbourhood.",
+    unavailable: "Listings are temporarily unavailable.",
+    unavailableNote: "Please try again in a moment.",
+  },
+
+  units: {
+    area: "m²",
+    properties: { one: "property", few: "properties", many: "properties" },
+    rooms: { one: "room", few: "rooms", many: "rooms" },
+    bedrooms: { one: "bedroom", few: "bedrooms", many: "bedrooms" },
+    bathrooms: { one: "bathroom", few: "bathrooms", many: "bathrooms" },
+    photos: { one: "photo", few: "photos", many: "photos" },
+    listed: { one: "listing", few: "listings", many: "listings" },
+  },
+
+  floor: {
+    ordinalFirst: "Floor {floor}",
+    ordinal: "Floor {floor}",
+    pair: "{floor} of {total}",
+  },
+
+  period: {
+    month: " / month",
+    day: " / day",
+    year: " / year",
+  },
+
+  property: {
+    forSale: "For sale",
+    forRent: "For rent",
+    land: "Land",
+    negotiable: "Negotiable",
+    type: "Type",
+    rooms: "Rooms",
+    bedrooms: "Bedrooms",
+    bathrooms: "Bathrooms",
+    area: "Area",
+    landArea: "Land",
+    size: "Size",
+    floor: "Floor",
+    built: "Built",
+    features: "Features",
+    location: "Location",
+    price: "Price",
+    gallery: "Gallery",
+    photographyToFollow: "Photography to follow",
+    breadcrumb: "Properties",
+    breadcrumbLabel: "Breadcrumb",
+    more: "More from the selection",
+    all: "All properties",
+    view: "View property",
+  },
+
+  propertyTypes: {
+    apartment: "Apartment",
+    penthouse: "Penthouse",
+    house: "House",
+    villa: "Villa",
+    townhouse: "Townhouse",
+    commercial: "Commercial",
+    office: "Office",
+    retail: "Retail",
+    warehouse: "Warehouse",
+    land: "Land",
+    garage: "Garage",
+    other: "Other",
+  },
+
+  features: {
+    air_conditioning: "Air conditioning",
+    attic: "Attic",
+    balcony: "Balcony",
+    basement: "Basement",
+    central_heating: "Central heating",
+    city_view: "City view",
+    elevator: "Elevator",
+    fireplace: "Fireplace",
+    floor_heating: "Floor heating",
+    furnished: "Furnished",
+    garage: "Garage",
+    garden: "Garden",
+    gas_heating: "Gas heating",
+    mountain_view: "Mountain view",
+    new_building: "New building",
+    parking: "Parking",
+    pet_friendly: "Pet friendly",
+    playground: "Playground",
+    renovated: "Renovated",
+    security: "Security",
+    storage: "Storage",
+    swimming_pool: "Swimming pool",
+    terrace: "Terrace",
+    unfurnished: "Unfurnished",
+  },
+
+  contact: {
+    enquire: "Enquire",
+    requestInfo: "Request more information",
+    leaveDetails: "Leave your details and we'll get back to you.",
+    call: "Call",
+    whatsapp: "Message on WhatsApp",
+    contact: "Contact",
+    price: "Price",
+    speakToUs: "Speak to us",
+    tellUs: "Tell us what you are looking for",
+    notListed: "Can't see it here? We place properties before they are listed.",
+    talkToTeam: "Talk to the team",
+    contactBrand: "Contact {brand}",
+    contactUs: "Contact us",
+    whatsappGeneral: "Hello {brand} — I'd like to talk about a property.",
+    whatsappListing: "Hello {brand} — I'd like to know more about “{name}” ({place}), listed at {price}. Ref: {slug}",
+  },
+
+  inquiry: {
+    defaultMessage: "I'd like more information about “{name}”.",
+    sentLabel: "Request sent",
+    sentTitle: "Thank you. We’ll be in touch shortly.",
+    fieldName: "Full name",
+    fieldPhone: "Phone number",
+    fieldEmail: "Email address (optional)",
+    fieldMessage: "Message",
+    sending: "Sending…",
+    send: "Send request",
+    privacy: "We use these details only to answer your request.",
+    errName: "Please enter your name.",
+    errPhone: "Please enter a valid phone number.",
+    errEmail: "Please enter a valid email address, or leave it empty.",
+    errMessage: "Please keep the message under {max} characters.",
+    errUnavailable: "We couldn't send your request right now. Please try again, or contact us by phone or WhatsApp.",
+    errRateLimited: "We already have your request. Please wait a moment and try again.",
+    errInvalid: "Please check the highlighted fields.",
+    errPropertyUnavailable: "This property is no longer available. Please contact us directly.",
+    errNetwork: "We couldn't send your request. Please check your connection and try again.",
+  },
+
+  gallery: {
+    viewAll: "View all {count} photos",
+    open: "Open image {index} of {total}",
+    prev: "Prev",
+    next: "Next",
+    close: "Close",
+    of: "{name} gallery",
+  },
+
+  page: {
+    indexLabel: "The Index",
+    indexTitle: "Select your next address.",
+    indexMetaTitle: "Properties",
+    indexMetaDescription: "Apartments, houses, land and commercial space in Yerevan.",
+    notFoundMetaTitle: "Property not found",
+    siteDescription: "Find your place. Own your next chapter. Properties in {cityIn} selected for the way you want to live.",
+    ogDescription: "Properties in {cityIn} selected for the way you want to live.",
+  },
+
+  hero: {
+    headline: ["Find", "your place."],
+    copy: "Discover properties selected for the way you want to live.",
+    explore: "Explore properties",
+    scroll: "Scroll to explore",
+  },
+
+  search: {
+    label: "Property Search",
+    title: ["What are you", "looking for?"],
+    submit: "Search properties",
+    inPlace: "{intent} in {cityIn}",
+    searching: "Searching {intent} · {city}",
+    buyBlurb: "Apartments, houses and penthouses held for the long term.",
+    rentBlurb: "Furnished and unfurnished homes on six- and twelve-month terms.",
+    landBlurb: "Plots with permissions, services and an orientation worth building on.",
+  },
+
+  home: {
+    latestLabel: "Latest properties",
+    latestTitle: "Newly listed.",
+  },
+
+  selection: {
+    label: "The Selection",
+    title: ["Select your", "next address."],
+    note: "{count}, currently. Each one visited, measured and photographed before it reaches this page.",
+    empty: "Nothing listed at the moment.",
+    shown: "{shown} of {total} shown",
+    seeAll: "See all properties",
+  },
+
+  transformation: {
+    label: "Transformation",
+    title: ["From space", "to possibility."],
+    lead: "See what’s possible.",
+    stages: ["Empty space", "Structure", "Materials", "Furniture", "Light", "Home"],
+    hint: "Scroll to move through the space · scroll back to reverse it",
+  },
+
+  collection: {
+    label: "Categories",
+    title: "The VIP Collection",
+    scrollHint: "Scroll to move across →",
+    explore: "Explore",
+  },
+
+  about: {
+    label: "About {brand}",
+    headline: ["More than property.", "A better way home."],
+    body: [
+      "{brand} works at the intersection of architecture and everyday life. We look at light, proportion, orientation and neighbourhood before we look at square metres — because those are the things you live with.",
+      "Every listing we take on is visited, photographed and understood before it reaches this page. What you see here is a selected view of the market, not all of it.",
+    ],
+    teamAlt: "The {brand} team",
+    statProperties: "Properties",
+    statYears: "Years Experience",
+    statClients: "Clients",
+    placeholderNote: "* Placeholder figures. Replace the values in lib/site.ts with verified numbers before publishing.",
+  },
+
+  map: {
+    label: "Neighbourhoods",
+    title: ["Find your place", "in Yerevan."],
+    note: "Five districts, five different ways to live in the same city. Select one to see what is available.",
+    all: "All Yerevan",
+    available: "{count} available",
+    placeholderNote: "Stylized map · placeholder geometry",
+    empty: "Nothing listed here at the moment. Try another neighbourhood.",
+    alt: "Stylized map of Yerevan districts",
+    districtCount: "{district}, {count} properties",
+  },
+
+  districts: {
+    kentron: "Kentron",
+    arabkir: "Arabkir",
+    davtashen: "Davtashen",
+    ajapnyak: "Ajapnyak",
+    avan: "Avan",
+  },
+
+  districtBlurbs: {
+    kentron: "The centre. Opera, Northern Avenue, the cafés that never close.",
+    arabkir: "Established, green, quietly residential. Long streets and old trees.",
+    davtashen: "Open skies and new build. Families, space, the ring road close by.",
+    ajapnyak: "West of the gorge. Wide views back toward the city and Ararat.",
+    avan: "Elevated and calm, on the north-eastern edge. Air and distance.",
+  },
+
+  featured: {
+    label: "Featured property",
+    alt: "{name} — featured property",
+  },
+
+  cta: {
+    eyebrow: "Find your place. Own your next chapter.",
+    title: "Your next address is closer than you think.",
+  },
+
+  footer: {
+    properties: "Properties",
+    neighbourhoods: "Neighbourhoods",
+    contact: "Contact",
+    beingSetUp: "Contact details are being set up.",
+    blurb: "{concept}. Properties in {cityIn} selected for the way you want to live.",
+    placeholderMedia: "Placeholder imagery and statistics",
+  },
+
+  common: {
+    loading: "Loading…",
+    back: "Back",
+    backHome: "Back to home",
+    notFound: "Page not found.",
+    error: "Something went wrong.",
+    errorLabel: "Temporarily unavailable",
+    tryAgain: "Try again",
+  },
+
+  taxonomy: {
+    types: {
+      any: "Any type",
+      apartments: "Apartment",
+      houses: "House",
+      land: "Land",
+      commercial: "Commercial",
+    },
+    price: {
+      any: "Any price",
+      "0-150": "Up to $150,000",
+      "150-300": "$150,000 – $300,000",
+      "300-600": "$300,000 – $600,000",
+      "600+": "$600,000 +",
+    },
+    bedrooms: {
+      any: "Any",
+      "1": "1 +",
+      "2": "2 +",
+      "3": "3 +",
+      "4": "4 +",
+    },
+    categories: {
+      apartments: "Apartments",
+      houses: "Houses",
+      land: "Land",
+      commercial: "Commercial",
+    },
+    categoryBlurbs: {
+      apartments: "City floors with light on two sides, from pre-war stone to new towers.",
+      houses: "Private homes, terraces and gardens within reach of the centre.",
+      land: "Plots with permissions, orientation and a view worth building toward.",
+      commercial: "Ground floors, studios and offices on streets people actually walk.",
+    },
+  },
+};

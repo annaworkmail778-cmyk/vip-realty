@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSiteProfile } from "@/components/site/SiteProfileProvider";
+import { useDict } from "@/components/site/LocaleProvider";
 import { brandLockup } from "@/lib/site/profile";
 
 /* ----------------------------------------------------------------------------
@@ -37,20 +38,21 @@ export function Logo({
   label?: string;
 }) {
   const { brandName } = useSiteProfile();
+  const dict = useDict();
   const [first, rest] = brandLockup(brandName);
   const inner = (
     <span className={`flex items-center gap-3 ${className}`}>
       <LogoMark className="h-7 w-auto text-gold shrink-0" />
       <span className="flex flex-col leading-none">
         <span className="font-display text-[1.42rem] tracking-[0.34em] pl-[0.34em] leading-none">{first}</span>
-        {rest && <span className="label mt-[0.28rem] text-[0.5rem] tracking-[0.52em] opacity-80">{rest}</span>}
+        {rest && <span className="wordmark mt-[0.28rem] text-[0.5rem] tracking-[0.52em] opacity-80">{rest}</span>}
       </span>
     </span>
   );
 
   if (!href) return inner;
   return (
-    <Link href={href} aria-label={label ?? `${brandName} — home`} className="inline-flex shrink-0">
+    <Link href={href} aria-label={label ?? `${brandName} — ${dict.nav.home}`} className="inline-flex shrink-0">
       {inner}
     </Link>
   );

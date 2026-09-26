@@ -1,7 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLink } from "@/components/ui/ArrowLink";
-import { formatPrice, locationLine, metaLine, positionLabel } from "@/lib/listings/format";
+import { locationLine, positionLabel } from "@/lib/listings/format";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import type { Listing } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
@@ -25,6 +28,8 @@ export function PropertyFeature({
   variant?: "stage" | "stacked";
   priority?: boolean;
 }) {
+  const dict = useDict();
+  const fmt = useFormat();
   const stage = variant === "stage";
   const href = `/properties/${listing.slug}`;
   const cover = listing.media.cover;
@@ -42,18 +47,18 @@ export function PropertyFeature({
       </p>
 
       <dl data-feature="text" className="mt-8 flex flex-wrap gap-x-8 gap-y-3 border-t border-ivory/12 pt-6">
-        {metaLine(listing).map((m) => (
+        {fmt.meta(listing).map((m) => (
           <div key={m}>
             <dd className="label text-ivory/80">{m}</dd>
           </div>
         ))}
         <div>
-          <dd className="label text-champagne">{formatPrice(listing)}</dd>
+          <dd className="label text-champagne">{fmt.price(listing)}</dd>
         </div>
       </dl>
 
       <div data-feature="text" className="mt-8">
-        <ArrowLink href={href}>View property</ArrowLink>
+        <ArrowLink href={href}>{dict.property.view}</ArrowLink>
       </div>
     </>
   );

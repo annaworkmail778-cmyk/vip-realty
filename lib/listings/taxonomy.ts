@@ -12,6 +12,9 @@ export const PROPERTY_TYPE_CODES: readonly PropertyTypeCode[] = [
   "office", "retail", "warehouse", "land", "garage", "other",
 ];
 
+/** Fallback English labels. `mapListing()` stores one of these on every listing
+ *  as `typeLabel`; the website renders the TRANSLATED label instead, looked up
+ *  from the same frozen code via the formatter (lib/listings/format.ts). */
 export const PROPERTY_TYPE_LABELS: Record<PropertyTypeCode, string> = {
   apartment: "Apartment",
   penthouse: "Penthouse",
@@ -38,38 +41,42 @@ export const CATEGORY_TYPES: Record<Category, readonly PropertyTypeCode[]> = {
 export const categoryOf = (type: PropertyTypeCode): Category | null =>
   (Object.keys(CATEGORY_TYPES) as Category[]).find((c) => CATEGORY_TYPES[c].includes(type)) ?? null;
 
-export const CATEGORIES: { id: Category; label: string; blurb: string }[] = [
-  { id: "apartments", label: "Apartments", blurb: "City floors with light on two sides, from pre-war stone to new towers." },
-  { id: "houses",     label: "Houses",     blurb: "Private homes, terraces and gardens within reach of the centre." },
-  { id: "land",       label: "Land",       blurb: "Plots with permissions, orientation and a view worth building toward." },
-  { id: "commercial", label: "Commercial", blurb: "Ground floors, studios and offices on streets people actually walk." },
+/** Collection order on the website. Labels and blurbs are translated:
+ *  dict.taxonomy.categories[id] and dict.taxonomy.categoryBlurbs[id]. */
+export const CATEGORIES: { id: Category }[] = [
+  { id: "apartments" },
+  { id: "houses" },
+  { id: "land" },
+  { id: "commercial" },
 ];
 
 export const SEARCH_INTENTS: readonly SearchIntent[] = ["buy", "rent", "land"];
 
+/* Filter options. The `id` is the frozen value that travels in the query string;
+   display labels come from dict.taxonomy.* and never affect the URL. */
 export const PROPERTY_TYPES = [
-  { id: "any", label: "Any type" },
-  { id: "apartments", label: "Apartment" },
-  { id: "houses", label: "House" },
-  { id: "land", label: "Land" },
-  { id: "commercial", label: "Commercial" },
+  { id: "any" },
+  { id: "apartments" },
+  { id: "houses" },
+  { id: "land" },
+  { id: "commercial" },
 ] as const;
 
 /** Purchase-price bands. They are quoted in US dollars and only apply to sale prices. */
 export const PRICE_BANDS = [
-  { id: "any", label: "Any price", min: 0, max: Infinity },
-  { id: "0-150", label: "Up to $150,000", min: 0, max: 150_000 },
-  { id: "150-300", label: "$150,000 – $300,000", min: 150_000, max: 300_000 },
-  { id: "300-600", label: "$300,000 – $600,000", min: 300_000, max: 600_000 },
-  { id: "600+", label: "$600,000 +", min: 600_000, max: Infinity },
+  { id: "any", min: 0, max: Infinity },
+  { id: "0-150", min: 0, max: 150_000 },
+  { id: "150-300", min: 150_000, max: 300_000 },
+  { id: "300-600", min: 300_000, max: 600_000 },
+  { id: "600+", min: 600_000, max: Infinity },
 ] as const;
 
 export const BEDROOM_OPTIONS = [
-  { id: "any", label: "Any" },
-  { id: "1", label: "1 +" },
-  { id: "2", label: "2 +" },
-  { id: "3", label: "3 +" },
-  { id: "4", label: "4 +" },
+  { id: "any" },
+  { id: "1" },
+  { id: "2" },
+  { id: "3" },
+  { id: "4" },
 ] as const;
 
 export type TypeFilter = (typeof PROPERTY_TYPES)[number]["id"];
@@ -80,13 +87,16 @@ export type BedroomFilter = (typeof BEDROOM_OPTIONS)[number]["id"];
  * Districts drawn on the stylized map (components/YerevanMap.tsx). Positions
  * are abstract map units, not coordinates; a listing is pinned at its
  * district's position, never at its address.
+ *
+ * Ids are frozen (they travel in `?district=`); labels and blurbs are
+ * translated via dict.districts[id] and dict.districtBlurbs[id].
  */
-export const MAP_DISTRICTS: { id: MapDistrictId; label: string; blurb: string; map: { x: number; y: number } }[] = [
-  { id: "kentron",   label: "Kentron",   blurb: "The centre. Opera, Northern Avenue, the cafés that never close.", map: { x: 52, y: 58 } },
-  { id: "arabkir",   label: "Arabkir",   blurb: "Established, green, quietly residential. Long streets and old trees.", map: { x: 46, y: 34 } },
-  { id: "davtashen", label: "Davtashen", blurb: "Open skies and new build. Families, space, the ring road close by.", map: { x: 24, y: 22 } },
-  { id: "ajapnyak",  label: "Ajapnyak",  blurb: "West of the gorge. Wide views back toward the city and Ararat.", map: { x: 20, y: 52 } },
-  { id: "avan",      label: "Avan",      blurb: "Elevated and calm, on the north-eastern edge. Air and distance.", map: { x: 78, y: 26 } },
+export const MAP_DISTRICTS: { id: MapDistrictId; map: { x: number; y: number } }[] = [
+  { id: "kentron",   map: { x: 52, y: 58 } },
+  { id: "arabkir",   map: { x: 46, y: 34 } },
+  { id: "davtashen", map: { x: 24, y: 22 } },
+  { id: "ajapnyak",  map: { x: 20, y: 52 } },
+  { id: "avan",      map: { x: 78, y: 26 } },
 ];
 
 export const isMapDistrict = (id: string | null): id is MapDistrictId =>

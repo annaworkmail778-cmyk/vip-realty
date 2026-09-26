@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PropertyDetail } from "@/components/PropertyDetail";
-import { formatPrice, locationLine } from "@/lib/listings/format";
+import { locationLine } from "@/lib/listings/format";
 import { getPublishedListing, listRelatedListings } from "@/lib/listings/queries";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ----------------------------------------------------------------------------
    Property detail, rendered per request from Supabase.
@@ -27,17 +28,20 @@ async function load(slug: string) {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
+  const { dict, fmt } = await getDictionary();
   let listing;
   try {
     listing = await load(slug);
   } catch {
-    return { title: "Properties" };
+    return { title: dict.page.indexMetaTitle };
   }
-  if (!listing) return { title: "Property not found" };
+  if (!listing) return { title: dict.page.notFoundMetaTitle };
 
+  // The title is the stored listing title, verbatim. Only the type label and the
+  // price formatting around it follow the UI language.
   return {
     title: listing.name,
-    description: `${listing.typeLabel} · ${locationLine(listing)}. ${formatPrice(listing)}.`,
+    description: `${fmt.type(listing)} · ${locationLine(listing)}. ${fmt.price(listing)}.`,
     openGraph: listing.media.cover ? { images: [listing.media.cover.url] } : undefined,
   };
 }
