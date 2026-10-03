@@ -14,7 +14,7 @@ import type { Dictionary } from "@/lib/i18n/types";
    without) JavaScript — there is no client component here at all.
 ---------------------------------------------------------------------------- */
 
-export function LanguageGate({ dict }: { dict: Dictionary }) {
+export function LanguageGate({ dict, brand }: { dict: Dictionary; brand: string }) {
   return (
     <div
       className="fixed inset-0 z-[200] flex flex-col justify-between bg-ink text-ivory [animation:fade_0.7s_var(--ease-editorial)_both]"
@@ -23,9 +23,9 @@ export function LanguageGate({ dict }: { dict: Dictionary }) {
       aria-label={dict.locale.label}
     >
       <div className="shell flex items-center pt-[clamp(2rem,6vh,3.5rem)]">
-        {/* The Latin wordmark, not UI copy: `.wordmark` keeps its case and
-            tracking in every locale. */}
-        <p className="wordmark text-[0.82rem] tracking-[0.4em] text-ivory">{dict.gate.eyebrow}</p>
+        {/* The configured agency's name as a wordmark, not UI copy: `.wordmark`
+            keeps its case and tracking in every locale. */}
+        <p className="wordmark text-[0.82rem] tracking-[0.4em] text-ivory">{brand.toUpperCase()}</p>
       </div>
 
       <div className="shell w-full">

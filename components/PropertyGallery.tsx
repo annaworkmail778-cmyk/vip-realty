@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { useDict } from "@/components/site/LocaleProvider";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import { fill } from "@/lib/i18n/fill";
 import type { ListingImage } from "@/lib/listings/types";
 
@@ -22,13 +22,17 @@ export function PropertyGallery({
   variant = "strip",
 }: {
   images: ListingImage[];
+  /** The listing's display title (`fmt.title`), already in the UI language. */
   name: string;
   variant?: "strip" | "hero";
 }) {
   const dict = useDict();
+  const fmt = useFormat();
   const [open, setOpen] = useState<number | null>(null);
   const openLabel = (i: number) =>
     fill(dict.gallery.open, { index: i + 1, total: images.length });
+  // A photo without stored alt text is described by the title and its position.
+  const altOf = (i: number) => images[i].alt || fmt.imageAlt(name, i + 1);
 
   const move = useCallback(
     (delta: number) => setOpen((i) => (i === null ? null : (i + delta + images.length) % images.length)),
@@ -67,6 +71,7 @@ export function PropertyGallery({
           <div className="grid gap-2 lg:aspect-[16/9] lg:grid-cols-[1.7fr_1fr]">
             <Frame
               image={images[0]}
+              alt={altOf(0)}
               index={0}
               total={images.length}
               onOpen={setOpen}
@@ -86,6 +91,7 @@ export function PropertyGallery({
                     <Frame
                       key={image.url}
                       image={image}
+                      alt={altOf(index)}
                       index={index}
                       total={images.length}
                       onOpen={setOpen}
@@ -100,11 +106,16 @@ export function PropertyGallery({
             )}
           </div>
 
+          {/* Shown at every breakpoint. On a phone it is the only way into the
+              gallery; on desktop the thumbnail rail's "+N" badge is too quiet to
+              advertise that the rest of the photography exists. The count comes
+              straight from `images.length`, so it is also the honest statement
+              of how many photographs the listing actually has. */}
           {images.length > 1 && (
             <button
               type="button"
               onClick={() => setOpen(0)}
-              className="label mt-3 inline-flex items-center gap-2.5 text-espresso/70 transition-colors duration-500 hover:text-espresso lg:hidden"
+              className="label mt-3 inline-flex items-center gap-2.5 text-espresso/70 transition-colors duration-500 hover:text-espresso"
             >
               <span className="link-underline">
                 {fill(dict.gallery.viewAll, { count: images.length })}
@@ -119,6 +130,7 @@ export function PropertyGallery({
             <Frame
               key={image.url}
               image={image}
+              alt={altOf(i)}
               index={i}
               total={images.length}
               onOpen={setOpen}
@@ -147,7 +159,7 @@ export function PropertyGallery({
           <div className="relative h-[76vh] w-full max-w-6xl">
             <Image
               src={images[open].url}
-              alt={images[open].alt}
+              alt={altOf(open)}
               fill
               sizes="90vw"
               className="object-contain"
@@ -173,9 +185,10 @@ export function PropertyGallery({
 }
 
 function Frame({
-  image, index, total, onOpen, label, className = "", sizes, priority = false, counter = false, overlay,
+  image, alt, index, total, onOpen, label, className = "", sizes, priority = false, counter = false, overlay,
 }: {
   image: ListingImage;
+  alt: string;
   index: number;
   total: number;
   label: string;
@@ -195,7 +208,7 @@ function Frame({
     >
       <Image
         src={image.url}
-        alt={image.alt}
+        alt={alt}
         fill
         sizes={sizes}
         priority={priority}

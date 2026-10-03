@@ -5,6 +5,7 @@ import { SiteProfileProvider } from "@/components/site/SiteProfileProvider";
 import { LocaleProvider } from "@/components/site/LocaleProvider";
 import { media } from "@/lib/media";
 import { getSiteProfile } from "@/lib/site/profile.server";
+import { siteOrigin } from "@/lib/site/url";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { fill } from "@/lib/i18n/fill";
 import { HTML_LANG } from "@/lib/i18n/config";
@@ -57,7 +58,7 @@ const sansArmenian = Noto_Sans_Armenian({
 /* Title, template and Open Graph follow the configured agency (lib/site/profile.server.ts). */
 export async function generateMetadata(): Promise<Metadata> {
   const [profile, { dict }] = await Promise.all([getSiteProfile(), getDictionary()]);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteUrl = siteOrigin();
   const title = `${profile.legalName} — ${dict.brand.concept}`;
   /* Both inflected forms: Armenian uses the genitive here, Russian and English
      the locative, and each dictionary picks whichever its sentence needs. */

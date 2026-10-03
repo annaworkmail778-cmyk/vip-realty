@@ -9,6 +9,7 @@ import {
   featureLabel,
   placeId,
 } from "./taxonomy";
+import { districtIdOf } from "./places";
 import type { CurrencyCode, Listing, ListingImage, ListingIntent, PricePeriod } from "./types";
 
 /* ----------------------------------------------------------------------------
@@ -74,7 +75,13 @@ export function publicImageUrl(storagePath: string): string | null {
   return `${base}/storage/v1/object/public/${PROPERTY_IMAGES_BUCKET}/${path}`;
 }
 
-function mapImages(value: unknown, name: string): { cover: ListingImage | null; images: ListingImage[] } {
+/** URL id of a stored district: the gazetteer id when the name is a known Yerevan
+ *  district in any script, otherwise the slug of the stored text (or null). */
+export const districtUrlId = (label: string) => districtIdOf(label) ?? (placeId(label) || null);
+
+/* Images without stored alt text get "" here; the renderer derives a localised
+   alt from the display title, which this locale-free mapper cannot know. */
+function mapImages(value: unknown): { cover: ListingImage | null; images: ListingImage[] } {
   if (!Array.isArray(value)) return { cover: null, images: [] };
 
   const parsed = value
@@ -95,9 +102,9 @@ function mapImages(value: unknown, name: string): { cover: ListingImage | null; 
     })
     .sort((a, b) => a.order - b.order);
 
-  const images: ListingImage[] = parsed.map((img, i) => ({
+  const images: ListingImage[] = parsed.map((img) => ({
     url: img.url,
-    alt: img.alt ?? `${name}, image ${i + 1}`,
+    alt: img.alt ?? "",
     width: img.width,
     height: img.height,
   }));
@@ -146,7 +153,7 @@ export function mapListing(row: unknown): Listing | null {
   }
 
   const districtLabel = text(row.district);
-  const district = districtLabel ? placeId(districtLabel) || null : null;
+  const district = districtLabel ? districtUrlId(districtLabel) : null;
   const mapDistrict = MAP_DISTRICTS.find((d) => d.id === district) ?? null;
 
   return {
@@ -177,7 +184,7 @@ export function mapListing(row: unknown): Listing | null {
     features: mapFeatures(row.features),
     featured: row.featured === true,
     publishedAt: text(row.published_at),
-    media: mapImages(row.images, name),
+    media: mapImages(row.images),
     map: mapDistrict ? { district: mapDistrict.id, ...mapDistrict.map } : null,
   };
 }

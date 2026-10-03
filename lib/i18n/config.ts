@@ -45,7 +45,9 @@ export const HTML_LANG: Record<Locale, string> = {
   en: "en",
 };
 
-/** Locale used for number and currency formatting. */
+/** Locale used for plural rules and case mapping. Digits and currency are
+ *  formatted from fixed tables in lib/listings/format.ts, because browsers do
+ *  not all ship locale data for Armenian. */
 export const INTL_LOCALE: Record<Locale, string> = {
   hy: "hy-AM",
   ru: "ru-RU",

@@ -2,7 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { connection } from "next/server";
 import { supabasePublic } from "@/lib/supabase/public";
-import { LISTING_COLUMNS, mapListing, typesForCategory } from "./mappers";
+import { LISTING_COLUMNS, districtUrlId, mapListing, typesForCategory } from "./mappers";
+import { cityIdOf } from "./places";
 import { CATEGORY_TYPES, PRICE_BANDS, placeId } from "./taxonomy";
 import type { ListingSearch } from "./filters";
 import type { Category, CategoryCounts, DistrictOption, Listing, ListingFacets } from "./types";
@@ -68,12 +69,14 @@ interface FacetIndex extends ListingFacets {
   cityLabels: Record<string, string[]>;
 }
 
-function buildOptions(values: (string | null)[]) {
+/* Spellings of one place in different scripts ("Avan", "Ավան") share an id, so
+   they become one option whose filter matches every stored spelling. */
+function buildOptions(values: (string | null)[], idOf: (label: string) => string | null) {
   const labels: Record<string, string[]> = {};
   for (const raw of values) {
     const label = raw?.trim();
     if (!label) continue;
-    const id = placeId(label);
+    const id = idOf(label);
     if (!id) continue;
     labels[id] ??= [];
     if (!labels[id].includes(label)) labels[id].push(label);
@@ -96,8 +99,8 @@ export const getListingFacets = cache(async (): Promise<QueryResult<FacetIndex>>
   }
 
   const rows = (data ?? []) as { city: string | null; district: string | null }[];
-  const districts = buildOptions(rows.map((r) => r.district));
-  const cities = buildOptions(rows.map((r) => r.city));
+  const districts = buildOptions(rows.map((r) => r.district), districtUrlId);
+  const cities = buildOptions(rows.map((r) => r.city), (label) => cityIdOf(label) ?? (placeId(label) || null));
   return {
     ok: true,
     data: {
@@ -159,7 +162,13 @@ export async function searchListings(search: ListingSearch): Promise<QueryResult
     if (Number.isFinite(band.max)) query = query.lte("price", band.max);
   }
 
-  if (search.bedrooms !== "any") query = query.gte("bedrooms", Number(search.bedrooms));
+  // Rooms is what listings record. A listing that only states bedrooms still
+  // qualifies when it has at least that many bedrooms (it then has at least as
+  // many rooms). `min` is one of the fixed ROOM_OPTIONS ids, never free input.
+  if (search.rooms !== "any") {
+    const min = Number(search.rooms);
+    query = query.or(`rooms.gte.${min},and(rooms.is.null,bedrooms.gte.${min})`);
+  }
   if (search.areaMin !== null) query = query.gte("area_sqm", search.areaMin);
   if (search.areaMax !== null) query = query.lte("area_sqm", search.areaMax);
 
@@ -242,6 +251,30 @@ export async function listRelatedListings(listing: Listing, limit = 3): Promise<
     return unavailable;
   }
   return { ok: true, data: mapRows("related listings", data) };
+}
+
+/** Slug and last change of every published listing, for the sitemap. */
+export async function listSitemapListings(): Promise<QueryResult<{ slug: string; updatedAt: string | null }[]>> {
+  const client = await db();
+  if (!client) return unconfigured;
+
+  const { data, error } = await client
+    .from(VIEW)
+    .select("slug, updated_at")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(5000);
+  if (error) {
+    logFailure("sitemap listings", error);
+    return unavailable;
+  }
+  return {
+    ok: true,
+    data: ((data ?? []) as { slug: unknown; updated_at: unknown }[]).flatMap((r) =>
+      typeof r.slug === "string" && r.slug
+        ? [{ slug: r.slug, updatedAt: typeof r.updated_at === "string" ? r.updated_at : null }]
+        : [],
+    ),
+  };
 }
 
 /** Number of published listings per website collection. */

@@ -5,7 +5,6 @@ import { getSiteProfile } from "@/lib/site/profile.server";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { fill } from "@/lib/i18n/fill";
 import { telHref, whatsappUrl } from "@/lib/site/profile";
-import { MEDIA_IS_PLACEHOLDER } from "@/lib/media";
 import { CATEGORIES } from "@/lib/listings/taxonomy";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import type { DistrictOption } from "@/lib/listings/types";
@@ -13,7 +12,7 @@ import type { DistrictOption } from "@/lib/listings/types";
 /* `districts` are the neighbourhoods that currently have published listings. */
 export async function Footer({ districts }: { districts: DistrictOption[] }) {
   const year = new Date().getFullYear();
-  const [profile, { dict }] = await Promise.all([getSiteProfile(), getDictionary()]);
+  const [profile, { dict, fmt }] = await Promise.all([getSiteProfile(), getDictionary()]);
   const socialLinks = site.social.flatMap((s) => (s.href ? [{ label: s.label, href: s.href }] : []));
   const tel = telHref(profile);
   const whatsapp = whatsappUrl(
@@ -79,7 +78,7 @@ export async function Footer({ districts }: { districts: DistrictOption[] }) {
               {districts.map((d) => (
                 <li key={d.id}>
                   <Link href={`/properties?district=${d.id}`} className="label link-underline text-ivory/75 hover:text-ivory">
-                    {d.label}
+                    {fmt.districtName(d.label)}
                   </Link>
                 </li>
               ))}
@@ -112,11 +111,7 @@ export async function Footer({ districts }: { districts: DistrictOption[] }) {
 
         <div className="mt-14 flex flex-col gap-4 border-t border-ivory/10 pt-7 sm:flex-row sm:items-center sm:justify-between">
           <p className="label text-ivory/35">© {year} {profile.legalName}</p>
-          <p className="label text-ivory/35">
-            {MEDIA_IS_PLACEHOLDER
-              ? dict.footer.placeholderMedia
-              : `${dict.brand.city}, ${dict.brand.country}`}
-          </p>
+          <p className="label text-ivory/35">{`${dict.brand.city}, ${dict.brand.country}`}</p>
         </div>
       </div>
     </footer>

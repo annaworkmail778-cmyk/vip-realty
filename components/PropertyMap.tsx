@@ -108,8 +108,6 @@ export function PropertyMap({
               onSelectDistrict={select}
               onSelectPin={setActiveSlug}
             />
-
-            <p className="label mt-4 text-ivory/30">{dict.map.placeholderNote}</p>
           </div>
 
           {/* preview panel */}
@@ -130,7 +128,7 @@ export function PropertyMap({
                   {preview.media.cover && (
                     <Image
                       src={preview.media.cover.url}
-                      alt={preview.media.cover.alt}
+                      alt={preview.media.cover.alt || fmt.title(preview)}
                       fill
                       sizes="(max-width: 1024px) 100vw, 22rem"
                       loading="lazy"
@@ -138,9 +136,9 @@ export function PropertyMap({
                     />
                   )}
                 </div>
-                <h3 className="display-sm mt-5">{preview.name}</h3>
+                <h3 className="display-sm mt-5">{fmt.title(preview, { short: true })}</h3>
                 <p className="label mt-3 text-ivory/50">
-                  {preview.districtLabel ?? preview.city} · {fmt.type(preview)}
+                  {preview.districtLabel ? fmt.districtName(preview.districtLabel) : fmt.cityName(preview.city)} · {fmt.type(preview)}
                 </p>
                 <p className="label mt-2 text-champagne">{fmt.price(preview)}</p>
                 {fmt.meta(preview).length > 0 && (
@@ -167,7 +165,7 @@ export function PropertyMap({
                         preview?.slug === p.slug ? "text-champagne" : "text-ivory/55 hover:text-ivory"
                       }`}
                     >
-                      <span className="label">{positionLabel(i)} · {p.name}</span>
+                      <span className="label">{positionLabel(i)} · {fmt.title(p, { short: true })}</span>
                       {(p.area ?? p.landArea) !== null && (
                         <span className="label shrink-0 opacity-60">{fmt.area((p.area ?? p.landArea)!)}</span>
                       )}

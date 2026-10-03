@@ -6,7 +6,6 @@ import { ContactPanel } from "@/components/ContactPanel";
 import { YerevanMap } from "@/components/YerevanMap";
 import { StickyContactBar } from "@/components/inquiry/StickyContactBar";
 import { ArrowLink } from "@/components/ui/ArrowLink";
-import { districtFirstLine, locationLine } from "@/lib/listings/format";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import type { Listing } from "@/lib/listings/types";
 
@@ -31,11 +30,14 @@ export async function PropertyDetail({
   related: Listing[];
 }) {
   const { dict, fmt } = await getDictionary();
-  // Only public, display-ready values go to the client-side inquiry panel.
+  const title = fmt.title(listing);
+  // Only public, display-ready values go to the client-side inquiry panel. The
+  // dialog and the WhatsApp message print `location` next to the name, so a
+  // generated title is passed without its place.
   const inquiry = {
     slug: listing.slug,
-    name: listing.name,
-    location: locationLine(listing),
+    name: fmt.title(listing, { short: true }),
+    location: fmt.locationLine(listing),
     price: fmt.price(listing),
   };
   const facts = [
@@ -75,10 +77,10 @@ export async function PropertyDetail({
                 {/* Only link when the district has a URL id the index can filter on. */}
                 {listing.district ? (
                   <Link href={`/properties?district=${listing.district}`} className="link-underline">
-                    {listing.districtLabel}
+                    {fmt.districtName(listing.districtLabel)}
                   </Link>
                 ) : (
-                  <span>{listing.districtLabel}</span>
+                  <span>{fmt.districtName(listing.districtLabel)}</span>
                 )}
               </>
             )}
@@ -89,10 +91,10 @@ export async function PropertyDetail({
           {/* ---------------------------------------------------------------- gallery first */}
           <div className="mt-6">
             {gallery.length > 0 ? (
-              <PropertyGallery images={gallery} name={listing.name} variant="hero" />
+              <PropertyGallery images={gallery} name={title} variant="hero" />
             ) : cover ? (
               <div className="relative aspect-[4/5] overflow-hidden bg-ivory-3 sm:aspect-[16/9]">
-                <Image src={cover.url} alt={cover.alt} fill sizes="100vw" priority className="object-cover" />
+                <Image src={cover.url} alt={cover.alt || title} fill sizes="100vw" priority className="object-cover" />
               </div>
             ) : null}
           </div>
@@ -109,10 +111,11 @@ export async function PropertyDetail({
               <span className="label text-espresso/50">{fmt.type(listing)}</span>
             </div>
 
-            <h1 data-reveal="up" className="display-lg mt-5 max-w-[18ch] text-ink">{listing.name}</h1>
+            {/* The place is on the line below, so a generated title omits it here. */}
+            <h1 data-reveal="up" className="display-lg mt-5 max-w-[18ch] text-ink">{fmt.title(listing, { short: true })}</h1>
 
             <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
-              <p className="label text-cocoa">{districtFirstLine(listing)}</p>
+              <p className="label text-cocoa">{fmt.districtFirstLine(listing)}</p>
               <p className="price price-lg text-ink">{price}</p>
             </div>
           </header>
@@ -171,7 +174,7 @@ export async function PropertyDetail({
                 </div>
               )}
               <p className={`label text-cocoa ${listing.map ? "mt-3" : "mt-6"}`}>
-                {[listing.districtLabel, listing.city].filter(Boolean).join(", ")}
+                {fmt.place(listing)}
               </p>
             </section>
           </div>

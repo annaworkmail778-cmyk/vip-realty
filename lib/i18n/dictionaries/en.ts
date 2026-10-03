@@ -9,7 +9,6 @@ export const en: Dictionary = {
   },
 
   gate: {
-    eyebrow: "VIP REALTY",
     headings: ["Ընտրեք լեզուն", "Выберите язык", "Choose your language"],
     note: "You can change it at any time.",
   },
@@ -43,7 +42,7 @@ export const en: Dictionary = {
     location: "Location",
     propertyType: "Property type",
     price: "Price",
-    bedrooms: "Bedrooms",
+    rooms: "Rooms",
     allDistricts: "All Yerevan",
     intentAll: "All",
     intentBuy: "Buy",
@@ -198,6 +197,34 @@ export const en: Dictionary = {
     next: "Next",
     close: "Close",
     of: "{name} gallery",
+    imageAlt: "{name}, photo {index}",
+  },
+
+  listingTitle: {
+    sale: "{subject} for sale",
+    rent: "{subject} for rent",
+    withPlace: "{title} in {place}",
+    rooms: {
+      apartment: "{count}-room apartment",
+      penthouse: "{count}-room penthouse",
+      house: "{count}-room house",
+      villa: "{count}-room villa",
+      townhouse: "{count}-room townhouse",
+    },
+    subject: {
+      apartment: "apartment",
+      penthouse: "penthouse",
+      house: "house",
+      villa: "villa",
+      townhouse: "townhouse",
+      commercial: "commercial space",
+      office: "office",
+      retail: "retail space",
+      warehouse: "warehouse",
+      land: "land plot",
+      garage: "garage",
+      other: "property",
+    },
   },
 
   page: {
@@ -268,7 +295,6 @@ export const en: Dictionary = {
     statProperties: "Properties",
     statYears: "Years Experience",
     statClients: "Clients",
-    placeholderNote: "* Placeholder figures. Replace the values in lib/site.ts with verified numbers before publishing.",
   },
 
   map: {
@@ -277,7 +303,6 @@ export const en: Dictionary = {
     note: "Five districts, five different ways to live in the same city. Select one to see what is available.",
     all: "All Yerevan",
     available: "{count} available",
-    placeholderNote: "Stylized map · placeholder geometry",
     empty: "Nothing listed here at the moment. Try another neighbourhood.",
     alt: "Stylized map of Yerevan districts",
     districtCount: "{district}, {count} properties",
@@ -289,6 +314,17 @@ export const en: Dictionary = {
     davtashen: "Davtashen",
     ajapnyak: "Ajapnyak",
     avan: "Avan",
+    erebuni: "Erebuni",
+    "kanaker-zeytun": "Kanaker-Zeytun",
+    "malatia-sebastia": "Malatia-Sebastia",
+    "nor-nork": "Nor Nork",
+    "nork-marash": "Nork-Marash",
+    nubarashen: "Nubarashen",
+    shengavit: "Shengavit",
+  },
+
+  cities: {
+    yerevan: "Yerevan",
   },
 
   districtBlurbs: {
@@ -315,7 +351,6 @@ export const en: Dictionary = {
     contact: "Contact",
     beingSetUp: "Contact details are being set up.",
     blurb: "{concept}. Properties in {cityIn} selected for the way you want to live.",
-    placeholderMedia: "Placeholder imagery and statistics",
   },
 
   common: {
@@ -343,7 +378,7 @@ export const en: Dictionary = {
       "300-600": "$300,000 – $600,000",
       "600+": "$600,000 +",
     },
-    bedrooms: {
+    rooms: {
       any: "Any",
       "1": "1 +",
       "2": "2 +",

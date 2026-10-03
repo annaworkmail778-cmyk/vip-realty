@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLink } from "@/components/ui/ArrowLink";
-import { locationLine, positionLabel } from "@/lib/listings/format";
+import { positionLabel } from "@/lib/listings/format";
 import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import type { Listing } from "@/lib/listings/types";
 
@@ -33,17 +33,19 @@ export function PropertyFeature({
   const stage = variant === "stage";
   const href = `/properties/${listing.slug}`;
   const cover = listing.media.cover;
+  const title = fmt.title(listing);
+  const coverAlt = cover?.alt || title;
 
   const meta = (
     <>
       <p data-feature="text" className="label text-champagne">{positionLabel(position)}</p>
 
       <h3 data-feature="text" className="display-md mt-5 text-ivory">
-        <Link href={href} className="link-underline">{listing.name}</Link>
+        <Link href={href} className="link-underline">{fmt.title(listing, { short: true })}</Link>
       </h3>
 
       <p data-feature="text" className="label mt-4 text-ivory/55">
-        {locationLine(listing)}
+        {fmt.locationLine(listing)}
       </p>
 
       <dl data-feature="text" className="mt-8 flex flex-wrap gap-x-8 gap-y-3 border-t border-ivory/12 pt-6">
@@ -74,7 +76,7 @@ export function PropertyFeature({
             <Image
               data-feature="media"
               src={cover.url}
-              alt={cover.alt}
+              alt={coverAlt}
               fill
               sizes="(max-width: 1024px) 100vw, 62vw"
               priority={priority}
@@ -94,7 +96,7 @@ export function PropertyFeature({
           {cover && (
             <Image
               src={cover.url}
-              alt={cover.alt}
+              alt={coverAlt}
               fill
               sizes="(max-width: 640px) 100vw, 60vw"
               loading="lazy"

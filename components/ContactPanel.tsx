@@ -33,12 +33,13 @@ export function ContactPanel({
   const profile = useSiteProfile();
   const dict = useDict();
   const fmt = useFormat();
-  /* The listing title, place and price are inserted exactly as stored /
-     formatted; only the sentence around them is translated. */
+  /* The listing's display title, place and price as the visitor sees them on
+     the page; the slug stays the stable reference the agency can look up. The
+     place has its own slot in the message, so a generated title omits it. */
   const enquiry = fill(dict.contact.whatsappListing, {
     brand: profile.brandName,
-    name: listing.name,
-    place: listing.districtLabel ?? listing.city,
+    name: fmt.title(listing, { short: true }),
+    place: listing.districtLabel ? fmt.districtName(listing.districtLabel) : fmt.cityName(listing.city),
     price: fmt.price(listing),
     slug: listing.slug,
   });

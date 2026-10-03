@@ -1,13 +1,13 @@
 "use client";
 
 import { Select, type SelectOption } from "@/components/ui/Select";
-import { useDict } from "@/components/site/LocaleProvider";
+import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import {
-  BEDROOM_OPTIONS,
+  ROOM_OPTIONS,
   PRICE_BANDS,
   PROPERTY_TYPES,
-  type BedroomFilter,
   type PriceFilter,
+  type RoomFilter,
   type TypeFilter,
 } from "@/lib/listings/taxonomy";
 import type { DistrictOption } from "@/lib/listings/types";
@@ -17,14 +17,14 @@ export interface FilterState {
   district: string;
   type: TypeFilter;
   price: PriceFilter;
-  bedrooms: BedroomFilter;
+  rooms: RoomFilter;
 }
 
 export const EMPTY_FILTERS: FilterState = {
   district: "any",
   type: "any",
   price: "any",
-  bedrooms: "any",
+  rooms: "any",
 };
 
 /* ----------------------------------------------------------------------------
@@ -34,9 +34,9 @@ export const EMPTY_FILTERS: FilterState = {
    districts that currently have published listings in Supabase.
 
    The option ids are the frozen taxonomy ids that travel in the query string.
-   Only the labels are translated, and district labels are rendered exactly as
-   the database stores them — never translated, because `placeId()` derives the
-   district's URL id from that same stored text.
+   Only the labels are translated. A district is shown in the UI language when
+   it is a recognised Yerevan district (`fmt.districtName`), otherwise exactly
+   as stored; its id — and therefore the URL — never changes with the language.
 ---------------------------------------------------------------------------- */
 
 export function PropertyFilters({
@@ -53,12 +53,16 @@ export function PropertyFilters({
   className?: string;
 }) {
   const dict = useDict();
+  const fmt = useFormat();
 
   // Keep a selected district visible even when it no longer has listings.
-  const districtOptions =
+  const districtOptions = (
     value.district !== "any" && !districts.some((d) => d.id === value.district)
       ? [...districts, { id: value.district, label: value.district }]
-      : districts;
+      : districts
+  )
+    .map((d) => ({ id: d.id, label: fmt.districtName(d.label) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   const set = <K extends keyof FilterState>(key: K, v: FilterState[K]) =>
     onChange({ ...value, [key]: v });
@@ -84,8 +88,7 @@ export function PropertyFilters({
         onChange={(v) => set("district", v)}
         options={[
           { id: "any", label: dict.filters.allDistricts },
-          // District names come from the database and are shown as stored.
-          ...districtOptions.map((d) => ({ id: d.id, label: d.label })),
+          ...districtOptions,
         ]}
       />
       <Select
@@ -106,11 +109,11 @@ export function PropertyFilters({
       />
       <Select
         tone={tone}
-        name={field("bedrooms")}
-        label={dict.filters.bedrooms}
-        value={value.bedrooms}
-        onChange={(v) => set("bedrooms", v as FilterState["bedrooms"])}
-        options={localised(BEDROOM_OPTIONS, dict.taxonomy.bedrooms)}
+        name={field("rooms")}
+        label={dict.filters.rooms}
+        value={value.rooms}
+        onChange={(v) => set("rooms", v as FilterState["rooms"])}
+        options={localised(ROOM_OPTIONS, dict.taxonomy.rooms)}
       />
     </div>
   );

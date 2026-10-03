@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { districtFirstLine } from "@/lib/listings/format";
 import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import type { Listing } from "@/lib/listings/types";
 
@@ -34,6 +33,8 @@ export function PropertyCard({
   const dict = useDict();
   const fmt = useFormat();
   const meta = fmt.meta(listing);
+  // The place has its own line on the card, so a generated title omits it.
+  const title = fmt.title(listing, { short: true });
   const cover = listing.media.cover;
   const isRent = listing.intent === "rent";
 
@@ -44,7 +45,7 @@ export function PropertyCard({
           {cover ? (
             <Image
               src={cover.url}
-              alt={cover.alt}
+              alt={cover.alt || fmt.title(listing)}
               fill
               sizes={sizes}
               priority={priority}
@@ -71,9 +72,9 @@ export function PropertyCard({
         <div className="flex flex-1 flex-col p-5 sm:p-6">
           <p className="price text-ink">{fmt.price(listing)}</p>
 
-          <h3 className="display-xs mt-3 line-clamp-2 text-ink">{listing.name}</h3>
+          <h3 className="display-xs mt-3 line-clamp-2 text-ink">{title}</h3>
 
-          <p className="label mt-2.5 text-cocoa">{districtFirstLine(listing)}</p>
+          <p className="label mt-2.5 text-cocoa">{fmt.districtFirstLine(listing)}</p>
 
           {/* Pushed to the bottom so cards of differing title length still align. */}
           <div className="mt-auto pt-5">

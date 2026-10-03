@@ -33,8 +33,11 @@ export const site = {
   ] as { key: "properties" | "buy" | "rent" | "land" | "about" | "contact"; label: string; href: string }[],
 
   /**
-   * PLACEHOLDER statistics. These are illustrative only — replace `value`
-   * with audited figures before publishing, or drop entries entirely.
+   * Company statistics. The values below are UNCONFIRMED placeholders, so the
+   * site does not show them (components/AboutSection.tsx renders only entries
+   * with `placeholder: false`). To publish one, replace `value` with the
+   * agency's confirmed figure and set `placeholder: false`. The production
+   * config gate keeps reporting any entry still marked `placeholder: true`.
    * `key` selects the translated caption (dict.about[key]).
    */
   stats: [

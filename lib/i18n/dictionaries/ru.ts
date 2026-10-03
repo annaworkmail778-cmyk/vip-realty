@@ -9,7 +9,6 @@ export const ru: Dictionary = {
   },
 
   gate: {
-    eyebrow: "VIP REALTY",
     headings: ["Ընտրեք լեզուն", "Выберите язык", "Choose your language"],
     note: "Вы можете изменить его в любой момент.",
   },
@@ -43,7 +42,7 @@ export const ru: Dictionary = {
     location: "Расположение",
     propertyType: "Тип недвижимости",
     price: "Цена",
-    bedrooms: "Спальни",
+    rooms: "Комнаты",
     allDistricts: "Весь Ереван",
     intentAll: "Все",
     intentBuy: "Продажа",
@@ -198,6 +197,34 @@ export const ru: Dictionary = {
     next: "Вперёд",
     close: "Закрыть",
     of: "{name} — галерея",
+    imageAlt: "{name}, фото {index}",
+  },
+
+  listingTitle: {
+    sale: "Продаётся {subject}",
+    rent: "Сдаётся {subject}",
+    withPlace: "{title}, {place}",
+    rooms: {
+      apartment: "{count}-комнатная квартира",
+      penthouse: "{count}-комнатный пентхаус",
+      house: "{count}-комнатный дом",
+      villa: "{count}-комнатная вилла",
+      townhouse: "{count}-комнатный таунхаус",
+    },
+    subject: {
+      apartment: "квартира",
+      penthouse: "пентхаус",
+      house: "дом",
+      villa: "вилла",
+      townhouse: "таунхаус",
+      commercial: "коммерческая недвижимость",
+      office: "офис",
+      retail: "торговое помещение",
+      warehouse: "склад",
+      land: "земельный участок",
+      garage: "гараж",
+      other: "объект недвижимости",
+    },
   },
 
   page: {
@@ -268,7 +295,6 @@ export const ru: Dictionary = {
     statProperties: "Объектов",
     statYears: "Лет опыта",
     statClients: "Клиентов",
-    placeholderNote: "* Значения предварительные. Перед публикацией замените их в lib/site.ts на проверенные цифры.",
   },
 
   map: {
@@ -277,7 +303,6 @@ export const ru: Dictionary = {
     note: "Пять районов — пять разных способов жить в одном городе. Выберите один, чтобы увидеть доступные варианты.",
     all: "Весь Ереван",
     available: "{count} доступно",
-    placeholderNote: "Стилизованная карта · условная геометрия",
     empty: "Сейчас здесь нет объектов. Попробуйте другой район.",
     alt: "Стилизованная карта районов Еревана",
     districtCount: "{district}, объектов: {count}",
@@ -289,6 +314,17 @@ export const ru: Dictionary = {
     davtashen: "Давташен",
     ajapnyak: "Аджапняк",
     avan: "Аван",
+    erebuni: "Эребуни",
+    "kanaker-zeytun": "Канакер-Зейтун",
+    "malatia-sebastia": "Малатия-Себастия",
+    "nor-nork": "Нор-Норк",
+    "nork-marash": "Норк-Мараш",
+    nubarashen: "Нубарашен",
+    shengavit: "Шенгавит",
+  },
+
+  cities: {
+    yerevan: "Ереван",
   },
 
   districtBlurbs: {
@@ -315,7 +351,6 @@ export const ru: Dictionary = {
     contact: "Контакты",
     beingSetUp: "Контактные данные уточняются.",
     blurb: "{concept}. Недвижимость в {cityIn}, выбранная под ваш образ жизни.",
-    placeholderMedia: "Предварительные изображения и показатели",
   },
 
   common: {
@@ -343,7 +378,7 @@ export const ru: Dictionary = {
       "300-600": "$300,000 – $600,000",
       "600+": "От $600,000",
     },
-    bedrooms: {
+    rooms: {
       any: "Любое",
       "1": "1 +",
       "2": "2 +",

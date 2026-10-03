@@ -128,7 +128,7 @@ function Body({ s }: { s: Extract<Awaited<ReturnType<typeof getOperationsStatus>
         <StatCard value={s.listings.draftsPendingReview - s.listings.draftsWithoutAgency} label="Drafts awaiting review" tone="accent" href="/admin/properties?status=review" />
         <StatCard value={s.listings.approvedNotPublished} label="Approved, not published" href="/admin/properties?status=approved" />
         <StatCard value={s.listings.publiclyVisible} label="Visible on the website" />
-        <StatCard value={s.inquiries.new} label="New inquiries" />
+        <StatCard value={s.inquiries.new} label="New inquiries" href="/admin/inquiries" />
       </section>
       {s.listings.draftsWithoutAgency > 0 && (
         <p className="text-[0.8rem] text-ivory/40">

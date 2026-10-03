@@ -29,7 +29,10 @@ export function AboutSection() {
   }, root, []);
 
   const { brandName } = useSiteProfile();
-  const anyPlaceholder = site.stats.some((s) => s.placeholder);
+  /* Only figures the agency has confirmed are shown (`placeholder: false` in
+     lib/site.ts). Unconfirmed ones are never published, with or without a
+     disclaimer; with none confirmed the row is left out entirely. */
+  const stats = site.stats.filter((s) => !s.placeholder);
 
   return (
     <section
@@ -76,23 +79,18 @@ export function AboutSection() {
         />
       </div>
 
-      <div className="shell">
-        <dl className="mt-12 grid gap-y-10 border-t border-espresso/12 pt-10 sm:grid-cols-3 lg:mt-16">
-          {site.stats.map((stat) => (
-            <div key={stat.key} data-reveal="up">
-              <dt className="display-md text-espresso">
-                {stat.value}
-                {stat.placeholder && <span className="align-super text-[0.3em] text-gold"> *</span>}
-              </dt>
-              <dd className="label mt-3 text-espresso/55">{dict.about[stat.key]}</dd>
-            </div>
-          ))}
-        </dl>
-
-        {anyPlaceholder && (
-          <p className="label mt-8 max-w-[52ch] text-espresso/40">{dict.about.placeholderNote}</p>
-        )}
-      </div>
+      {stats.length > 0 && (
+        <div className="shell">
+          <dl className="mt-12 grid gap-y-10 border-t border-espresso/12 pt-10 sm:grid-cols-3 lg:mt-16">
+            {stats.map((stat) => (
+              <div key={stat.key} data-reveal="up">
+                <dt className="display-md text-espresso">{stat.value}</dt>
+                <dd className="label mt-3 text-espresso/55">{dict.about[stat.key]}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
     </section>
   );
 }

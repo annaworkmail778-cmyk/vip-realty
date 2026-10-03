@@ -71,7 +71,9 @@ export const PRICE_BANDS = [
   { id: "600+", min: 600_000, max: Infinity },
 ] as const;
 
-export const BEDROOM_OPTIONS = [
+/** Minimum number of ROOMS ("3 +"). Listings — and the Armenian market — count
+ *  rooms ("3 սենյականոց"), so this filters `rooms`, not `bedrooms`. */
+export const ROOM_OPTIONS = [
   { id: "any" },
   { id: "1" },
   { id: "2" },
@@ -81,7 +83,7 @@ export const BEDROOM_OPTIONS = [
 
 export type TypeFilter = (typeof PROPERTY_TYPES)[number]["id"];
 export type PriceFilter = (typeof PRICE_BANDS)[number]["id"];
-export type BedroomFilter = (typeof BEDROOM_OPTIONS)[number]["id"];
+export type RoomFilter = (typeof ROOM_OPTIONS)[number]["id"];
 
 /**
  * Districts drawn on the stylized map (components/YerevanMap.tsx). Positions

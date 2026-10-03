@@ -4,7 +4,6 @@ import { useRef } from "react";
 import Image from "next/image";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap } from "@/lib/motion";
-import { locationLine } from "@/lib/listings/format";
 import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import { fill } from "@/lib/i18n/fill";
 import type { Listing } from "@/lib/listings/types";
@@ -35,14 +34,18 @@ export function FeaturedProperty({ listing: property }: { listing: Listing }) {
     );
   }, root, []);
 
+  const title = fmt.title(property);
   const size = property.area ?? property.landArea;
   const facts = [
-    { label: dict.property.location, value: locationLine(property) },
+    { label: dict.property.location, value: fmt.locationLine(property) },
     { label: dict.property.price, value: fmt.price(property) },
     ...(size !== null ? [{ label: dict.property.size, value: fmt.area(size) }] : []),
-    ...(property.bedrooms !== null
-      ? [{ label: dict.property.bedrooms, value: String(property.bedrooms) }]
-      : []),
+    // Listings record rooms far more often than bedrooms; show whichever is known.
+    ...(property.rooms !== null
+      ? [{ label: dict.property.rooms, value: String(property.rooms) }]
+      : property.bedrooms !== null
+        ? [{ label: dict.property.bedrooms, value: String(property.bedrooms) }]
+        : []),
   ];
 
   return (
@@ -56,7 +59,7 @@ export function FeaturedProperty({ listing: property }: { listing: Listing }) {
           <Image
             data-featured-img
             src={cover.url}
-            alt={fill(dict.featured.alt, { name: property.name })}
+            alt={fill(dict.featured.alt, { name: title })}
             fill
             sizes="100vw"
             loading="lazy"
@@ -72,7 +75,8 @@ export function FeaturedProperty({ listing: property }: { listing: Listing }) {
           <p className="label text-champagne">{dict.featured.label}</p>
         </div>
 
-        <h2 data-reveal="up" className="display-lg mt-6 max-w-[13ch]">{property.name}</h2>
+        {/* The location is listed in the facts below, so a generated title omits it. */}
+        <h2 data-reveal="up" className="display-lg mt-6 max-w-[13ch]">{fmt.title(property, { short: true })}</h2>
 
         <dl className="mt-10 grid gap-y-6 border-t border-ivory/15 pt-7 sm:grid-cols-2 lg:grid-cols-4">
           {facts.map((f) => (

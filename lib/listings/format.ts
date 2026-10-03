@@ -1,6 +1,8 @@
 import { INTL_LOCALE, type Locale } from "@/lib/i18n/config";
 import { fill } from "@/lib/i18n/fill";
 import type { Dictionary } from "@/lib/i18n/types";
+import { cityIdOf, districtIdOf, type DistrictId } from "./places";
+import { isGeneratedTitle, type TitleFields } from "./titles";
 import type { Listing, MapDistrictId } from "./types";
 
 /* ----------------------------------------------------------------------------
@@ -15,11 +17,35 @@ import type { Listing, MapDistrictId } from "./types";
    What is formatted here and what is not:
      formatted   numbers, currency, areas, unit words, plural forms, floor
                  wording, and labels derived from FROZEN CODES (property_type,
-                 feature codes, map district ids)
-     verbatim    every free-text value the database stores — listing title,
-                 description, district and city names, image alt text. Those are
-                 joined and punctuated here but never translated or rewritten.
+                 feature codes, district ids)
+     resolved    stored values that only restate structured data: a Yerevan
+                 district or city name the gazetteer recognises
+                 (lib/listings/places.ts), and a system-generated title
+                 (lib/listings/titles.ts) — both shown in the visitor's language
+     verbatim    every other free-text value the database stores — a custom
+                 title, the description, an unknown place name, stored image alt
+                 text. Joined and punctuated here, never translated or rewritten.
 ---------------------------------------------------------------------------- */
+
+type PlaceFields = Pick<Listing, "city" | "districtLabel">;
+
+/* Digits and currency are formatted HERE, not with Intl.NumberFormat. Prices
+   and areas render on the server and again in the browser, and browsers do not
+   all ship the same locale data: Chrome has none for Armenian, so `hy-AM`
+   silently falls back to the browser's own language ("$147,000", or "AMD" for
+   ֏), the text no longer matches the server's and React re-renders it. These
+   tables reproduce the CLDR digits and symbol placement the server produced
+   before; the only visible difference is that ֏ and ₽ are now always shown as
+   symbols (Intl wrote "AMD"/"RUB" in some locales). Plural selection stays
+   on Intl.PluralRules: the Armenian forms are identical, so a fallback there
+   cannot change the text. */
+const DIGITS: Record<Locale, { group: string; decimal: string; minGroupingDigits: number }> = {
+  hy: { group: "\u00A0", decimal: ",", minGroupingDigits: 2 }, // "1234", "12 345"
+  ru: { group: "\u00A0", decimal: ",", minGroupingDigits: 1 }, // "1 234"
+  en: { group: ",", decimal: ".", minGroupingDigits: 1 }, // "1,234"
+};
+
+const CURRENCY_SYMBOLS: Record<Listing["currency"], string> = { USD: "$", AMD: "֏", EUR: "€", RUB: "₽" };
 
 /** Plural word forms; selected with Intl.PluralRules for the active locale. */
 export interface PluralForms {
@@ -53,24 +79,49 @@ export interface Format {
   count(value: number, kind: UnitKind): string;
   /** A plain number in the locale's digit grouping. */
   number(value: number): string;
-  /** Translated label / blurb for a frozen map district id. */
-  district(id: MapDistrictId): string;
+  /** Translated label for a frozen district id; blurb for a map district. */
+  district(id: DistrictId): string;
   districtBlurb(id: MapDistrictId): string;
+  /** A stored district name in the UI language when recognised, else as stored. */
+  districtName(stored: string): string;
+  /** A stored city name in the UI language when recognised, else as stored. */
+  cityName(stored: string): string;
+  /** "Ավան, Երևան" — district and city, or just the city. */
+  place(listing: PlaceFields): string;
+  /** "Avan · Yerevan" — district first, which is how buyers search. */
+  districtFirstLine(listing: PlaceFields): string;
+  /** "Yerevan · Avan", or just the city when the district is unknown. */
+  locationLine(listing: PlaceFields): string;
+  /** The listing title to display: a system-generated one in the UI language,
+   *  any other one exactly as stored. `short` drops the place from a generated
+   *  title, for tiles that show the place on their own line. */
+  title(listing: TitleFields, options?: { short?: boolean }): string;
+  /** Alt text for the n-th (1-based) photo of a listing without a stored one. */
+  imageAlt(name: string, index: number): string;
 }
 
 export function createFormat(locale: Locale, dict: Dictionary): Format {
   const tag = INTL_LOCALE[locale];
-  const numbers = new Intl.NumberFormat(tag);
   const plurals = new Intl.PluralRules(tag);
-  const currencies = new Map<string, Intl.NumberFormat>();
+  const digits = DIGITS[locale];
 
-  const money = (currency: string) => {
-    let f = currencies.get(currency);
-    if (!f) {
-      f = new Intl.NumberFormat(tag, { style: "currency", currency, maximumFractionDigits: 0 });
-      currencies.set(currency, f);
-    }
-    return f;
+  /** Rounded to `maxFraction` places, trailing zeros dropped, grouped per locale. */
+  const formatNumber = (value: number, maxFraction: number) => {
+    const scale = 10 ** maxFraction;
+    const rounded = Math.round(Math.abs(value) * scale) / scale;
+    const [int, frac = ""] = rounded.toFixed(maxFraction).split(".");
+    const fraction = frac.replace(/0+$/, "");
+    const grouped = int.length >= 4 + digits.minGroupingDigits - 1
+      ? int.replace(/\B(?=(\d{3})+$)/g, digits.group)
+      : int;
+    return `${value < 0 && rounded !== 0 ? "-" : ""}${grouped}${fraction ? digits.decimal + fraction : ""}`;
+  };
+
+  /** "$147,000" in English, "147 000 $" in Armenian and Russian. */
+  const money = (amount: number, currency: Listing["currency"]) => {
+    const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
+    const value = formatNumber(amount, 0);
+    return locale === "en" ? `${symbol}${value}` : `${value}\u00A0${symbol}`;
   };
 
   const pick = (count: number, forms: PluralForms) => {
@@ -82,7 +133,7 @@ export function createFormat(locale: Locale, dict: Dictionary): Format {
     return forms.many;
   };
 
-  const number = (value: number) => numbers.format(value);
+  const number = (value: number) => formatNumber(value, 3);
 
   const plural = (count: number, kind: UnitKind) => pick(count, dict.units[kind]);
 
@@ -96,9 +147,41 @@ export function createFormat(locale: Locale, dict: Dictionary): Format {
     return single ? { floor: Number(single[1]), total: null } : null;
   };
 
+  const districtName = (stored: string) => {
+    const id = districtIdOf(stored);
+    return id ? dict.districts[id] : stored;
+  };
+
+  const cityName = (stored: string) => {
+    const id = cityIdOf(stored);
+    return id ? dict.cities[id] : stored;
+  };
+
+  const place = (listing: PlaceFields) =>
+    [listing.districtLabel ? districtName(listing.districtLabel) : null, cityName(listing.city)]
+      .filter(Boolean)
+      .join(", ");
+
+  /* Upper-cases the first letter only ("3-room apartment…" → unchanged,
+     "apartment for sale…" → "Apartment for sale…"). */
+  const sentence = (text: string) => text.charAt(0).toLocaleUpperCase(tag) + text.slice(1);
+
+  const title = (listing: TitleFields, options: { short?: boolean } = {}) => {
+    if (!isGeneratedTitle(listing)) return listing.name;
+    const t = dict.listingTitle;
+    const type = listing.propertyType;
+    const withRooms = type in t.rooms && listing.rooms !== null && listing.rooms > 0
+      ? fill(t.rooms[type as keyof typeof t.rooms], { count: listing.rooms })
+      : null;
+    const subject = withRooms ?? t.subject[type];
+    const core = fill(listing.transactionIntent === "rent" ? t.rent : t.sale, { subject });
+    const where = options.short ? "" : place(listing);
+    return sentence(where ? fill(t.withPlace, { title: core, place: where }) : core);
+  };
+
   return {
     price(listing) {
-      const amount = money(listing.currency).format(listing.price);
+      const amount = money(listing.price, listing.currency);
       return listing.period ? `${amount}${dict.period[listing.period]}` : amount;
     },
 
@@ -176,19 +259,24 @@ export function createFormat(locale: Locale, dict: Dictionary): Format {
 
     district: (id) => dict.districts[id],
     districtBlurb: (id) => dict.districtBlurbs[id],
+
+    districtName,
+    cityName,
+    place,
+    districtFirstLine: (listing) =>
+      listing.districtLabel
+        ? `${districtName(listing.districtLabel)} · ${cityName(listing.city)}`
+        : cityName(listing.city),
+    locationLine: (listing) =>
+      listing.districtLabel
+        ? `${cityName(listing.city)} · ${districtName(listing.districtLabel)}`
+        : cityName(listing.city),
+    title,
+    imageAlt: (name, index) => fill(dict.gallery.imageAlt, { name, index }),
   };
 }
 
 /* ---------------------------------------------------------------- locale-free */
-
-/** "Arabkir · Yerevan" — district first, which is how buyers search. District and
- *  city are rendered exactly as the database stores them and are never translated. */
-export const districtFirstLine = (listing: Pick<Listing, "city" | "districtLabel">) =>
-  listing.districtLabel ? `${listing.districtLabel} · ${listing.city}` : listing.city;
-
-/** "Yerevan · Arabkir", or just the city when the district is unknown. */
-export const locationLine = (listing: Pick<Listing, "city" | "districtLabel">) =>
-  listing.districtLabel ? `${listing.city} · ${listing.districtLabel}` : listing.city;
 
 /** Two-digit editorial position: 0 → "01". */
 export const positionLabel = (index: number) => String(index + 1).padStart(2, "0");

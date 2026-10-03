@@ -4,14 +4,17 @@ import type { FilterState } from "@/components/PropertyFilters";
 import { parseListingSearch } from "@/lib/listings/filters";
 import { getFacetOptions, searchListings } from "@/lib/listings/queries";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { canonical } from "@/lib/site/url";
 
 /* Locale-aware, so the tab title and the description follow the chosen language.
-   The route was already rendered per request, so this changes no caching. */
+   The route was already rendered per request, so this changes no caching. Every
+   filtered view canonicalises to the unfiltered index. */
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getDictionary();
   return {
     title: dict.page.indexMetaTitle,
     description: dict.page.indexMetaDescription,
+    ...canonical("/properties"),
   };
 }
 
@@ -31,7 +34,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
     district: search.district,
     type: search.type,
     price: search.price,
-    bedrooms: search.bedrooms,
+    rooms: search.rooms,
   };
 
   const queryKey = JSON.stringify(search);

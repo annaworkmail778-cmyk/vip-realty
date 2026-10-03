@@ -15,6 +15,7 @@ import { Logo } from "@/components/ui/Logo";
 const NAV = [
   { href: "/admin/properties?status=review", label: "Review", match: "review" },
   { href: "/admin/properties?status=all", label: "Properties", match: "properties" },
+  { href: "/admin/inquiries", label: "Inquiries" },
   { href: "/admin/agents", label: "Agents" },
   { href: "/admin/agency", label: "Agency" },
   { href: "/admin/pipeline", label: "Pipeline" },

@@ -77,12 +77,13 @@ export const media = {
    are resolved per listing by lib/listings/mappers.ts. */
 
 /**
- * Whether any placeholder content is still on the page. The hero, the section
- * 02 intent loops and the section 04 clip are real; the collection images,
- * team photograph and map are not, and neither are the contact details or
- * statistics in lib/site.ts.
+ * Whether any placeholder imagery is still in use. The hero, the section 02
+ * intent loops and the section 04 clip are real; the collection images and the
+ * team photograph are not yet the agency's own.
  *
- * Set to false once those are replaced too — it only drives the small in-page
- * disclosure, never the layout.
+ * Set to false once those are replaced or approved by the agency. Nothing is
+ * shown to visitors because of it: it is read only by the production config
+ * gate (`npm run check:config -- --production --site`), which reports it until
+ * then.
  */
 export const MEDIA_IS_PLACEHOLDER = true;

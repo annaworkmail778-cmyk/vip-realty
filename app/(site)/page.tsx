@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Hero } from "@/components/Hero";
 import { PropertySearch } from "@/components/PropertySearch";
 import { LatestProperties } from "@/components/LatestProperties";
@@ -8,6 +9,7 @@ import { AboutSection } from "@/components/AboutSection";
 import { PropertyMap } from "@/components/PropertyMap";
 import { FeaturedProperty } from "@/components/FeaturedProperty";
 import { getSiteProfile } from "@/lib/site/profile.server";
+import { canonical } from "@/lib/site/url";
 import { FinalCTA } from "@/components/FinalCTA";
 import {
   getCategoryCounts,
@@ -15,6 +17,12 @@ import {
   listFeaturedListings,
   listRecentListings,
 } from "@/lib/listings/queries";
+
+/* Title, description and Open Graph come from the root layout; only the
+   canonical address is page-specific. */
+export function generateMetadata(): Metadata {
+  return canonical("/");
+}
 
 /** How many listings the map section shows; the index has the full set. */
 const MAP_LIMIT = 100;

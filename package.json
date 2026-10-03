@@ -18,7 +18,8 @@
     "smoke": "node scripts/smoke/smoke.mjs",
     "admin:hash-password": "node scripts/admin/hash-password.mjs",
     "test:config": "node --test scripts/config/*.test.mjs",
-    "test": "npm run test:media && npm run test:config"
+    "test:listings": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/test/ts-hooks.mjs --test lib/listings/*.test.mjs",
+    "test": "npm run test:media && npm run test:config && npm run test:listings"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

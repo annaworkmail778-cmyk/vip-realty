@@ -1,10 +1,10 @@
 import {
-  BEDROOM_OPTIONS,
+  ROOM_OPTIONS,
   PRICE_BANDS,
   PROPERTY_TYPES,
   SEARCH_INTENTS,
-  type BedroomFilter,
   type PriceFilter,
+  type RoomFilter,
   type TypeFilter,
 } from "./taxonomy";
 import type { SearchIntent } from "./types";
@@ -13,11 +13,13 @@ import type { SearchIntent } from "./types";
    The properties index URL contract, parsed and validated.
 
      /properties?intent=buy&type=apartments&district=arabkir&price=150-300
-                &bedrooms=2&city=yerevan&area_min=80&area_max=200
+                &rooms=2&city=yerevan&area_min=80&area_max=200
 
-   `intent`, `type`, `district`, `price` and `bedrooms` are the existing public
-   URL parameters (unchanged). `city`, `area_min` and `area_max` are accepted as
-   additional server-side filters. Anything unrecognised is ignored. Client-safe.
+   `intent`, `type`, `district`, `price` and `rooms` are the public URL
+   parameters. `bedrooms` is still read as an alias of `rooms`, so links shared
+   before the filter was renamed keep working; `rooms` wins when both are given.
+   `city`, `area_min` and `area_max` are accepted as additional server-side
+   filters. Anything unrecognised is ignored. Client-safe.
 ---------------------------------------------------------------------------- */
 
 export interface ListingSearch {
@@ -25,7 +27,7 @@ export interface ListingSearch {
   type: TypeFilter;
   district: string;
   price: PriceFilter;
-  bedrooms: BedroomFilter;
+  rooms: RoomFilter;
   city: string | null;
   areaMin: number | null;
   areaMax: number | null;
@@ -55,7 +57,7 @@ export function parseListingSearch(params: Params): ListingSearch {
     type: pick(one(params.type), PROPERTY_TYPES.map((t) => t.id), "any"),
     district: district && ID.test(district) ? district : "any",
     price: pick(one(params.price), PRICE_BANDS.map((b) => b.id), "any"),
-    bedrooms: pick(one(params.bedrooms), BEDROOM_OPTIONS.map((b) => b.id), "any"),
+    rooms: pick(one(params.rooms) ?? one(params.bedrooms), ROOM_OPTIONS.map((r) => r.id), "any"),
     city: city && ID.test(city) ? city : null,
     areaMin: area(one(params.area_min)),
     areaMax: area(one(params.area_max)),

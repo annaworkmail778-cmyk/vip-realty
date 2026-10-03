@@ -40,6 +40,8 @@ export type MapDistrictId = "kentron" | "arabkir" | "davtashen" | "ajapnyak" | "
 
 export interface ListingImage {
   url: string;
+  /** Stored alt text, or "" when none was stored: the renderer then derives a
+   *  localised one from the display title (`fmt.imageAlt`). */
   alt: string;
   width: number | null;
   height: number | null;
@@ -58,9 +60,9 @@ export interface Listing {
   category: Category | null;
   country: string | null;
   city: string;
-  /** District as published, e.g. "Arabkir". */
+  /** District as stored, e.g. "Arabkir" or "Արաբկիր". Render it with `fmt.districtName`. */
   districtLabel: string | null;
-  /** URL id of the district, e.g. "arabkir". */
+  /** URL id of the district, e.g. "arabkir" (lib/listings/places.ts), whatever script it was stored in. */
   district: string | null;
   price: number;
   currency: CurrencyCode;
