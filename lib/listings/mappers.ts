@@ -10,7 +10,7 @@ import {
   placeId,
 } from "./taxonomy";
 import { districtIdOf } from "./places";
-import type { CurrencyCode, Listing, ListingImage, ListingIntent, PricePeriod } from "./types";
+import type { CurrencyCode, Listing, ListingAgent, ListingImage, ListingIntent, PricePeriod } from "./types";
 
 /* ----------------------------------------------------------------------------
    The single boundary between Supabase rows and the website.
@@ -28,6 +28,7 @@ export const LISTING_COLUMNS = [
   "price", "currency", "price_period", "price_negotiable",
   "area_sqm", "land_area_sqm", "rooms", "bedrooms", "bathrooms", "floor", "total_floors", "year_built",
   "features", "featured", "published_at", "images",
+  "agent_name", "agent_phone", "agent_whatsapp",
 ].join(", ");
 
 export const PROPERTY_IMAGES_BUCKET = "property-images";
@@ -186,7 +187,21 @@ export function mapListing(row: unknown): Listing | null {
     publishedAt: text(row.published_at),
     media: mapImages(row.images),
     map: mapDistrict ? { district: mapDistrict.id, ...mapDistrict.map } : null,
+    agent: mapAgent(row),
   };
+}
+
+const E164 = /^\+[1-9][0-9]{6,14}$/;
+
+/** The listing agent's public contact. Without a usable number the agent is
+ *  null, so the page offers the agency's contacts instead. */
+function mapAgent(row: Row): ListingAgent | null {
+  const phone = text(row.agent_phone);
+  const whatsappPhone = text(row.agent_whatsapp) ?? phone;
+  const validPhone = phone && E164.test(phone) ? phone : null;
+  const validWhatsapp = whatsappPhone && E164.test(whatsappPhone) ? whatsappPhone.replace(/\D/g, "") : null;
+  if (!validPhone && !validWhatsapp) return null;
+  return { name: text(row.agent_name), phone: validPhone, whatsapp: validWhatsapp };
 }
 
 /** Which property-type codes a website collection filter matches. */

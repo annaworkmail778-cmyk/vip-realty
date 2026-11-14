@@ -157,6 +157,7 @@ export const en: Dictionary = {
     call: "Call",
     whatsapp: "Message on WhatsApp",
     contact: "Contact",
+    agent: "Agent",
     price: "Price",
     speakToUs: "Speak to us",
     tellUs: "Tell us what you are looking for",

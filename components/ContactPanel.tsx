@@ -5,7 +5,7 @@ import type { InquiryListing } from "@/components/inquiry/InquiryDialog";
 import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import { fill } from "@/lib/i18n/fill";
-import { formatPhone, telHref, telLink, viberUrl, whatsappUrl } from "@/lib/site/profile";
+import { formatPhone, listingContact, telHref, telLink, viberUrl, whatsappUrl } from "@/lib/site/profile";
 import { ViberGlyph, WhatsAppGlyph } from "@/components/ui/ContactIcons";
 import type { Listing } from "@/lib/listings/types";
 
@@ -31,7 +31,10 @@ export function ContactPanel({
   inquiry: InquiryListing;
   tone?: "dark" | "light";
 }) {
-  const profile = useSiteProfile();
+  const agency = useSiteProfile();
+  /* The agent who brought the listing answers for it; the agency otherwise. */
+  const profile = listingContact(agency, listing.agent);
+  const agentName = listing.agent ? listing.agent.name : null;
   const dict = useDict();
   const fmt = useFormat();
   /* The listing's display title, place and price as the visitor sees them on
@@ -76,8 +79,9 @@ export function ContactPanel({
         </div>
 
         <div className={`mt-7 border-t pt-6 ${t.divider}`}>
-          <p className={`label ${t.muted}`}>{dict.contact.contact}</p>
-          <p className={`mt-3 font-display text-[1.35rem] leading-tight ${t.name}`}>{profile.legalName}</p>
+          <p className={`label ${t.muted}`}>{agentName ? dict.contact.agent : dict.contact.contact}</p>
+          <p className={`mt-3 font-display text-[1.35rem] leading-tight ${t.name}`}>{agentName ?? profile.legalName}</p>
+          {agentName && <p className={`label mt-2 ${t.hours}`}>{profile.legalName}</p>}
           {profile.officeHours && <p className={`label mt-2 ${t.hours}`}>{profile.officeHours}</p>}
 
           <div className="mt-5 space-y-2.5">

@@ -157,6 +157,7 @@ export const ru: Dictionary = {
     call: "Позвонить",
     whatsapp: "Написать в WhatsApp",
     contact: "Контакты",
+    agent: "Агент",
     price: "Цена",
     speakToUs: "Свяжитесь с нами",
     tellUs: "Расскажите, что вы ищете",

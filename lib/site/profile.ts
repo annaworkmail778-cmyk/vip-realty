@@ -44,6 +44,16 @@ export const EMPTY_PROFILE: SiteProfile = {
   officeHours: null,
 };
 
+/** The contacts to offer for one listing: its agent's numbers when the agent
+ *  has any, otherwise the agency's. Name, address and hours stay the agency's. */
+export function listingContact(
+  profile: SiteProfile,
+  agent: { phone: string | null; whatsapp: string | null } | null,
+): SiteProfile {
+  if (!agent || (!agent.phone && !agent.whatsapp)) return profile;
+  return { ...profile, phone: agent.phone, phoneSecondary: null, whatsapp: agent.whatsapp, email: null };
+}
+
 /** wa.me link for the configured number, or null when WhatsApp is not configured. */
 export const whatsappUrl = (profile: SiteProfile, message: string) =>
   profile.whatsapp ? `https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(message)}` : null;

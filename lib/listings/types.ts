@@ -89,6 +89,17 @@ export interface Listing {
   };
   /** Position on the stylized map, only when the district is one the map draws. */
   map: { district: MapDistrictId; x: number; y: number } | null;
+  /** The agent who brought the listing (public name and numbers only), or null.
+   *  The listing page contacts this agent and falls back to the agency. */
+  agent: ListingAgent | null;
+}
+
+export interface ListingAgent {
+  name: string | null;
+  /** E.164, e.g. "+37494000000". */
+  phone: string | null;
+  /** Digits only, for wa.me / Viber links. */
+  whatsapp: string | null;
 }
 
 export interface DistrictOption {

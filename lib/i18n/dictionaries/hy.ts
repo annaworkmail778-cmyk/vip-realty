@@ -191,6 +191,7 @@ export const hy = {
     call: "Զանգահարել",
     whatsapp: "Գրել WhatsApp-ով",
     contact: "Կապ",
+    agent: "Գործակալ",
     price: "Գին",
     speakToUs: "Խոսեք մեզ հետ",
     tellUs: "Պատմեք, թե ինչ եք փնտրում",

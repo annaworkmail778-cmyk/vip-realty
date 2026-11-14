@@ -95,7 +95,9 @@ export default async function AgentsPage() {
       <section className="mt-14">
         <h2 className="label text-ivory/40">Unregistered senders</h2>
         <p className="mt-3 max-w-[70ch] text-[0.85rem] leading-relaxed text-ivory/55">
-          Direct messages the pipeline could not attribute to an agent. Nothing was created from them. Confirm out of
+          Messages (direct or in the WhatsApp listings group) the pipeline could not attribute to an agent. Nothing was
+          created from them. To let a new agent post listings: create the agent with their phone number (shown on
+          their listings), then link one of their messages below. Confirm out of
           band who sent a message, then register its identity on the right agent — the value is copied from the stored
           message, never typed.
         </p>
@@ -109,7 +111,7 @@ export default async function AgentsPage() {
               <li key={s.messageId} className="grid gap-3 py-4 lg:grid-cols-[1fr_22rem]">
                 <div className="text-[0.85rem]">
                   <p className="text-ivory/85">
-                    {mask(s.whatsappUserId) !== "—" ? `id ${mask(s.whatsappUserId)}` : s.senderPhone ?? "unknown sender"}
+                    {mask(s.whatsappUserId) !== "—" ? `id ${mask(s.whatsappUserId)}` : s.senderPhone ?? s.profileName ?? "unknown sender"}
                     <span className="text-ivory/40"> · {s.agencyName} · {dateTime(s.receivedAt)}</span>
                   </p>
                   <p className="label mt-1 text-ivory/40">

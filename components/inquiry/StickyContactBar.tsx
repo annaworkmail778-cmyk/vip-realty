@@ -5,7 +5,8 @@ import { InquiryDialog, type InquiryListing } from "./InquiryDialog";
 import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 import { useDict } from "@/components/site/LocaleProvider";
 import { fill } from "@/lib/i18n/fill";
-import { telHref, viberUrl, whatsappUrl } from "@/lib/site/profile";
+import { listingContact, telHref, viberUrl, whatsappUrl } from "@/lib/site/profile";
+import type { ListingAgent } from "@/lib/listings/types";
 import { PhoneGlyph, ViberGlyph, WhatsAppGlyph } from "@/components/ui/ContactIcons";
 
 /* ----------------------------------------------------------------------------
@@ -24,12 +25,15 @@ import { PhoneGlyph, ViberGlyph, WhatsAppGlyph } from "@/components/ui/ContactIc
 export function StickyContactBar({
   listing,
   price,
+  agent = null,
 }: {
   listing: InquiryListing;
   price: string;
+  /** The listing's agent; their numbers replace the agency's when present. */
+  agent?: ListingAgent | null;
 }) {
   const [open, setOpen] = useState(false);
-  const profile = useSiteProfile();
+  const profile = listingContact(useSiteProfile(), agent);
   const dict = useDict();
   const enquiry = fill(dict.contact.whatsappListing, {
     brand: profile.brandName,

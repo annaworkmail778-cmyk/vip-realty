@@ -201,7 +201,7 @@ export async function PropertyDetail({
         )}
       </div>
 
-      <StickyContactBar listing={inquiry} price={price} />
+      <StickyContactBar listing={inquiry} price={price} agent={listing.agent} />
     </article>
   );
 }
