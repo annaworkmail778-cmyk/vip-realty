@@ -6,6 +6,7 @@ import { NextAddress } from "@/components/NextAddress";
 import { TransformationSection } from "@/components/TransformationSection";
 import { PropertyCollection } from "@/components/PropertyCollection";
 import { AboutSection } from "@/components/AboutSection";
+import { FaithSection } from "@/components/FaithSection";
 import { PropertyMap } from "@/components/PropertyMap";
 import { FeaturedProperty } from "@/components/FeaturedProperty";
 import { getSiteProfile } from "@/lib/site/profile.server";
@@ -57,9 +58,10 @@ export default async function HomePage() {
       <TransformationSection />
       <PropertyCollection counts={counts.ok ? counts.data : null} />
       <AboutSection />
+      <FaithSection />
       <PropertyMap properties={listings} />
       {featuredListing && <FeaturedProperty listing={featuredListing} />}
-      <FinalCTA brandName={profile.brandName} />
+      <FinalCTA profile={profile} />
     </>
   );
 }

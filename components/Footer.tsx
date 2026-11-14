@@ -4,7 +4,7 @@ import { site } from "@/lib/site";
 import { getSiteProfile } from "@/lib/site/profile.server";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { fill } from "@/lib/i18n/fill";
-import { telHref, whatsappUrl } from "@/lib/site/profile";
+import { formatPhone, mapsUrl, telHref, telLink, viberUrl, whatsappUrl } from "@/lib/site/profile";
 import { CATEGORIES } from "@/lib/listings/taxonomy";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import type { DistrictOption } from "@/lib/listings/types";
@@ -19,6 +19,9 @@ export async function Footer({ districts }: { districts: DistrictOption[] }) {
     profile,
     fill(dict.contact.whatsappGeneral, { brand: profile.brandName }),
   );
+  const viber = viberUrl(profile);
+  const map = mapsUrl(profile);
+  const secondTel = telLink(profile.phoneSecondary);
 
   return (
     <footer data-nav-tone="dark" className="border-t border-ivory/10 bg-ink text-ivory">
@@ -32,7 +35,15 @@ export async function Footer({ districts }: { districts: DistrictOption[] }) {
                   href={tel}
                   className="mt-4 block font-display text-[clamp(1.9rem,4.5vw,3rem)] leading-none text-ivory transition-colors duration-500 hover:text-champagne"
                 >
-                  {profile.phone}
+                  {formatPhone(profile.phone!)}
+                </a>
+              )}
+              {secondTel && (
+                <a
+                  href={secondTel}
+                  className="mt-3 block font-display text-[clamp(1.4rem,3vw,2rem)] leading-none text-ivory/80 transition-colors duration-500 hover:text-champagne"
+                >
+                  {formatPhone(profile.phoneSecondary!)}
                 </a>
               )}
               {profile.officeHours && <p className="label mt-4 text-ivory/50">{profile.officeHours}</p>}
@@ -41,6 +52,7 @@ export async function Footer({ districts }: { districts: DistrictOption[] }) {
               {whatsapp && (
                 <ArrowLink href={whatsapp} tone="gold" external>{dict.contact.whatsapp}</ArrowLink>
               )}
+              {viber && <ArrowLink href={viber} tone="gold">{dict.contact.viber}</ArrowLink>}
               <ArrowLink href="/#contact">{dict.contact.tellUs}</ArrowLink>
             </div>
           </div>
@@ -88,11 +100,20 @@ export async function Footer({ districts }: { districts: DistrictOption[] }) {
           <div id="footer-contact">
             <p className="label text-ivory/45">{dict.footer.contact}</p>
             <ul className="mt-5 space-y-2.5 label text-ivory/75">
-              {tel && <li><a href={tel} className="link-underline">{profile.phone}</a></li>}
+              {tel && <li><a href={tel} className="link-underline">{formatPhone(profile.phone!)}</a></li>}
+              {secondTel && <li><a href={secondTel} className="link-underline">{formatPhone(profile.phoneSecondary!)}</a></li>}
               {profile.email && (
                 <li><a href={`mailto:${profile.email}`} className="link-underline">{profile.email}</a></li>
               )}
-              {profile.officeAddress && <li className="text-ivory/55">{profile.officeAddress}</li>}
+              {profile.officeAddress && (
+                <li className="text-ivory/55">
+                  {map ? (
+                    <a href={map} target="_blank" rel="noreferrer" className="link-underline">{profile.officeAddress}</a>
+                  ) : (
+                    profile.officeAddress
+                  )}
+                </li>
+              )}
               {profile.officeHours && <li className="text-ivory/55">{profile.officeHours}</li>}
               {!profile.configured && <li className="text-ivory/55">{dict.footer.beingSetUp}</li>}
             </ul>

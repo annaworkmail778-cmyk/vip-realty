@@ -9,7 +9,7 @@ import { site } from "@/lib/site";
 import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 import { useDict } from "@/components/site/LocaleProvider";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
-import { telHref } from "@/lib/site/profile";
+import { formatPhone, telHref, telLink } from "@/lib/site/profile";
 import type { DistrictOption } from "@/lib/listings/types";
 
 type Tone = "dark" | "light";
@@ -285,7 +285,10 @@ function MenuContact() {
   return (
     <div className="label space-y-1 text-ivory/55">
       {profile.officeAddress && <p>{profile.officeAddress}</p>}
-      {tel && <a href={tel} className="block">{profile.phone}</a>}
+      {tel && <a href={tel} className="block">{formatPhone(profile.phone!)}</a>}
+      {profile.phoneSecondary && (
+        <a href={telLink(profile.phoneSecondary)!} className="block">{formatPhone(profile.phoneSecondary)}</a>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import { ButtonLink } from "@/components/ui/ArrowLink";
 import { gsap, useGsap } from "@/lib/motion";
 import { media } from "@/lib/media";
@@ -13,6 +14,13 @@ import { useSiteProfile } from "@/components/site/SiteProfileProvider";
    Minimal overlay: one label, one headline, one line of copy, two actions.
 ---------------------------------------------------------------------------- */
 
+/* Quick entry points into the index; labels come from the navigation dictionary. */
+const QUICK = [
+  { key: "buy", href: "/properties?intent=buy" },
+  { key: "rent", href: "/properties?intent=rent" },
+  { key: "land", href: "/properties?intent=land" },
+] as const;
+
 export function Hero() {
   const { brandName } = useSiteProfile();
   const dict = useDict();
@@ -24,9 +32,11 @@ export function Hero() {
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
     tl.fromTo("[data-hero='media']", { scale: 1.08 }, { scale: 1, duration: 2.6, ease: "power2.out" }, 0)
       .fromTo("[data-hero='label']", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 1 }, 0.35)
+      .fromTo("[data-hero='blessing']", { opacity: 0, y: 10, letterSpacing: "0.3em" }, { opacity: 1, y: 0, letterSpacing: "0.08em", duration: 1.6 }, 0.3)
       .fromTo("[data-hero='line']", { yPercent: 112 }, { yPercent: 0, duration: 1.35, stagger: 0.09, ease: "expo.out" }, 0.45)
       .fromTo("[data-hero='copy']", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 1 }, 1.1)
       .fromTo("[data-hero='cta'] > *", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.9, stagger: 0.1 }, 1.25)
+      .fromTo("[data-hero='quick'] > *", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.07 }, 1.45)
       .fromTo("[data-hero='scroll']", { opacity: 0 }, { opacity: 1, duration: 1 }, 1.6);
 
     // Content drifts up and dims as the next section arrives.
@@ -76,7 +86,12 @@ export function Hero() {
           {dict.brand.tagline}
         </p>
 
-        <h1 className="display-xl mt-auto text-ivory">
+        {/* The agency's blessing to every visitor, in the brand gold. */}
+        <p data-hero="blessing" className="mt-auto font-display text-[clamp(1.15rem,2.4vw,1.6rem)] italic tracking-[0.08em] text-champagne">
+          {dict.hero.blessing}
+        </p>
+
+        <h1 className="display-xl mt-3 text-ivory">
           {dict.hero.headline.map((line) => (
             <span key={line} className="block overflow-hidden">
               <span data-hero="line" className="block">
@@ -91,9 +106,23 @@ export function Hero() {
             {dict.hero.copy}
           </p>
 
-          <div data-hero="cta" className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <ButtonLink href="/properties">{dict.hero.explore}</ButtonLink>
-            <ButtonLink href="/#contact" variant="outline">{dict.contact.contactUs}</ButtonLink>
+          <div className="flex flex-col gap-4 md:items-end">
+            <div data-hero="cta" className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <ButtonLink href="/properties">{dict.hero.explore}</ButtonLink>
+              <ButtonLink href="/#contact" variant="outline">{dict.contact.contactUs}</ButtonLink>
+            </div>
+            {/* One tap straight into what most visitors came for. */}
+            <nav data-hero="quick" aria-label={dict.nav.search} className="flex flex-wrap gap-2">
+              {QUICK.map((q) => (
+                <Link
+                  key={q.key}
+                  href={q.href}
+                  className="label rounded-full border border-ivory/25 bg-black/20 px-4 py-2 text-ivory/85 backdrop-blur-sm transition-colors duration-500 hover:border-champagne hover:text-champagne"
+                >
+                  {dict.nav[q.key]}
+                </Link>
+              ))}
+            </nav>
           </div>
         </div>
 

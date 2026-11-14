@@ -21,9 +21,12 @@ export interface SiteProfile {
   brandIsPlaceholder: boolean;
   legalName: string;
   phone: string | null;
-  /** Digits only, for wa.me links. */
+  /** A second public number, shown next to the first when set. */
+  phoneSecondary: string | null;
+  /** Digits only, for wa.me links. The same number is offered on Viber. */
   whatsapp: string | null;
   email: string | null;
+  /** Address and hours in the visitor's language (falls back to the Armenian value). */
   officeAddress: string | null;
   officeHours: string | null;
 }
@@ -34,6 +37,7 @@ export const EMPTY_PROFILE: SiteProfile = {
   brandIsPlaceholder: true,
   legalName: WORKING_BRAND_NAME,
   phone: null,
+  phoneSecondary: null,
   whatsapp: null,
   email: null,
   officeAddress: null,
@@ -44,8 +48,27 @@ export const EMPTY_PROFILE: SiteProfile = {
 export const whatsappUrl = (profile: SiteProfile, message: string) =>
   profile.whatsapp ? `https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(message)}` : null;
 
-/** `tel:` href for the configured number, or null. */
-export const telHref = (profile: SiteProfile) => (profile.phone ? `tel:${profile.phone.replace(/[^\d+]/g, "")}` : null);
+/** `tel:` href for a number, or null. */
+export const telLink = (phone: string | null) => (phone ? `tel:${phone.replace(/[^\d+]/g, "")}` : null);
+
+/** `tel:` href for the configured main number, or null. */
+export const telHref = (profile: SiteProfile) => telLink(profile.phone);
+
+/** Viber chat link for the configured WhatsApp number (the agency uses one number for both), or null. */
+export const viberUrl = (profile: SiteProfile) =>
+  profile.whatsapp ? `viber://chat?number=${encodeURIComponent(`+${profile.whatsapp}`)}` : null;
+
+/** Google Maps search for the configured office address, or null. */
+export const mapsUrl = (profile: SiteProfile) =>
+  profile.officeAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(profile.officeAddress)}`
+    : null;
+
+/** "+374 94 12 34 56" for an Armenian E.164 number; anything else is shown as stored. */
+export function formatPhone(phone: string): string {
+  const am = /^\+374(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(phone.replace(/\s+/g, ""));
+  return am ? `+374 ${am[1]} ${am[2]} ${am[3]} ${am[4]}` : phone;
+}
 
 /** "VIP Realty" -> ["VIP", "REALTY"] for the logo lockup; single words keep one line. */
 export function brandLockup(brandName: string): [string, string | null] {

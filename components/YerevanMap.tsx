@@ -88,14 +88,14 @@ export function YerevanMap({
             <path
               d={MAP_SHAPES[d.id]}
               fill={on ? "#3b2a20" : "url(#mapDistrict)"}
-              stroke={on ? "#c9a227" : "#4a3428"}
+              stroke={on ? "#c49b5b" : "#4a3428"}
               strokeWidth={on ? 0.55 : 0.3}
               opacity={selected && !on ? 0.4 : 1}
               className="transition-all duration-500"
             />
             <text
               x={d.map.x} y={d.map.y} textAnchor="middle"
-              fill={on ? "#d9be7a" : "#c9b79f"}
+              fill={on ? "#e1b377" : "#c9b79f"}
               opacity={selected && !on ? 0.45 : 0.85}
               /* Uppercased by CSS, not in JS, so the Armenian override in
                  globals.css can opt out of Latin small-caps convention. */
@@ -107,7 +107,7 @@ export function YerevanMap({
             {count !== undefined && (
               <text
                 x={d.map.x} y={d.map.y + 3.6} textAnchor="middle"
-                fill="#c9a227" opacity={on ? 0.9 : 0.45}
+                fill="#c49b5b" opacity={on ? 0.9 : 0.45}
                 className="pointer-events-none select-none"
                 style={{ fontSize: 2, fontFamily: "var(--font-sans)" }}
               >
@@ -148,9 +148,9 @@ export function YerevanMap({
             className={onSelectPin ? "cursor-pointer" : undefined}
             onClick={onSelectPin ? () => onSelectPin(p.slug) : undefined}
           >
-            <circle r={on ? 1.5 : 1} fill={on ? "#d9be7a" : "#f4efe7"} className="transition-all duration-500" />
+            <circle r={on ? 1.5 : 1} fill={on ? "#e1b377" : "#f4efe7"} className="transition-all duration-500" />
             <circle
-              r={on ? 3.4 : 2.2} fill="none" stroke="#c9a227" strokeWidth="0.22"
+              r={on ? 3.4 : 2.2} fill="none" stroke="#c49b5b" strokeWidth="0.22"
               opacity={on ? 0.9 : 0.35} className="transition-all duration-500"
             />
           </g>

@@ -68,9 +68,19 @@ export const media = {
     commercial: `${MEDIA_ROOT}/collection/commercial-v2.jpg`,
   },
 
-  about: { team: `${MEDIA_ROOT}/team/team.jpg` },
+  /**
+   * The founders' photograph for the faith section (components/FaithSection.tsx).
+   * `null` until the agency supplies it: the section then shows its text only.
+   * Drop the file at /public/media/team/founders.jpg and set the path here.
+   */
+  founders: null as string | null,
 
-  brand: { logo: `${MEDIA_ROOT}/brand/vip-realty.svg` },
+  brand: {
+    /** The agency's gold mark (cut from the supplied logo), transparent PNG. */
+    mark: `${MEDIA_ROOT}/brand/vip-realty-mark.png`,
+    /** 1200×630 share image: the full logo on the brand brown. */
+    og: `${MEDIA_ROOT}/brand/og-vip-realty.jpg`,
+  },
 } as const;
 
 /* Listing photographs are not local media: they live in Supabase Storage and
@@ -78,8 +88,8 @@ export const media = {
 
 /**
  * Whether any placeholder imagery is still in use. The hero, the section 02
- * intent loops and the section 04 clip are real; the collection images and the
- * team photograph are not yet the agency's own.
+ * intent loops, the section 04 clip and the logo are real; the four collection
+ * images are illustrations, not the agency's own photography.
  *
  * Set to false once those are replaced or approved by the agency. Nothing is
  * shown to visitors because of it: it is read only by the production config

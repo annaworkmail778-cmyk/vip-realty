@@ -15,9 +15,9 @@ export const site = {
    *  agency's real profile URLs before launch; the production config gate reports unset ones.
    *  Network names are brand names and are deliberately not translated. */
   social: [
-    { label: "Instagram", href: null },
-    { label: "Facebook", href: null },
-    { label: "LinkedIn", href: null },
+    { label: "Instagram", href: "https://www.instagram.com/vip_realty_agency/" },
+    { label: "Facebook", href: "https://www.facebook.com/329458273580244" },
+    { label: "TikTok", href: "https://www.tiktok.com/@vip_realty_company" },
   ] as { label: string; href: string | null }[],
 
   /* `key` selects the translated label from the dictionary (dict.nav[key]); the
@@ -33,16 +33,14 @@ export const site = {
   ] as { key: "properties" | "buy" | "rent" | "land" | "about" | "contact"; label: string; href: string }[],
 
   /**
-   * Company statistics. The values below are UNCONFIRMED placeholders, so the
-   * site does not show them (components/AboutSection.tsx renders only entries
-   * with `placeholder: false`). To publish one, replace `value` with the
-   * agency's confirmed figure and set `placeholder: false`. The production
-   * config gate keeps reporting any entry still marked `placeholder: true`.
-   * `key` selects the translated caption (dict.about[key]).
+   * Company statistics, as confirmed by the agency (2026-11): founded in 2022,
+   * more than 1000 clients. Only entries with `placeholder: false` are shown
+   * (components/AboutSection.tsx); the production config gate reports any entry
+   * still marked `placeholder: true`. `key` selects the translated caption
+   * (dict.about[key]).
    */
   stats: [
-    { key: "statProperties", value: "1,500+", placeholder: true },
-    { key: "statYears", value: "10+", placeholder: true },
-    { key: "statClients", value: "500+", placeholder: true },
-  ] as { key: "statProperties" | "statYears" | "statClients"; value: string; placeholder: boolean }[],
+    { key: "statClients", value: "1000+", placeholder: false },
+    { key: "statFounded", value: "2022", placeholder: false },
+  ] as { key: "statClients" | "statFounded"; value: string; placeholder: boolean }[],
 } as const;

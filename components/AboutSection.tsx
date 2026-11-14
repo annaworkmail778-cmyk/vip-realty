@@ -21,8 +21,8 @@ export function AboutSection() {
   const root = useRef<HTMLElement>(null);
 
   useGsap(() => {
-    gsap.to("[data-about-img]", {
-      yPercent: -9,
+    gsap.fromTo("[data-about-img]", { yPercent: 10 }, {
+      yPercent: -10,
       ease: "none",
       scrollTrigger: { trigger: "[data-about-frame]", start: "top bottom", end: "bottom top", scrub: true },
     });
@@ -67,21 +67,29 @@ export function AboutSection() {
         </div>
       </div>
 
-      <div data-about-frame className="relative mt-16 h-[46vh] w-full overflow-hidden sm:h-[62vh] lg:mt-24">
-        <Image
-          data-about-img
-          src={media.about.team}
-          alt={fill(dict.about.teamAlt, { brand: brandName })}
-          fill
-          sizes="100vw"
-          loading="lazy"
-          className="scale-110 object-cover"
-        />
+      {/* Brand panel instead of a team photograph: the agency prefers not to
+          publish staff photos, and nothing here may depict people who are not
+          its team. The mark drifts slowly as the panel scrolls past. */}
+      <div
+        data-about-frame
+        className="relative mt-16 flex h-[46vh] w-full items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_center,#4a3a31_0%,#2a1d16_70%)] sm:h-[58vh] lg:mt-24"
+      >
+        <div data-about-img className="flex flex-col items-center text-center">
+          <Image src={media.brand.mark} alt="" width={254} height={315} className="h-[clamp(7rem,22vh,12rem)] w-auto" />
+          <p className="wordmark mt-8 text-[clamp(1.1rem,2.6vw,1.6rem)] tracking-[0.34em] text-champagne">
+            {brandName.toUpperCase()}
+          </p>
+          <p className="label mt-3 text-ivory/60">{dict.about.panelTagline}</p>
+        </div>
       </div>
 
       {stats.length > 0 && (
         <div className="shell">
-          <dl className="mt-12 grid gap-y-10 border-t border-espresso/12 pt-10 sm:grid-cols-3 lg:mt-16">
+          <dl
+            className={`mt-12 grid gap-y-10 border-t border-espresso/12 pt-10 lg:mt-16 ${
+              stats.length === 1 ? "" : stats.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
+            }`}
+          >
             {stats.map((stat) => (
               <div key={stat.key} data-reveal="up">
                 <dt className="display-md text-espresso">{stat.value}</dt>

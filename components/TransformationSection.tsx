@@ -143,7 +143,8 @@ export function TransformationSection() {
       <div className="shell relative flex h-full flex-col pb-[clamp(1.5rem,4vh,3rem)] pt-[calc(var(--nav-h)+clamp(1.5rem,6vh,4rem))]">
         <div>
           <SectionLabel index="04">{dict.transformation.label}</SectionLabel>
-          <h2 className="display-md mt-6 max-w-[12ch]">
+          {/* 18ch: the Armenian second line ("հնարավորություն։") is 16 characters and must not break mid-word. */}
+          <h2 className="display-md mt-6 max-w-[18ch]">
             {dict.transformation.title[0]}<br />{dict.transformation.title[1]}
           </h2>
         </div>

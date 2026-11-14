@@ -166,6 +166,10 @@ export const en: Dictionary = {
     contactUs: "Contact us",
     whatsappGeneral: "Hello {brand} — I'd like to talk about a property.",
     whatsappListing: "Hello {brand} — I'd like to know more about “{name}” ({place}), listed at {price}. Ref: {slug}",
+    viber: "Message on Viber",
+    openMap: "Open in Maps",
+    visitUs: "Visit us",
+    follow: "Follow us",
   },
 
   inquiry: {
@@ -239,6 +243,7 @@ export const en: Dictionary = {
 
   hero: {
     headline: ["Find", "your place."],
+    blessing: "God bless you",
     copy: "Discover properties selected for the way you want to live.",
     explore: "Explore properties",
     scroll: "Scroll to explore",
@@ -263,7 +268,7 @@ export const en: Dictionary = {
   selection: {
     label: "The Selection",
     title: ["Select your", "next address."],
-    note: "{count}, currently. Each one visited, measured and photographed before it reaches this page.",
+    note: "{count}, currently.",
     empty: "Nothing listed at the moment.",
     shown: "{shown} of {total} shown",
     seeAll: "See all properties",
@@ -288,13 +293,22 @@ export const en: Dictionary = {
     label: "About {brand}",
     headline: ["More than property.", "A better way home."],
     body: [
-      "{brand} works at the intersection of architecture and everyday life. We look at light, proportion, orientation and neighbourhood before we look at square metres — because those are the things you live with.",
-      "Every listing we take on is visited, photographed and understood before it reaches this page. What you see here is a selected view of the market, not all of it.",
+      "{brand} has worked in the property market of Yerevan and nearby cities since 2022. In that time we have helped more than 1,000 families find their home or sell their property. Our team knows every district of the city and works with each client personally, from the first call to the close of the deal.",
+      "The agency was founded and is directed by Sergey Mikhayelyan; Jemma Melkonyan leads the team. Our team of seven will help you at every step of the deal.",
     ],
-    teamAlt: "The {brand} team",
-    statProperties: "Properties",
-    statYears: "Years Experience",
+    panelTagline: "Your real estate agency",
     statClients: "Clients",
+    statFounded: "Founded",
+  },
+
+  faith: {
+    label: "Our faith",
+    verse: "Unless the Lord builds the house, those who build it labor in vain.",
+    reference: "Psalm 127:1",
+    statement: "We are a family of faith, and we build our work on honesty and God's blessing. Every home we help someone find is the start of a new chapter in their life.",
+    founders: "Sergey Mikhayelyan & Jemma Melkonyan",
+    foundersRole: "Founder & Director · Head of Staff",
+    photoAlt: "Sergey Mikhayelyan and Jemma Melkonyan",
   },
 
   map: {

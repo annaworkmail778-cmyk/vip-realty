@@ -16,8 +16,8 @@
   --color-sand: #dccbb4;
   --color-ivory: #f4efe7;
   --color-ivory-2: #efe6d8;
-  --color-gold: #c9a227;
-  --color-champagne: #d9be7a;
+  --color-gold: #c49b5b; /* the logo's deep gold */
+  --color-champagne: #e1b377; /* the logo's mid gold */
 
   /* Font stacks are spelled out by family name rather than through next/font's
      CSS variables, because each variable expands to `"Family", "Family Fallback"`
@@ -135,7 +135,8 @@
 @layer components {
   /* Editorial display sizes — one scale, used everywhere. */
   .display-xl { font-size: clamp(3rem, min(12.5vw, 21vh), 11rem); line-height: 0.86; }
-  .display-lg { font-size: clamp(2.6rem, min(8vw, 14vh), 7rem); line-height: 0.9; }
+  /* 2.1rem floor: long Armenian and Russian words ("հնարավորություն") must fit a 375px phone unbroken. */
+  .display-lg { font-size: clamp(2.1rem, min(8vw, 14vh), 7rem); line-height: 0.9; }
   .display-md { font-size: clamp(2.2rem, 5.2vw, 4.75rem); line-height: 0.95; }
   .display-sm { font-size: clamp(1.6rem, 3vw, 2.6rem); line-height: 1.05; }
 
@@ -190,7 +191,7 @@
   }
 
   .gold-rule {
-    background: linear-gradient(to right, var(--color-gold), rgb(201 162 39 / 0));
+    background: linear-gradient(to right, var(--color-gold), rgb(196 155 91 / 0));
   }
 
   /* ------------------------------------------------------------------ inventory

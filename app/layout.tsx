@@ -73,7 +73,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title,
       description: fill(dict.page.ogDescription, place),
-      images: [media.hero.og],
+      images: [{ url: media.brand.og, width: 1200, height: 630, alt: profile.brandName }],
       type: "website",
     },
   };
