@@ -3,12 +3,14 @@ import { DataNotice, EmptyState, PageHeader } from "@/components/admin/pieces";
 import { RetryMediaButton } from "@/components/admin/ReviewActions";
 import { MEDIA_REASON_LABELS, label } from "@/lib/admin/labels";
 import { listMediaIssues, listSubmissionIssues } from "@/lib/admin/properties";
+import { getAdminT } from "@/lib/admin/i18n.server";
+import { code } from "@/lib/admin/i18n";
 
 export const dynamic = "force-dynamic";
 
-const dateTime = (iso: string | null) =>
+const dateTimeIn = (dl: string) => (iso: string | null) =>
   iso
-    ? new Intl.DateTimeFormat("en-GB", {
+    ? new Intl.DateTimeFormat(dl, {
         day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Yerevan",
       }).format(new Date(iso))
     : "—";
@@ -23,13 +25,14 @@ const GROUPS: { key: string; title: string; match: (status: string, reason: stri
 /* Problems in the automated pipeline that no listing shows on its own: media that could not be attached and
    submissions that did not become a clean draft. Read-only except the database-defined media retry. */
 export default async function PipelinePage() {
-  const [media, submissions] = await Promise.all([listMediaIssues(), listSubmissionIssues()]);
+  const [media, submissions, { t, dateLocale }] = await Promise.all([listMediaIssues(), listSubmissionIssues(), getAdminT()]);
+  const dateTime = dateTimeIn(dateLocale);
 
   return (
     <div>
       <PageHeader
-        title="Pipeline"
-        subtitle="WhatsApp media and submissions that need attention. Nothing here is visible on the website."
+        title={t("Pipeline")}
+        subtitle={t("WhatsApp media and submissions that need attention. Nothing here is visible on the website.")}
       />
 
       {!media.ok || !submissions.ok ? (
@@ -40,25 +43,25 @@ export default async function PipelinePage() {
             const rows = media.data.filter((m) => g.match(m.status, m.reason));
             return (
               <section key={g.key}>
-                <h2 className="label text-ivory/40">{g.title} ({rows.length})</h2>
+                <h2 className="label text-ivory/40">{t(g.title)} ({rows.length})</h2>
                 {rows.length === 0 ? (
-                  <EmptyState>None.</EmptyState>
+                  <EmptyState>{t("None.")}</EmptyState>
                 ) : (
                   <ul className="mt-4 divide-y divide-ivory/10 border-y border-ivory/10">
                     {rows.map((m) => (
                       <li key={m.mediaId} className="grid gap-3 py-3 text-[0.85rem] lg:grid-cols-[14rem_1fr_12rem_10rem]">
-                        <span className="text-ivory/85">{label(MEDIA_REASON_LABELS, m.reason)}</span>
+                        <span className="text-ivory/85">{t(label(MEDIA_REASON_LABELS, m.reason))}</span>
                         <span className="text-ivory/60">
-                          {m.agentName ?? "unknown sender"} · {m.agencyName ?? "—"}
+                          {m.agentName ?? t("unknown sender")} · {m.agencyName ?? "—"}
                           {m.propertyId ? (
-                            <> · <Link href={`/admin/properties/${m.propertyId}`} className="link-underline text-ivory">{m.propertyTitle ?? "draft"}</Link></>
-                          ) : m.sessionStatus ? ` · session ${m.sessionStatus}` : ""}
-                          {m.failedStage ? ` · failed at ${m.failedStage}` : ""}
+                            <> · <Link href={`/admin/properties/${m.propertyId}`} className="link-underline text-ivory">{m.propertyTitle ?? t("draft")}</Link></>
+                          ) : m.sessionStatus ? ` · ${t("session")} ${code(t, m.sessionStatus)}` : ""}
+                          {m.failedStage ? ` · ${t("failed at")} ${m.failedStage}` : ""}
                         </span>
                         <span className="label text-ivory/40">
-                          tries {m.attempts.download}/{m.attempts.validation}/{m.attempts.attach} · {dateTime(m.updatedAt)}
+                          {t("tries")} {m.attempts.download}/{m.attempts.validation}/{m.attempts.attach} · {dateTime(m.updatedAt)}
                         </span>
-                        <span>{m.retryable ? <RetryMediaButton mediaId={m.mediaId} /> : <span className="label text-ivory/30">no action</span>}</span>
+                        <span>{m.retryable ? <RetryMediaButton mediaId={m.mediaId} /> : <span className="label text-ivory/30">{t("no action")}</span>}</span>
                       </li>
                     ))}
                   </ul>
@@ -68,19 +71,19 @@ export default async function PipelinePage() {
           })}
 
           <section>
-            <h2 className="label text-ivory/40">Submissions without a clean draft ({submissions.data.length})</h2>
+            <h2 className="label text-ivory/40">{t("Submissions without a clean draft")} ({submissions.data.length})</h2>
             {submissions.data.length === 0 ? (
-              <EmptyState>None.</EmptyState>
+              <EmptyState>{t("None.")}</EmptyState>
             ) : (
               <ul className="mt-4 divide-y divide-ivory/10 border-y border-ivory/10">
                 {submissions.data.map((s) => (
                   <li key={s.sessionId} className="grid gap-3 py-3 text-[0.85rem] lg:grid-cols-[12rem_1fr_12rem]">
                     <span className="text-ivory/85">
-                      {s.validationStatus ?? s.sessionStatus}
-                      {s.conflictCount > 0 ? ` · ${s.conflictCount} conflict(s)` : ""}
+                      {code(t, s.validationStatus ?? s.sessionStatus)}
+                      {s.conflictCount > 0 ? ` · ${t("{n} conflict(s)", { n: s.conflictCount })}` : ""}
                     </span>
                     <span className="text-ivory/60">
-                      {s.agentName ?? "—"} · {s.agencyName ?? "—"} · session {s.sessionStatus}
+                      {s.agentName ?? "—"} · {s.agencyName ?? "—"} · {t("session")} {code(t, s.sessionStatus)}
                       {s.lastError ? ` · ${s.lastError}` : ""}
                       {s.issues.length > 0 && (
                         <span className="mt-1 block text-ivory/45">
@@ -89,7 +92,7 @@ export default async function PipelinePage() {
                         </span>
                       )}
                       {s.propertyId && (
-                        <> · <Link href={`/admin/properties/${s.propertyId}`} className="link-underline text-ivory">draft</Link></>
+                        <> · <Link href={`/admin/properties/${s.propertyId}`} className="link-underline text-ivory">{t("draft")}</Link></>
                       )}
                     </span>
                     <span className="label text-ivory/40">{dateTime(s.lastMessageAt)}</span>

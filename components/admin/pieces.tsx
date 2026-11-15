@@ -1,6 +1,10 @@
-import Link from "next/link";
+"use client";
 
-/* Small shared building blocks for the admin screens. */
+import Link from "next/link";
+import { useAdminT } from "@/components/admin/AdminI18n";
+import { code } from "@/lib/admin/i18n";
+
+/* Small shared building blocks for the admin screens. Callers pass already-translated titles. */
 
 export function PageHeader({
   title, subtitle, children,
@@ -50,30 +54,21 @@ const REVIEW_TONE: Record<string, string> = {
   rejected: "border-ivory/12 text-ivory/40 line-through",
 };
 
-const LABELS: Record<string, string> = {
-  draft: "Draft",
-  published: "Published",
-  sold: "Sold",
-  rented: "Rented",
-  archived: "Archived",
-  pending: "Pending review",
-  approved: "Approved",
-  rejected: "Rejected",
-};
-
 function Pill({ tone, children }: { tone: string; children: React.ReactNode }) {
   return <span className={`label inline-block whitespace-nowrap border px-2.5 py-1 text-[0.55rem] ${tone}`}>{children}</span>;
 }
 
 /** Public listing lifecycle status. */
 export function ListingStatusPill({ status }: { status: string }) {
-  return <Pill tone={LISTING_TONE[status] ?? "border-ivory/20 text-ivory/60"}>{LABELS[status] ?? status}</Pill>;
+  const { t } = useAdminT();
+  return <Pill tone={LISTING_TONE[status] ?? "border-ivory/20 text-ivory/60"}>{code(t, status)}</Pill>;
 }
 
 /** Human review state (separate from the listing status). */
 export function ReviewStatusPill({ status }: { status: string | null }) {
-  if (!status) return <span className="label text-ivory/30">Not in review</span>;
-  return <Pill tone={REVIEW_TONE[status] ?? "border-ivory/20 text-ivory/60"}>{LABELS[status] ?? status}</Pill>;
+  const { t } = useAdminT();
+  if (!status) return <span className="label text-ivory/30">{t("Not in review")}</span>;
+  return <Pill tone={REVIEW_TONE[status] ?? "border-ivory/20 text-ivory/60"}>{code(t, status === "pending" ? "pending_review" : status)}</Pill>;
 }
 
 export function EmptyState({ children }: { children: React.ReactNode }) {
@@ -82,19 +77,14 @@ export function EmptyState({ children }: { children: React.ReactNode }) {
 
 /** Shown when admin data cannot be loaded. Never includes internal errors. */
 export function DataNotice({ reason }: { reason: "unconfigured" | "unavailable" }) {
+  const { t } = useAdminT();
   return (
     <div className="mt-8 border border-champagne/30 bg-champagne/5 p-5">
-      <p className="label text-champagne">{reason === "unconfigured" ? "Not configured" : "Temporarily unavailable"}</p>
+      <p className="label text-champagne">{reason === "unconfigured" ? t("Not configured") : t("Temporarily unavailable")}</p>
       <p className="mt-3 text-[0.88rem] leading-relaxed text-ivory/70">
-        {reason === "unconfigured" ? (
-          <>
-            Listing management needs server-side database access. Set{" "}
-            <code className="text-champagne">SUPABASE_SERVICE_ROLE_KEY</code> in{" "}
-            <code className="text-champagne">.env.local</code> (never in client code) and restart the server.
-          </>
-        ) : (
-          "The database could not be reached. Try again in a moment."
-        )}
+        {reason === "unconfigured"
+          ? t("Listing management needs server-side database access, which is not configured on this server.")
+          : t("The database could not be reached. Try again in a moment.")}
       </p>
     </div>
   );

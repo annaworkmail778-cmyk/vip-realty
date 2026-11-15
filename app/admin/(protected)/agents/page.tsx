@@ -2,12 +2,13 @@ import Link from "next/link";
 import { DataNotice, EmptyState, PageHeader } from "@/components/admin/pieces";
 import { LinkIdentityForm } from "@/components/admin/ManagementForms";
 import { listAgencies, listAgents, listUnlinkedSenders } from "@/lib/admin/management";
+import { getAdminT } from "@/lib/admin/i18n.server";
 
 export const dynamic = "force-dynamic";
 
-const dateTime = (iso: string | null) =>
+const dateTimeIn = (dl: string) => (iso: string | null) =>
   iso
-    ? new Intl.DateTimeFormat("en-GB", {
+    ? new Intl.DateTimeFormat(dl, {
         day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Yerevan",
       }).format(new Date(iso))
     : "—";
@@ -23,16 +24,19 @@ const REASONS: Record<string, string> = {
   agency_mismatch: "wrong agency",
   agency_inactive: "agency is inactive",
   bsuid_not_registered: "user id not registered for this agent",
+  lid_not_registered: "not registered",
 };
 
 /* Agents and their WhatsApp identities: the people whose submissions become listings. */
 export default async function AgentsPage() {
-  const [agents, agencies, unlinked] = await Promise.all([listAgents(), listAgencies(), listUnlinkedSenders()]);
+  const [agents, agencies, unlinked, { t, dateLocale }] =
+    await Promise.all([listAgents(), listAgencies(), listUnlinkedSenders(), getAdminT()]);
+  const dateTime = dateTimeIn(dateLocale);
 
   if (!agents.ok) {
     return (
       <div>
-        <PageHeader title="Agents" />
+        <PageHeader title={t("Agents")} />
         <DataNotice reason={agents.reason === "unconfigured" ? "unconfigured" : "unavailable"} />
       </div>
     );
@@ -41,30 +45,30 @@ export default async function AgentsPage() {
 
   return (
     <div>
-      <PageHeader title="Agents" subtitle="Who may submit listings over WhatsApp, and under which identity.">
+      <PageHeader title={t("Agents")} subtitle={t("The agents whose listings in the WhatsApp group become listings on the website.")}>
         {hasAgency && (
-          <Link href="/admin/agents/new" className="label border border-ivory/25 px-4 py-2.5 hover:border-champagne">
-            Add agent
+          <Link href="/admin/agents/new" className="label bg-ivory px-4 py-2.5 text-ink hover:bg-champagne">
+            + {t("Add agent")}
           </Link>
         )}
       </PageHeader>
 
       {!hasAgency ? (
         <div className="mt-8">
-          <EmptyState>Create an agency first — every agent belongs to one.</EmptyState>
+          <EmptyState>{t("Create an agency first — every agent belongs to one.")}</EmptyState>
           <Link href="/admin/agency/new" className="label bg-ivory px-5 py-2.5 text-ink hover:bg-champagne">
-            Create an agency
+            {t("Create an agency")}
           </Link>
         </div>
       ) : agents.data.length === 0 ? (
-        <EmptyState>No agents yet. Add the agents who will send listings from their WhatsApp.</EmptyState>
+        <EmptyState>{t("No agents yet. Add the agents who will send listings from their WhatsApp.")}</EmptyState>
       ) : (
         <div className="mt-8 overflow-x-auto">
           <table className="w-full min-w-[52rem] border-collapse text-left">
             <thead>
               <tr className="border-b border-ivory/15">
-                {["Agent", "Agency", "WhatsApp id", "WhatsApp phone", "Listings", "Last message", ""].map((h) => (
-                  <th key={h} className="label py-2 pr-3 font-normal text-ivory/35">{h}</th>
+                {["Agent", "Phone shown on listings", "Agency", "Listings (published)", "Last message", ""].map((h) => (
+                  <th key={h} className="label py-2 pr-3 font-normal text-ivory/35">{h && t(h)}</th>
                 ))}
               </tr>
             </thead>
@@ -73,17 +77,16 @@ export default async function AgentsPage() {
                 <tr key={a.id} className="border-b border-ivory/10">
                   <td className="py-3 pr-3 text-[0.9rem] text-ivory/85">
                     {a.name}
-                    {!a.isActive && <span className="label ml-2 text-ivory/40">inactive</span>}
+                    {!a.isActive && <span className="label ml-2 text-ivory/40">{t("inactive")}</span>}
                   </td>
+                  <td className="py-3 pr-3 label text-ivory/70">{a.phone ?? a.whatsappPhone ?? "—"}</td>
                   <td className="py-3 pr-3 text-[0.85rem] text-ivory/60">
-                    {a.agencyName}{!a.agencyActive && <span className="label ml-2 text-ivory/40">inactive</span>}
+                    {a.agencyName}{!a.agencyActive && <span className="label ml-2 text-ivory/40">{t("inactive")}</span>}
                   </td>
-                  <td className="py-3 pr-3 label text-ivory/60">{mask(a.whatsappUserId)}</td>
-                  <td className="py-3 pr-3 label text-ivory/60">{a.whatsappPhone ?? "—"}</td>
                   <td className="py-3 pr-3 label text-ivory/60">{a.listingCount} ({a.publishedCount})</td>
                   <td className="py-3 pr-3 label text-ivory/40">{dateTime(a.lastMessageAt)}</td>
                   <td className="py-3 text-right">
-                    <Link href={`/admin/agents/${a.id}`} className="label link-underline text-champagne">Edit</Link>
+                    <Link href={`/admin/agents/${a.id}`} className="label link-underline text-champagne">{t("Edit")}</Link>
                   </td>
                 </tr>
               ))}
@@ -93,30 +96,26 @@ export default async function AgentsPage() {
       )}
 
       <section className="mt-14">
-        <h2 className="label text-ivory/40">Unregistered senders</h2>
+        <h2 className="label text-ivory/40">{t("Unrecognised senders in the WhatsApp group")}</h2>
         <p className="mt-3 max-w-[70ch] text-[0.85rem] leading-relaxed text-ivory/55">
-          Messages (direct or in the WhatsApp listings group) the pipeline could not attribute to an agent. Nothing was
-          created from them. To let a new agent post listings: create the agent with their phone number (shown on
-          their listings), then link one of their messages below. Confirm out of
-          band who sent a message, then register its identity on the right agent — the value is copied from the stored
-          message, never typed.
+          {t("Messages from people who are not linked to an agent yet. Nothing was created from them. If one of them is an agent, choose who it is and press Link — their listings will be processed from then on.")}
         </p>
         {!unlinked.ok ? (
           <DataNotice reason={unlinked.reason === "unconfigured" ? "unconfigured" : "unavailable"} />
         ) : unlinked.data.length === 0 ? (
-          <EmptyState>None.</EmptyState>
+          <EmptyState>{t("None.")}</EmptyState>
         ) : (
           <ul className="mt-4 divide-y divide-ivory/10 border-y border-ivory/10">
             {unlinked.data.map((s) => (
               <li key={s.messageId} className="grid gap-3 py-4 lg:grid-cols-[1fr_22rem]">
                 <div className="text-[0.85rem]">
                   <p className="text-ivory/85">
-                    {mask(s.whatsappUserId) !== "—" ? `id ${mask(s.whatsappUserId)}` : s.senderPhone ?? s.profileName ?? "unknown sender"}
+                    {s.profileName ?? s.senderPhone ?? (mask(s.whatsappUserId) !== "—" ? `id ${mask(s.whatsappUserId)}` : t("unknown sender"))}
                     <span className="text-ivory/40"> · {s.agencyName} · {dateTime(s.receivedAt)}</span>
                   </p>
                   <p className="label mt-1 text-ivory/40">
-                    {REASONS[s.reason ?? ""] ?? s.reason ?? "unattributed"} · {s.messageCount} message(s)
-                    {s.profileName ? ` · WhatsApp profile name: ${s.profileName} (not verified)` : ""}
+                    {t(REASONS[s.reason ?? ""] ?? s.reason ?? "unattributed")} · {t("{n} message(s)", { n: s.messageCount })}
+                    {s.profileName ? ` · ${t("WhatsApp profile name (not verified)")}` : ""}
                   </p>
                   {s.bodyPreview && <p className="mt-2 text-ivory/55">“{s.bodyPreview}”</p>}
                 </div>

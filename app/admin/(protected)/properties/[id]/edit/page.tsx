@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DataNotice, ListingStatusPill, PageHeader, ReviewStatusPill } from "@/components/admin/pieces";
 import { ListingEditForm } from "@/components/admin/ManagementForms";
 import { getReviewDetail } from "@/lib/admin/properties";
+import { getAdminT } from "@/lib/admin/i18n.server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,13 +11,13 @@ export const dynamic = "force-dynamic";
    here — the database refuses anything outside the content whitelist. */
 export default async function EditListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const result = await getReviewDetail(id);
+  const [result, { t }] = await Promise.all([getReviewDetail(id), getAdminT()]);
   if (!result.ok && result.reason === "not_found") notFound();
 
   if (!result.ok) {
     return (
       <div>
-        <PageHeader title="Edit listing" />
+        <PageHeader title={t("Edit listing")} />
         <DataNotice reason={result.reason === "unconfigured" ? "unconfigured" : "unavailable"} />
       </div>
     );
@@ -26,8 +27,8 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
   if (p.agencyName === null) {
     return (
       <div>
-        <PageHeader title={p.title ?? "Listing"} subtitle={p.slug} />
-        <p className="mt-8 label text-ivory/40">Legacy listing without an agency — editing is disabled.</p>
+        <PageHeader title={p.title ?? t("Listing")} subtitle={p.slug} />
+        <p className="mt-8 label text-ivory/40">{t("Legacy listing without an agency — editing is disabled.")}</p>
       </div>
     );
   }
@@ -36,11 +37,11 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
     <div>
       <p className="label">
         <Link href={`/admin/properties/${p.id}`} className="link-underline text-ivory/45 hover:text-ivory">
-          ← Listing
+          ← {t("Listing")}
         </Link>
       </p>
       <div className="mt-4">
-        <PageHeader title={`Edit: ${p.title ?? "Untitled draft"}`} subtitle={p.slug}>
+        <PageHeader title={`${t("Edit")}: ${p.title ?? t("Untitled draft")}`} subtitle={p.slug}>
           <ListingStatusPill status={p.listingStatus} />
           <ReviewStatusPill status={p.reviewStatus} />
         </PageHeader>

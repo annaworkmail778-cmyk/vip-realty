@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { adminActorRef } from "@/lib/admin/auth";
 import { BLOCKER_LABELS, label } from "@/lib/admin/labels";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getAdminT } from "@/lib/admin/i18n.server";
+import { code, type AdminT } from "@/lib/admin/i18n";
 
 /* ----------------------------------------------------------------------------
    Admin mutations (server actions).
@@ -33,35 +35,39 @@ type Rpc = { ok?: boolean; outcome?: string; reason?: string; blockers?: unknown
 
 type Context =
   | { error: NonNullable<ActionState> }
-  | { actor: string; id: string; db: NonNullable<ReturnType<typeof supabaseAdmin>> };
+  | { actor: string; id: string; db: NonNullable<ReturnType<typeof supabaseAdmin>>; t: AdminT };
 
 async function context(fd: FormData, idField = "id"): Promise<Context> {
+  const { t } = await getAdminT();
   const actor = await adminActorRef();
-  if (!actor) return { error: { ok: false, message: "Your admin session has expired. Sign in again." } };
+  if (!actor) return { error: { ok: false, message: t("Your admin session has expired. Sign in again.") } };
   const id = text(fd, idField);
-  if (!UUID.test(id)) return { error: { ok: false, message: "Unknown listing." } };
+  if (!UUID.test(id)) return { error: { ok: false, message: t("Unknown listing.") } };
   const db = supabaseAdmin();
-  if (!db) return { error: { ok: false, message: "Listing management is not configured on this server." } };
-  return { actor, id, db };
+  if (!db) return { error: { ok: false, message: t("Listing management is not configured on this server.") } };
+  return { actor, id, db, t };
 }
 
-function failure(result: Rpc | null): ActionState {
+function failure(t: AdminT, result: Rpc | null): ActionState {
   const outcome = result?.outcome ?? "error";
   const blockers = Array.isArray(result?.blockers) ? result!.blockers.filter((b): b is string => typeof b === "string") : [];
+  const status = code(t, result?.listing_status ?? null);
   const message: Record<string, string> = {
-    stale: "This listing changed since you opened it. The page has been refreshed — review it again.",
-    not_found: "Listing not found.",
-    not_reviewable: "Legacy listings without an agency cannot be reviewed or published here.",
-    invalid_state: `Only drafts can be reviewed (this listing is ${result?.listing_status ?? "not a draft"}).`,
-    invalid_transition: `That change is not allowed from the current status (${result?.listing_status ?? "unknown"}).`,
-    blocked: "Cannot publish yet: " + (blockers.map((b) => label(BLOCKER_LABELS, b)).join("; ") || "requirements not met") + ".",
+    stale: t("This listing changed since you opened it. The page has been refreshed — review it again."),
+    not_found: t("Listing not found."),
+    not_reviewable: t("Legacy listings without an agency cannot be reviewed or published here."),
+    invalid_state: t("Only drafts can be reviewed (this listing is {status}).", { status }),
+    invalid_transition: t("That change is not allowed from the current status ({status}).", { status }),
+    blocked: t("Cannot publish yet: {blockers}.", {
+      blockers: blockers.map((b) => t(label(BLOCKER_LABELS, b))).join("; ") || t("requirements not met"),
+    }),
     invalid_request: result?.reason === "reason_required"
-      ? "A rejection needs a reason (3–500 characters)."
-      : "The request was not valid.",
-    not_requeueable: "Only failed media can be retried.",
-    expired: "The WhatsApp download window has passed; this media can no longer be retried.",
+      ? t("A rejection needs a reason (3–500 characters).")
+      : t("The request was not valid."),
+    not_requeueable: t("Only failed media can be retried."),
+    expired: t("The WhatsApp download window has passed; this media can no longer be retried."),
   };
-  return { ok: false, message: message[outcome] ?? "The action could not be completed. Try again.", blockers };
+  return { ok: false, message: message[outcome] ?? t("The action could not be completed. Try again."), blockers };
 }
 
 function refresh(id?: string) {
@@ -74,10 +80,11 @@ export async function reviewAction(_prev: ActionState, fd: FormData): Promise<Ac
   const ctx = await context(fd);
   if ("error" in ctx) return ctx.error;
   const decision = text(fd, "decision");
-  if (decision !== "approve" && decision !== "reject") return { ok: false, message: "Unknown decision." };
+  const { t } = ctx;
+  if (decision !== "approve" && decision !== "reject") return { ok: false, message: t("Unknown decision.") };
   const reason = text(fd, "reason");
   if (decision === "reject" && (reason.length < 3 || reason.length > 500)) {
-    return { ok: false, message: "A rejection needs a reason (3–500 characters)." };
+    return { ok: false, message: t("A rejection needs a reason (3–500 characters).") };
   }
 
   const { data, error } = await ctx.db.rpc("admin_review_property", {
@@ -87,28 +94,30 @@ export async function reviewAction(_prev: ActionState, fd: FormData): Promise<Ac
   refresh(ctx.id);
   if (error) {
     console.error("[admin] review failed", { code: error.code });
-    return { ok: false, message: "The database could not be reached. Try again." };
+    return { ok: false, message: t("The database could not be reached. Try again.") };
   }
   const r = data as Rpc;
-  if (!r?.ok) return failure(r);
-  return { ok: true, message: r.outcome === "already" ? "Already " + (decision === "approve" ? "approved" : "rejected") + "." : decision === "approve" ? "Approved." : "Rejected." };
+  if (!r?.ok) return failure(t, r);
+  if (r.outcome === "already") return { ok: true, message: decision === "approve" ? t("Already approved.") : t("Already rejected.") };
+  return { ok: true, message: decision === "approve" ? t("Approved.") : t("Rejected.") };
 }
 
 export async function publishAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await context(fd);
   if ("error" in ctx) return ctx.error;
+  const { t } = ctx;
   const { data, error } = await ctx.db.rpc("admin_publish_property", {
     p_property_id: ctx.id, p_expected_version: version(fd), p_actor: ctx.actor,
   });
   refresh(ctx.id);
   if (error) {
     console.error("[admin] publish failed", { code: error.code });
-    return { ok: false, message: "The database could not be reached. Try again." };
+    return { ok: false, message: t("The database could not be reached. Try again.") };
   }
   const r = data as Rpc;
-  if (!r?.ok) return failure(r);
+  if (!r?.ok) return failure(t, r);
   if (r.slug) revalidatePath(`/properties/${r.slug}`);
-  return { ok: true, message: r.outcome === "already" ? "Already published." : "Published — it is live on the website now." };
+  return { ok: true, message: r.outcome === "already" ? t("Already published.") : t("Published — it is live on the website now.") };
 }
 
 const TARGETS = ["sold", "rented", "archived", "draft"] as const;
@@ -116,8 +125,9 @@ const TARGETS = ["sold", "rented", "archived", "draft"] as const;
 export async function statusAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await context(fd);
   if ("error" in ctx) return ctx.error;
+  const { t } = ctx;
   const target = text(fd, "target");
-  if (!(TARGETS as readonly string[]).includes(target)) return { ok: false, message: "Unknown status." };
+  if (!(TARGETS as readonly string[]).includes(target)) return { ok: false, message: t("Unknown status.") };
 
   const { data, error } = await ctx.db.rpc("admin_set_listing_status", {
     p_property_id: ctx.id, p_target: target, p_expected_version: version(fd), p_actor: ctx.actor,
@@ -126,25 +136,31 @@ export async function statusAction(_prev: ActionState, fd: FormData): Promise<Ac
   refresh(ctx.id);
   if (error) {
     console.error("[admin] status change failed", { code: error.code });
-    return { ok: false, message: "The database could not be reached. Try again." };
+    return { ok: false, message: t("The database could not be reached. Try again.") };
   }
   const r = data as Rpc;
-  if (!r?.ok) return failure(r);
-  return { ok: true, message: r.outcome === "already" ? `Already ${target}.` : `Status changed to ${target}.` };
+  if (!r?.ok) return failure(t, r);
+  return {
+    ok: true,
+    message: r.outcome === "already"
+      ? t("Already {status}.", { status: code(t, target) })
+      : t("Status changed to {status}.", { status: code(t, target) }),
+  };
 }
 
 export async function retryMediaAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await context(fd, "media_id");
   if ("error" in ctx) return ctx.error;
+  const { t } = ctx;
   const { data, error } = await ctx.db.rpc("request_media_reprocessing", {
     p_media_id: ctx.id, p_reason: `retry requested by ${ctx.actor}`,
   });
   refresh();
   if (error) {
     console.error("[admin] media retry failed", { code: error.code });
-    return { ok: false, message: "The database could not be reached. Try again." };
+    return { ok: false, message: t("The database could not be reached. Try again.") };
   }
   const r = data as Rpc;
-  if (!r?.ok) return failure(r);
-  return { ok: true, message: "Queued for another attempt. The media worker picks it up on its next run." };
+  if (!r?.ok) return failure(t, r);
+  return { ok: true, message: t("Queued for another attempt. The media worker picks it up on its next run.") };
 }

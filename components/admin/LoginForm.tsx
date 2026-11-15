@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAdminT } from "@/components/admin/AdminI18n";
 
 export function LoginForm() {
   const router = useRouter();
+  const { t } = useAdminT();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -21,13 +23,15 @@ export function LoginForm() {
       });
       const body = await res.json();
       if (!res.ok || !body.ok) {
-        setError(body.error ?? "Sign-in failed.");
+        setError(res.status === 401 ? t("Wrong password.")
+          : res.status === 429 ? t("Too many attempts. Wait a few minutes and try again.")
+          : t("Sign-in failed."));
         return;
       }
       router.replace("/admin");
       router.refresh();
     } catch {
-      setError("Could not reach the server.");
+      setError(t("Could not reach the server."));
     } finally {
       setBusy(false);
     }
@@ -36,7 +40,7 @@ export function LoginForm() {
   return (
     <form onSubmit={submit} className="mt-8">
       <label className="block">
-        <span className="label text-ivory/40">Password</span>
+        <span className="label text-ivory/40">{t("Password")}</span>
         <input
           type="password"
           value={password}
@@ -54,7 +58,7 @@ export function LoginForm() {
         disabled={busy || !password}
         className="label-lg mt-7 w-full bg-ivory px-6 py-4 text-ink transition-colors duration-500 hover:bg-champagne disabled:opacity-40"
       >
-        {busy ? "Signing in…" : "Sign in"}
+        {busy ? t("Signing in…") : t("Sign in")}
       </button>
     </form>
   );

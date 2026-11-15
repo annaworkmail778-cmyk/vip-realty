@@ -3,9 +3,11 @@
 import { useActionState, useState } from "react";
 import { Field, Result, Select, Submit, TextArea, Toggle } from "@/components/admin/forms";
 import {
-  arrangeImagesAction, linkIdentityAction, saveAgencyAction, saveAgentAction, updateListingAction,
+  arrangeImagesAction, createAgentAction, linkIdentityAction, saveAgencyAction, saveAgentAction, updateListingAction,
 } from "@/lib/admin/management-actions";
 import type { AgencyRow, AgentRow, UnlinkedSender } from "@/lib/admin/management";
+import { useAdminT } from "@/components/admin/AdminI18n";
+import { code } from "@/lib/admin/i18n";
 
 /* ----------------------------------------------------------------------------
    Agency, agent, identity-link, listing-edit and gallery-order forms.
@@ -18,6 +20,7 @@ import type { AgencyRow, AgentRow, UnlinkedSender } from "@/lib/admin/management
 
 export function AgencyForm({ agency }: { agency?: AgencyRow }) {
   const [state, action] = useActionState(saveAgencyAction, null);
+  const { t } = useAdminT();
   const isNew = !agency;
 
   return (
@@ -26,95 +29,160 @@ export function AgencyForm({ agency }: { agency?: AgencyRow }) {
       {agency && <input type="hidden" name="updated_at" value={agency.updatedAt} />}
 
       <section className="space-y-5">
-        <h2 className="label text-ivory/40">Agency</h2>
-        <Field label="Internal name" name="name" defaultValue={agency?.name} required maxLength={160}
-               hint="Used in the admin only." />
-        {isNew && <Field label="Slug" name="slug" placeholder="left blank: generated from the name" maxLength={60}
-                         hint="Permanent; cannot be changed later." />}
-        <Toggle label="Active" name="is_active" defaultChecked={agency?.isActive ?? true}
-                hint="Inactive: inbound WhatsApp is stored but never processed, and nothing new can be published." />
+        <h2 className="label text-ivory/40">{t("Agency")}</h2>
+        <Field label={t("Internal name")} name="name" defaultValue={agency?.name} required maxLength={160}
+               hint={t("Used in the admin only.")} />
+        {isNew && <Field label={t("Slug")} name="slug" placeholder={t("left blank: generated from the name")} maxLength={60}
+                         hint={t("Permanent; cannot be changed later.")} />}
+        <Toggle label={t("Active")} name="is_active" defaultChecked={agency?.isActive ?? true}
+                hint={t("Inactive: inbound WhatsApp is stored but never processed, and nothing new can be published.")} />
       </section>
 
       <section className="space-y-5">
-        <h2 className="label text-ivory/40">Public profile (shown on the website)</h2>
-        <Field label="Display name (brand)" name="display_name" defaultValue={agency?.displayName} maxLength={80}
-               hint="Drives the logo, page titles and every mention of the agency on the site." />
-        <Field label="Legal name" name="legal_name" defaultValue={agency?.legalName} maxLength={160}
-               hint="Footer copyright line. Falls back to the display name." />
-        <Field label="Public phone" name="public_phone" defaultValue={agency?.publicPhone} placeholder="+374 …"
-               hint="International format. Shown as the Call action." />
-        <Field label="Public WhatsApp number" name="public_whatsapp" defaultValue={agency?.publicWhatsapp}
-               placeholder="+374 …" hint="International format. Used for the WhatsApp button on listings." />
-        <Field label="Public email" name="public_email" type="email" defaultValue={agency?.publicEmail} maxLength={254} />
-        <Field label="Office address" name="office_address" defaultValue={agency?.officeAddress} maxLength={200} />
-        <Field label="Opening hours" name="office_hours" defaultValue={agency?.officeHours} maxLength={120}
+        <h2 className="label text-ivory/40">{t("Public profile (shown on the website)")}</h2>
+        <Field label={t("Display name (brand)")} name="display_name" defaultValue={agency?.displayName} maxLength={80}
+               hint={t("Drives the logo, page titles and every mention of the agency on the site.")} />
+        <Field label={t("Legal name")} name="legal_name" defaultValue={agency?.legalName} maxLength={160}
+               hint={t("Footer copyright line. Falls back to the display name.")} />
+        <Field label={t("Public phone")} name="public_phone" defaultValue={agency?.publicPhone} placeholder="+374 …"
+               hint={t("International format. Shown as the Call action.")} />
+        <Field label={t("Public WhatsApp number")} name="public_whatsapp" defaultValue={agency?.publicWhatsapp}
+               placeholder="+374 …" hint={t("International format. Used for the WhatsApp button.")} />
+        <Field label={t("Public email")} name="public_email" type="email" defaultValue={agency?.publicEmail} maxLength={254} />
+        <Field label={t("Office address")} name="office_address" defaultValue={agency?.officeAddress} maxLength={200} />
+        <Field label={t("Opening hours")} name="office_hours" defaultValue={agency?.officeHours} maxLength={120}
                placeholder="Mon – Sat · 10:00 – 19:00" />
-        <Toggle label="This is the website agency" name="is_site_primary" defaultChecked={agency?.isSitePrimary ?? isNew}
-                hint="Exactly one agency provides the site's brand and contact details. Ticking this moves it here." />
+        <Toggle label={t("This is the website agency")} name="is_site_primary" defaultChecked={agency?.isSitePrimary ?? isNew}
+                hint={t("Exactly one agency provides the site's brand and contact details. Ticking this moves it here.")} />
       </section>
 
       <section className="space-y-5">
-        <h2 className="label text-ivory/40">WhatsApp routing</h2>
-        <Field label="WhatsApp Business number id" name="whatsapp_phone_number_id"
+        <h2 className="label text-ivory/40">{t("WhatsApp Cloud API (optional)")}</h2>
+        <Field label={t("WhatsApp Business number id")} name="whatsapp_phone_number_id"
                defaultValue={agency?.whatsappPhoneNumberId} maxLength={30}
-               hint="Meta's phone_number_id for this agency's business number (digits). Inbound messages are routed by it. Not a credential." />
+               hint={t("Only for the official WhatsApp Cloud API. The WhatsApp group automation does not use it.")} />
       </section>
 
       <div className="flex items-center gap-4">
-        <Submit>{isNew ? "Create agency" : "Save agency"}</Submit>
+        <Submit>{isNew ? t("Create agency") : t("Save agency")}</Submit>
       </div>
       <Result state={state} />
     </form>
   );
 }
 
-export function AgentForm({ agent, agencies }: { agent?: AgentRow; agencies: AgencyRow[] }) {
+export function AgentForm({ agent, agencies }: { agent: AgentRow; agencies: AgencyRow[] }) {
   const [state, action] = useActionState(saveAgentAction, null);
-  const isNew = !agent;
-  const options = agencies.map((a) => ({ value: a.id, label: `${a.name}${a.isActive ? "" : " (inactive)"}` }));
+  const { t } = useAdminT();
+  const options = agencies.map((a) => ({ value: a.id, label: `${a.name}${a.isActive ? "" : ` (${t("inactive")})`}` }));
 
   return (
     <form action={action} className="max-w-2xl space-y-8">
-      {agent && <input type="hidden" name="id" value={agent.id} />}
-      {agent && <input type="hidden" name="updated_at" value={agent.updatedAt} />}
+      <input type="hidden" name="id" value={agent.id} />
+      <input type="hidden" name="updated_at" value={agent.updatedAt} />
 
       <section className="space-y-5">
-        <Field label="Name" name="name" defaultValue={agent?.name} required maxLength={160} />
-        {isNew ? (
-          <Select label="Agency" name="agency_id" options={[{ value: "", label: "Choose an agency" }, ...options]} />
-        ) : agent?.hasHistory ? (
+        <Field label={t("Name")} name="name" defaultValue={agent.name} required maxLength={160}
+               hint={t("Shown on the website next to their listings.")} />
+        <Field label={t("Phone shown on listings")} name="phone" defaultValue={agent.phone} placeholder="+374 …"
+               hint={t("Visitors call and WhatsApp this number from the agent's listings.")} />
+        <Toggle label={t("Active")} name="is_active" defaultChecked={agent.isActive}
+                hint={t("Inactive: their WhatsApp messages create nothing. Existing listings stay as they are.")} />
+      </section>
+
+      {agencies.length > 1 && (
+        agent.hasHistory ? (
           <div>
-            <p className="label text-ivory/40">Agency</p>
+            <p className="label text-ivory/40">{t("Agency")}</p>
             <p className="mt-2 text-[0.9rem] text-ivory/85">{agent.agencyName}</p>
-            <p className="label mt-1.5 text-[0.6rem] text-ivory/30">
-              This agent already has listings or messages, so their agency is fixed. Create a new agent for another agency.
-            </p>
           </div>
         ) : (
-          <Select label="Agency" name="agency_id" defaultValue={agent?.agencyId} options={options}
-                  hint="Can still be corrected: this agent has no listings or messages yet." />
+          <Select label={t("Agency")} name="agency_id" defaultValue={agent.agencyId} options={options} />
+        )
+      )}
+
+      <details className="border border-ivory/10 p-4">
+        <summary className="label cursor-pointer text-ivory/40">{t("More (email, WhatsApp Cloud API identity)")}</summary>
+        <div className="mt-5 space-y-5">
+          <Field label={t("Email (internal)")} name="email" type="email" defaultValue={agent.email} maxLength={254} />
+          <Field label={t("WhatsApp user id (BSUID)")} name="whatsapp_user_id" defaultValue={agent.whatsappUserId}
+                 placeholder="AM.xxxxxxxx" maxLength={140}
+                 hint={t("Only for the official WhatsApp Cloud API. Group agents are linked from their messages instead.")} />
+          <Field label={t("WhatsApp phone (Cloud API identity)")} name="whatsapp_phone" defaultValue={agent.whatsappPhone}
+                 placeholder="+374 …" hint={t("Only for the official WhatsApp Cloud API.")} />
+        </div>
+      </details>
+
+      <div className="flex items-center gap-4">
+        <Submit>{t("Save agent")}</Submit>
+      </div>
+      <Result state={state} />
+    </form>
+  );
+}
+
+/** One-step agent creation: name, public phone, and (optionally) their messages in the WhatsApp group. */
+export function NewAgentForm({ agencies, senders }: { agencies: AgencyRow[]; senders: UnlinkedSender[] }) {
+  const [state, action] = useActionState(createAgentAction, null);
+  const { t, dateLocale } = useAdminT();
+  const active = agencies.filter((a) => a.isActive);
+  const primary = active.find((a) => a.isSitePrimary) ?? active[0];
+  const [agencyId, setAgencyId] = useState(primary?.id ?? "");
+  const candidates = senders.filter((s) => s.agencyId === agencyId);
+  const when = (iso: string) => new Intl.DateTimeFormat(dateLocale, {
+    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Yerevan",
+  }).format(new Date(iso));
+
+  return (
+    <form action={action} className="max-w-2xl space-y-8">
+      <input type="hidden" name="agency_id" value={agencyId} />
+      <section className="space-y-5">
+        <Field label={t("Name")} name="name" required maxLength={160} placeholder={t("e.g. Anna Petrosyan")}
+               hint={t("Shown on the website next to their listings.")} />
+        <Field label={t("Phone shown on listings")} name="phone" required placeholder="+374 77 123456"
+               hint={t("Visitors call and WhatsApp this number from the agent's listings.")} />
+        {active.length > 1 && (
+          <label className="block">
+            <span className="label text-ivory/40">{t("Agency")}</span>
+            <select value={agencyId} onChange={(e) => setAgencyId(e.target.value)}
+                    className="mt-2 w-full border border-ivory/15 bg-transparent px-3 py-2.5 text-[0.9rem] text-ivory outline-none focus:border-champagne">
+              {active.map((a) => <option key={a.id} value={a.id} className="bg-ink text-ivory">{a.displayName ?? a.name}</option>)}
+            </select>
+          </label>
         )}
-        <Toggle label="Active" name="is_active" defaultChecked={agent?.isActive ?? true}
-                hint="Inactive: their messages are stored but create nothing, and their status commands are ignored. Existing listings stay as they are." />
       </section>
 
-      <section className="space-y-5">
-        <h2 className="label text-ivory/40">WhatsApp identity</h2>
-        <Field label="WhatsApp user id (BSUID)" name="whatsapp_user_id" defaultValue={agent?.whatsappUserId}
-               placeholder="AM.xxxxxxxx" maxLength={140}
-               hint="Preferred identity. Read it from an unregistered sender below rather than typing it." />
-        <Field label="WhatsApp phone" name="whatsapp_phone" defaultValue={agent?.whatsappPhone} placeholder="+374 …"
-               hint="Fallback identity, used only until a user id is known." />
-      </section>
-
-      <section className="space-y-5">
-        <h2 className="label text-ivory/40">Internal contact (never shown publicly)</h2>
-        <Field label="Phone" name="phone" defaultValue={agent?.phone} placeholder="+374 …" />
-        <Field label="Email" name="email" type="email" defaultValue={agent?.email} maxLength={254} />
+      <section className="space-y-3">
+        <h2 className="label text-ivory/40">{t("Their WhatsApp in the listings group")}</h2>
+        <p className="text-[0.85rem] leading-relaxed text-ivory/55">
+          {t("Ask the agent to send any message in the WhatsApp group, then pick it here. From then on every listing they post in the group is recognised as theirs.")}
+        </p>
+        {candidates.length === 0 ? (
+          <p className="label text-ivory/35">
+            {t("No unrecognised messages in the group yet. You can create the agent now and link their message later on the Agents page.")}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <label className="flex items-start gap-3 border border-ivory/10 p-3">
+              <input type="radio" name="message_id" value="" defaultChecked className="mt-1 accent-champagne" />
+              <span className="label text-ivory/50">{t("Link later")}</span>
+            </label>
+            {candidates.map((s) => (
+              <label key={s.messageId} className="flex items-start gap-3 border border-ivory/10 p-3 hover:border-ivory/25">
+                <input type="radio" name="message_id" value={s.messageId} className="mt-1 accent-champagne" />
+                <span className="min-w-0 text-[0.85rem]">
+                  <span className="text-ivory/90">{s.profileName ?? s.senderPhone ?? t("unknown sender")}</span>
+                  <span className="label ml-2 text-ivory/40">{when(s.receivedAt)} · {t("{n} message(s)", { n: s.messageCount })}</span>
+                  {s.bodyPreview && <span className="mt-1 block truncate text-ivory/55">“{s.bodyPreview}”</span>}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="flex items-center gap-4">
-        <Submit>{isNew ? "Create agent" : "Save agent"}</Submit>
+        <Submit>{t("Add agent")}</Submit>
       </div>
       <Result state={state} />
     </form>
@@ -124,6 +192,7 @@ export function AgentForm({ agent, agencies }: { agent?: AgentRow; agencies: Age
 /** Registers the identity of a stored message on an agent — no BSUID is ever typed by hand. */
 export function LinkIdentityForm({ sender, agents }: { sender: UnlinkedSender; agents: AgentRow[] }) {
   const [state, action] = useActionState(linkIdentityAction, null);
+  const { t } = useAdminT();
   const candidates = agents.filter((a) => a.agencyId === sender.agencyId);
   const suggested = sender.suggestedAgentId ?? "";
   const [agentId, setAgentId] = useState(
@@ -132,14 +201,14 @@ export function LinkIdentityForm({ sender, agents }: { sender: UnlinkedSender; a
   const chosen = candidates.find((a) => a.id === agentId);
 
   if (candidates.length === 0) {
-    return <p className="label text-ivory/30">No agents in {sender.agencyName} yet.</p>;
+    return <p className="label text-ivory/30">{t("No agents in {agency} yet.", { agency: sender.agencyName })}</p>;
   }
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="message_id" value={sender.messageId} />
       <input type="hidden" name="updated_at" value={chosen?.updatedAt ?? ""} />
       <label className="block">
-        <span className="label text-ivory/40">Register to</span>
+        <span className="label text-ivory/40">{t("This is")}</span>
         <select
           name="agent_id"
           value={agentId}
@@ -148,12 +217,12 @@ export function LinkIdentityForm({ sender, agents }: { sender: UnlinkedSender; a
         >
           {candidates.map((a) => (
             <option key={a.id} value={a.id} className="bg-ink text-ivory">
-              {a.name}{a.isActive ? "" : " (inactive)"}
+              {a.name}{a.isActive ? "" : ` (${t("inactive")})`}
             </option>
           ))}
         </select>
       </label>
-      <Submit tone="default">Register identity</Submit>
+      <Submit tone="default">{t("Link")}</Submit>
       <Result state={state} />
     </form>
   );
@@ -190,11 +259,12 @@ export interface EditableListing {
 const PROPERTY_TYPES = ["apartment", "penthouse", "house", "villa", "townhouse", "commercial", "office", "retail",
   "warehouse", "land", "garage", "other"];
 
-const options = (values: string[], blank: string) =>
-  [{ value: "", label: blank }, ...values.map((v) => ({ value: v, label: v }))];
+const codeOptions = (t: (k: string) => string, values: string[]) =>
+  [{ value: "", label: "—" }, ...values.map((v) => ({ value: v, label: code(t, v) }))];
 
 export function ListingEditForm({ listing }: { listing: EditableListing }) {
   const [state, action] = useActionState(updateListingAction, null);
+  const { t } = useAdminT();
   const approved = listing.listingStatus === "draft" && listing.reviewStatus === "approved";
 
   return (
@@ -204,61 +274,60 @@ export function ListingEditForm({ listing }: { listing: EditableListing }) {
 
       {listing.listingStatus === "published" ? (
         <p className="border border-champagne/30 bg-champagne/5 p-4 text-[0.85rem] text-ivory/80">
-          This listing is live. Changes appear on the website immediately; anything that would break the publication
-          rules is refused and nothing is saved.
+          {t("This listing is live. Changes appear on the website immediately; anything that would break the publication rules is refused and nothing is saved.")}
         </p>
       ) : approved ? (
         <p className="border border-ivory/15 p-4 text-[0.85rem] text-ivory/70">
-          This draft is approved. Saving a change returns it to pending review.
+          {t("This draft is approved. Saving a change returns it to pending review.")}
         </p>
       ) : null}
 
       <section className="grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Field label="Title" name="title" defaultValue={listing.title} maxLength={160} />
+          <Field label={t("Title")} name="title" defaultValue={listing.title} maxLength={160} />
         </div>
-        <Select label="Intent" name="intent" defaultValue={listing.intent} options={options(["buy", "rent"], "—")} />
-        <Select label="Property type" name="property_type" defaultValue={listing.propertyType}
-                options={options(PROPERTY_TYPES, "—")} />
-        <Field label="Price" name="price" defaultValue={listing.price} step="any" />
-        <Select label="Currency" name="currency" defaultValue={listing.currency}
-                options={options(["USD", "AMD", "EUR", "RUB"], "—")} />
-        <Select label="Price period (rentals)" name="price_period" defaultValue={listing.pricePeriod}
-                options={options(["month", "day", "year"], "—")} />
-        <Select label="Price negotiable" name="price_negotiable"
+        <Select label={t("Intent")} name="intent" defaultValue={listing.intent} options={codeOptions(t, ["buy", "rent"])} />
+        <Select label={t("Property type")} name="property_type" defaultValue={listing.propertyType}
+                options={codeOptions(t, PROPERTY_TYPES)} />
+        <Field label={t("Price")} name="price" defaultValue={listing.price} step="any" />
+        <Select label={t("Currency")} name="currency" defaultValue={listing.currency}
+                options={[{ value: "", label: "—" }, ...["USD", "AMD", "EUR", "RUB"].map((v) => ({ value: v, label: v }))]} />
+        <Select label={t("Price period (rentals)")} name="price_period" defaultValue={listing.pricePeriod}
+                options={codeOptions(t, ["month", "day", "year"])} />
+        <Select label={t("Price negotiable")} name="price_negotiable"
                 defaultValue={listing.priceNegotiable === null ? "" : listing.priceNegotiable ? "yes" : "no"}
-                options={[{ value: "", label: "—" }, { value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
+                options={[{ value: "", label: "—" }, { value: "yes", label: t("Yes") }, { value: "no", label: t("No") }]} />
       </section>
 
       <section className="grid gap-5 sm:grid-cols-2">
-        <h2 className="label text-ivory/40 sm:col-span-2">Location</h2>
-        <Field label="City" name="city" defaultValue={listing.city} maxLength={80} />
-        <Field label="District" name="district" defaultValue={listing.district} maxLength={80} />
-        <Field label="Country (2 letters)" name="country" defaultValue={listing.country} maxLength={2}
+        <h2 className="label text-ivory/40 sm:col-span-2">{t("Location")}</h2>
+        <Field label={t("City")} name="city" defaultValue={listing.city} maxLength={80} />
+        <Field label={t("District")} name="district" defaultValue={listing.district} maxLength={80} />
+        <Field label={t("Country (2 letters)")} name="country" defaultValue={listing.country} maxLength={2}
                placeholder="AM" />
-        <Field label="Address (never shown publicly)" name="address" defaultValue={listing.address} maxLength={200} />
+        <Field label={t("Address (never shown publicly)")} name="address" defaultValue={listing.address} maxLength={200} />
       </section>
 
       <section className="grid gap-5 sm:grid-cols-3">
-        <h2 className="label text-ivory/40 sm:col-span-3">Size</h2>
-        <Field label="Area (m²)" name="area_sqm" defaultValue={listing.areaSqm} step="any" />
-        <Field label="Land area (m²)" name="land_area_sqm" defaultValue={listing.landAreaSqm} step="any" />
-        <Field label="Rooms" name="rooms" defaultValue={listing.rooms} />
-        <Field label="Bedrooms" name="bedrooms" defaultValue={listing.bedrooms} />
-        <Field label="Bathrooms" name="bathrooms" defaultValue={listing.bathrooms} />
-        <Field label="Floor" name="floor" defaultValue={listing.floor} />
-        <Field label="Total floors" name="total_floors" defaultValue={listing.totalFloors} />
-        <Field label="Year built" name="year_built" defaultValue={listing.yearBuilt} />
+        <h2 className="label text-ivory/40 sm:col-span-3">{t("Size")}</h2>
+        <Field label={t("Area (m²)")} name="area_sqm" defaultValue={listing.areaSqm} step="any" />
+        <Field label={t("Land area (m²)")} name="land_area_sqm" defaultValue={listing.landAreaSqm} step="any" />
+        <Field label={t("Rooms")} name="rooms" defaultValue={listing.rooms} />
+        <Field label={t("Bedrooms")} name="bedrooms" defaultValue={listing.bedrooms} />
+        <Field label={t("Bathrooms")} name="bathrooms" defaultValue={listing.bathrooms} />
+        <Field label={t("Floor")} name="floor" defaultValue={listing.floor} />
+        <Field label={t("Total floors")} name="total_floors" defaultValue={listing.totalFloors} />
+        <Field label={t("Year built")} name="year_built" defaultValue={listing.yearBuilt} />
       </section>
 
       <section className="space-y-5">
-        <TextArea label="Description" name="description" defaultValue={listing.description} rows={8} maxLength={5000} />
-        <Field label="Features" name="features" defaultValue={listing.features.join(", ")}
-               hint="Comma separated, e.g. parking, balcony, lift. Spaces become underscores." />
+        <TextArea label={t("Description")} name="description" defaultValue={listing.description} rows={8} maxLength={5000} />
+        <Field label={t("Features")} name="features" defaultValue={listing.features.join(", ")}
+               hint={t("Comma separated, in English, e.g. parking, balcony, lift. Spaces become underscores.")} />
       </section>
 
       <div className="flex items-center gap-4">
-        <Submit>Save changes</Submit>
+        <Submit>{t("Save changes")}</Submit>
       </div>
       <Result state={state} />
     </form>
@@ -270,6 +339,7 @@ export function ImageArranger({
   propertyId, version, images,
 }: { propertyId: string; version: number; images: { id: string; url: string; isPrimary: boolean }[] }) {
   const [state, action] = useActionState(arrangeImagesAction, null);
+  const { t } = useAdminT();
   const [order, setOrder] = useState(images.map((i) => i.id));
   const [primary, setPrimary] = useState(images.find((i) => i.isPrimary)?.id ?? "");
   const byId = new Map(images.map((i) => [i.id, i]));
@@ -303,7 +373,7 @@ export function ImageArranger({
               <label className="label flex items-center gap-2 text-ivory/60">
                 <input type="radio" checked={primary === id} onChange={() => setPrimary(id)}
                        className="accent-champagne" />
-                Cover
+                {t("Cover")}
               </label>
               <span className="ml-auto flex gap-1">
                 <button type="button" onClick={() => move(index, -1)} disabled={index === 0}
@@ -316,7 +386,7 @@ export function ImageArranger({
         })}
       </ul>
 
-      <div className="mt-4"><Submit tone="default">Save photo order</Submit></div>
+      <div className="mt-4"><Submit tone="default">{t("Save photo order")}</Submit></div>
       <Result state={state} />
     </form>
   );

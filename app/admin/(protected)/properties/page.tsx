@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { DataNotice, EmptyState, ListingStatusPill, PageHeader, ReviewStatusPill, StatCard } from "@/components/admin/pieces";
 import { BLOCKER_LABELS, label } from "@/lib/admin/labels";
+import { getAdminT } from "@/lib/admin/i18n.server";
+import { code, type AdminT } from "@/lib/admin/i18n";
 import { QUEUE_FILTERS, countReviewQueue, listReviewQueue, type QueueFilter } from "@/lib/admin/properties";
 
 export const dynamic = "force-dynamic";
@@ -18,13 +20,13 @@ const FILTER_LABEL: Record<QueueFilter, string> = {
   all: "All",
 };
 
-const date = (iso: string | null) =>
-  iso ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Yerevan" }).format(new Date(iso)) : "—";
+const date = (dl: string, iso: string | null) =>
+  iso ? new Intl.DateTimeFormat(dl, { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Yerevan" }).format(new Date(iso)) : "—";
 
-const price = (value: number | null, currency: string | null, period: string | null) => {
+const price = (t: AdminT, value: number | null, currency: string | null, period: string | null) => {
   if (value === null || !currency) return "—";
   const amount = new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
-  return period ? `${amount} / ${period}` : amount;
+  return period ? `${amount} / ${code(t, period)}` : amount;
 };
 
 /* Review queue: drafts waiting for a decision first, then every lifecycle state. */
@@ -33,13 +35,13 @@ export default async function AdminPropertiesPage({ searchParams }: { searchPara
   const raw = Array.isArray(sp.status) ? sp.status[0] : sp.status;
   const filter: QueueFilter = (QUEUE_FILTERS as readonly string[]).includes(raw ?? "") ? (raw as QueueFilter) : "review";
 
-  const [rows, counts] = await Promise.all([listReviewQueue(filter), countReviewQueue()]);
+  const [rows, counts, { t, dateLocale }] = await Promise.all([listReviewQueue(filter), countReviewQueue(), getAdminT()]);
 
   return (
     <div>
       <PageHeader
-        title="Listings"
-        subtitle="Review WhatsApp drafts, publish approved listings and manage their status. Only published listings are on the website."
+        title={t("Listings")}
+        subtitle={t("Review WhatsApp drafts, publish approved listings and manage their status. Only published listings are on the website.")}
       />
 
       {!rows.ok ? (
@@ -52,7 +54,7 @@ export default async function AdminPropertiesPage({ searchParams }: { searchPara
                 <StatCard
                   key={f}
                   value={counts.data[f]}
-                  label={FILTER_LABEL[f]}
+                  label={t(FILTER_LABEL[f])}
                   tone={f === "review" ? "accent" : f === "archived" ? "muted" : "default"}
                   href={`/admin/properties?status=${f}`}
                   active={filter === f}
@@ -66,7 +68,7 @@ export default async function AdminPropertiesPage({ searchParams }: { searchPara
               <thead>
                 <tr className="border-b border-ivory/15">
                   {["Listing", "Status", "Intent · Type", "Price", "Location", "Agent · Agency", "Extraction", "Photos", "Publishable", "Created"].map((h) => (
-                    <th key={h} className="label py-3 pr-4 font-normal text-ivory/35">{h}</th>
+                    <th key={h} className="label py-3 pr-4 font-normal text-ivory/35">{t(h)}</th>
                   ))}
                 </tr>
               </thead>
@@ -74,7 +76,7 @@ export default async function AdminPropertiesPage({ searchParams }: { searchPara
                 {rows.data.length === 0 ? (
                   <tr>
                     <td colSpan={10}>
-                      <EmptyState>{filter === "review" ? "Nothing waiting for review." : `No listings in “${FILTER_LABEL[filter]}”.`}</EmptyState>
+                      <EmptyState>{filter === "review" ? t("Nothing waiting for review.") : t("No listings in “{filter}”.", { filter: t(FILTER_LABEL[filter]) })}</EmptyState>
                     </td>
                   </tr>
                 ) : (
@@ -86,7 +88,7 @@ export default async function AdminPropertiesPage({ searchParams }: { searchPara
                       <tr key={p.id} className="border-b border-ivory/10 align-top transition-colors duration-300 hover:bg-ivory/[0.03]">
                         <td className="py-3.5 pr-4">
                           <Link href={`/admin/properties/${p.id}`} className="link-underline text-[0.95rem] text-ivory">
-                            {p.title ?? <span className="text-ivory/40">Untitled draft</span>}
+                            {p.title ?? <span className="text-ivory/40">{t("Untitled draft")}</span>}
                           </Link>
                           <p className="label mt-1 text-ivory/35">{p.slug}</p>
                         </td>
@@ -94,35 +96,35 @@ export default async function AdminPropertiesPage({ searchParams }: { searchPara
                           <ListingStatusPill status={p.listingStatus} />
                           <div><ReviewStatusPill status={p.reviewStatus} /></div>
                         </td>
-                        <td className="label py-3.5 pr-4 text-ivory/70">{p.intent ?? "—"} · {p.propertyType ?? "—"}</td>
-                        <td className="label py-3.5 pr-4 text-champagne">{price(p.price, p.currency, p.pricePeriod)}</td>
+                        <td className="label py-3.5 pr-4 text-ivory/70">{code(t, p.intent)} · {code(t, p.propertyType)}</td>
+                        <td className="label py-3.5 pr-4 text-champagne">{price(t, p.price, p.currency, p.pricePeriod)}</td>
                         <td className="label py-3.5 pr-4 text-ivory/70">{[p.district, p.city].filter(Boolean).join(", ") || "—"}</td>
                         <td className="label py-3.5 pr-4 text-ivory/70">
-                          {p.agentName ?? "—"}{p.agentActive === false ? " (inactive)" : ""}
-                          <p className="mt-1 text-ivory/40">{p.agencyName ?? "no agency"}</p>
+                          {p.agentName ?? "—"}{p.agentActive === false ? ` (${t("inactive")})` : ""}
+                          <p className="mt-1 text-ivory/40">{p.agencyName ?? t("no agency")}</p>
                         </td>
                         <td className="label py-3.5 pr-4 text-ivory/70">
-                          {p.extractionStatus ?? (p.source === "whatsapp" ? "missing" : "—")}
-                          {p.conflictCount > 0 && <p className="mt-1 text-champagne">{p.conflictCount} conflict(s)</p>}
+                          {p.extractionStatus ? code(t, p.extractionStatus) : p.source === "whatsapp" ? t("missing") : "—"}
+                          {p.conflictCount > 0 && <p className="mt-1 text-champagne">{t("{n} conflict(s)", { n: p.conflictCount })}</p>}
                         </td>
                         <td className="label py-3.5 pr-4 text-ivory/70">
                           {p.imageCount}
-                          {pending > 0 && <p className="mt-1 text-ivory/45">{pending} processing</p>}
-                          {problems > 0 && <p className="mt-1 text-champagne">{problems} problem(s)</p>}
+                          {pending > 0 && <p className="mt-1 text-ivory/45">{t("{n} processing", { n: pending })}</p>}
+                          {problems > 0 && <p className="mt-1 text-champagne">{t("{n} problem(s)", { n: problems })}</p>}
                         </td>
                         <td className="label py-3.5 pr-4">
                           {p.listingStatus === "published" ? (
-                            <span className="text-ivory/40">live</span>
+                            <span className="text-ivory/40">{t("live")}</span>
                           ) : p.publication.publishable ? (
-                            <span className="text-champagne">Ready</span>
+                            <span className="text-champagne">{t("Ready")}</span>
                           ) : (
-                            <span className="text-ivory/55" title={p.publication.blockers.map((b) => label(BLOCKER_LABELS, b)).join("; ")}>
-                              {label(BLOCKER_LABELS, p.publication.blockers[0])}
+                            <span className="text-ivory/55" title={p.publication.blockers.map((b) => t(label(BLOCKER_LABELS, b))).join("; ")}>
+                              {t(label(BLOCKER_LABELS, p.publication.blockers[0]))}
                               {p.publication.blockers.length > 1 ? ` +${p.publication.blockers.length - 1}` : ""}
                             </span>
                           )}
                         </td>
-                        <td className="label py-3.5 pr-4 text-ivory/50">{date(p.createdAt)}</td>
+                        <td className="label py-3.5 pr-4 text-ivory/50">{date(dateLocale, p.createdAt)}</td>
                       </tr>
                     );
                   })

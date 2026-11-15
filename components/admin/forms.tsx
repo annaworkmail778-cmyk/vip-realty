@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import type { ActionState } from "@/lib/admin/management-actions";
+import { useAdminT } from "@/components/admin/AdminI18n";
 
 /* ----------------------------------------------------------------------------
    Shared admin form pieces: plain labelled inputs, a submit button that
@@ -84,8 +85,9 @@ export function Toggle({
   );
 }
 
-export function Submit({ children = "Save", tone = "primary" }: { children?: React.ReactNode; tone?: "primary" | "default" }) {
+export function Submit({ children, tone = "primary" }: { children?: React.ReactNode; tone?: "primary" | "default" }) {
   const { pending } = useFormStatus();
+  const { t } = useAdminT();
   return (
     <button
       type="submit"
@@ -94,7 +96,7 @@ export function Submit({ children = "Save", tone = "primary" }: { children?: Rea
         tone === "primary" ? "bg-ivory text-ink hover:bg-champagne" : "border border-ivory/25 text-ivory hover:border-champagne"
       }`}
     >
-      {pending ? "Saving…" : children}
+      {pending ? t("Saving…") : children ?? t("Save")}
     </button>
   );
 }

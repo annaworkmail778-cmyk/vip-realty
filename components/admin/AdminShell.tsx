@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
+import { AdminLanguageSwitch, useAdminT } from "@/components/admin/AdminI18n";
 
 /* ----------------------------------------------------------------------------
    Admin chrome. Functional rather than editorial — this is a working tool —
@@ -32,6 +33,7 @@ export function AdminShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t } = useAdminT();
   const status = searchParams.get("status");
 
   const isActive = (item: (typeof NAV)[number]) => {
@@ -55,9 +57,12 @@ export function AdminShell({
           <div className="flex items-center justify-between px-5 py-5 lg:block">
             {/* Logo renders its own link home — do not wrap it in another. */}
             <Logo className="h-7 w-auto text-ivory" />
-            <button onClick={signOut} className="label text-ivory/40 hover:text-champagne lg:hidden">
-              Sign out
-            </button>
+            <div className="flex items-center gap-3 lg:hidden">
+              <AdminLanguageSwitch />
+              <button onClick={signOut} className="label text-ivory/40 hover:text-champagne">
+                {t("Sign out")}
+              </button>
+            </div>
           </div>
 
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:mt-4 lg:flex-col lg:overflow-visible lg:px-3 lg:pb-0">
@@ -71,7 +76,7 @@ export function AdminShell({
                     active ? "bg-espresso/60 text-champagne" : "text-ivory/55 hover:text-ivory"
                   }`}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               );
             })}
@@ -79,8 +84,9 @@ export function AdminShell({
 
           <div className="mt-auto hidden px-5 py-6 lg:block">
             <DatabaseBadge ready={databaseReady} />
-            <button onClick={signOut} className="label mt-5 text-ivory/40 transition-colors hover:text-champagne">
-              Sign out
+            <AdminLanguageSwitch className="-ml-2 mt-5" />
+            <button onClick={signOut} className="label mt-4 text-ivory/40 transition-colors hover:text-champagne">
+              {t("Sign out")}
             </button>
           </div>
         </aside>
@@ -97,10 +103,11 @@ export function AdminShell({
 }
 
 function DatabaseBadge({ ready }: { ready: boolean }) {
+  const { t } = useAdminT();
   return (
     <p className="label text-ivory/30">
-      Listings database ·{" "}
-      <span className={ready ? "text-champagne" : "text-ivory/60"}>{ready ? "Connected" : "Not configured"}</span>
+      {t("Listings database")} ·{" "}
+      <span className={ready ? "text-champagne" : "text-ivory/60"}>{ready ? t("Connected") : t("Not configured")}</span>
     </p>
   );
 }
