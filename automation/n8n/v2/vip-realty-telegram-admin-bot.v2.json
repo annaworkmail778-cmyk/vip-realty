@@ -1,0 +1,449 @@
+{
+  "id": "h4BUWcfKS4ZcuOiK",
+  "name": "VIP Realty — Telegram admin bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "name": "Telegram — button pressed",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1fb99d48-9911-4ba3-8bfa-d5d3918c70d2",
+      "webhookId": "ebc508be-e742-4f75-aab6-ef34058f0a56",
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Only the configured admin chat may act. Button data is \"pub:<uuid>\" or \"rej:<uuid>\".\nconst ADMIN_CHAT_ID = '__ADMIN_CHAT_ID__';\nconst q = $json.callback_query;\nif (!q) return [];\nconst chatId = String(q.message?.chat?.id ?? '');\nconst m = /^(pub|rej):([0-9a-f-]{36})$/.exec(String(q.data || ''));\nreturn [{ json: { query_id: q.id, chat_id: chatId, message_id: q.message?.message_id ?? null,\n  actor: 'telegram:' + String(q.from?.id ?? 'unknown'), allowed: chatId === ADMIN_CHAT_ID && !!m,\n  action: m ? m[1] : null, property_id: m ? m[2] : null } }];"
+      },
+      "name": "Parse action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "f8d1bc62-d53f-4061-b15b-8d2fe973a139"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.allowed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "e8b217cc-ba04-45c7-8743-a51406831f12"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.query_id }}",
+        "additionalFields": {
+          "text": "Թույլատրված չէ"
+        }
+      },
+      "name": "Telegram — not allowed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        200
+      ],
+      "id": "8d14ce35-7700-4f02-97e5-9d24cabbc95d",
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "webhookId": "8bb78f51-dfa6-427a-a48d-7088e0c9c25e"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/properties?select=id,slug,title,state_version,listing_status,review_status&id=eq.' + $json.property_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Load listing state",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        -40
+      ],
+      "id": "1e759f9a-8cd2-4bae-b7e2-e691f47a0039",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Parse action').item.json.action === 'pub' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Approve?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -40
+      ],
+      "id": "00a5c14d-f731-45c2-aded-18795dfff454"
+    },
+    {
+      "parameters": {
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/admin_review_property",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_property_id: $json.id, p_decision: 'approve', p_reason: null, p_expected_version: $json.state_version, p_actor: $('Parse action').item.json.actor }) }}"
+      },
+      "name": "Approve (review)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        -140
+      ],
+      "id": "5f73bd86-54bc-4674-a028-cab157a13182",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/admin_publish_property",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_property_id: $('Load listing state').item.json.id, p_expected_version: $json.state_version ?? $('Load listing state').item.json.state_version, p_actor: $('Parse action').item.json.actor }) }}"
+      },
+      "name": "Publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1320,
+        -140
+      ],
+      "id": "4eafc8e4-ff0a-4b2a-9a99-25c2ca037c94",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/admin_review_property",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_property_id: $json.id, p_decision: 'reject', p_reason: 'Մերժված է Telegram-ով', p_expected_version: $json.state_version, p_actor: $('Parse action').item.json.actor }) }}"
+      },
+      "name": "Reject",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        60
+      ],
+      "id": "ad59da76-07dc-4fef-b40e-6a5409aeccb8",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const __out = [];\nconst __items = $input.all();\nfor (let __k = 0; __k < __items.length; __k++) {\n  const $json = __items[__k].json;\n  const __r = (() => {\n    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n    const SITE = 'https://vip-realty.netlify.app';\n    const p = $('Load listing state').first().json;\n    const r = $json || {};\n    const BLOCKERS = { missing_title: 'վերնագիր', missing_intent: 'վաճառք/վարձ', missing_property_type: 'գույքի տեսակ',\n      missing_city: 'քաղաք', missing_price: 'գին', missing_currency: 'արժույթ', not_approved: 'հաստատված չէ',\n      media_processing: 'նկարները դեռ մշակվում են', extraction_not_valid: 'տվյալների ճանաչումը վավեր չէ',\n      unresolved_conflict: 'հակասական տվյալներ', agent_inactive: 'գործակալը ակտիվ չէ', agency_inactive: 'գործակալությունը ակտիվ չէ',\n      archived: 'արխիվացված է', database_guard: 'բազայի ստուգումը չանցավ' };\n    let text;\n    if (r.outcome === 'published') text = `✅ <b>Հրապարակված է</b>\\n${SITE}/properties/${esc(r.slug || p.slug)}`;\n    else if (r.outcome === 'already' && r.slug) text = `ℹ️ Արդեն հրապարակված է\\n${SITE}/properties/${esc(r.slug)}`;\n    else if (r.outcome === 'rejected' || (r.outcome === 'already' && r.review_status === 'rejected')) text = '❌ <b>Մերժված է</b>։ Կայքում չի երևա։';\n    else if (r.outcome === 'blocked') text = '⛔ <b>Չհաջողվեց հրապարակել</b>։ Լրացրեք՝ ' + esc((r.blockers || []).map((b) => BLOCKERS[b] || b).join(', ')) + '\\n«Խմբագրել» կոճակով ուղղեք և նորից սեղմեք ✅։';\n    else if (r.outcome === 'stale') text = '🔄 Հայտարարությունը հենց նոր փոփոխվել է։ Սեղմեք կոճակը կրկին։';\n    else if (r.outcome === 'invalid_state') text = 'ℹ️ Այս հայտարարությունն այլևս draft չէ (' + esc(r.listing_status || p.listing_status) + ')։';\n    else text = '⚠️ Գործողությունը չկատարվեց (' + esc(r.outcome || r.reason || r.message || 'error') + ')։';\n    return [{ json: { text, toast: text.replace(/<[^>]+>/g, '').split('\\n')[0].slice(0, 190) } }];\n  })();\n  for (const x of (__r || [])) __out.push(x);\n}\nreturn __out;"
+      },
+      "name": "Result message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -40
+      ],
+      "id": "acdd193b-d761-49de-b651-fd328cf84cf9"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Parse action').item.json.query_id }}",
+        "additionalFields": {
+          "text": "={{ $json.toast }}"
+        }
+      },
+      "name": "Telegram — answer button",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        -40
+      ],
+      "id": "a619f64f-1559-4456-8222-0e791f6e4417",
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "webhookId": "8cd6860d-9027-4874-b059-ab4c16bc0b93"
+    },
+    {
+      "parameters": {
+        "chatId": "__ADMIN_CHAT_ID__",
+        "text": "={{ $('Result message').item.json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "reply_to_message_id": "={{ $('Parse action').item.json.message_id }}"
+        }
+      },
+      "name": "Telegram — result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1980,
+        -40
+      ],
+      "id": "36b56cf5-10e4-41c8-bc2a-060438eeba08",
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "webhookId": "6c066545-f16d-4c3a-b1d8-1afaae051de7"
+    }
+  ],
+  "connections": {
+    "Telegram — button pressed": {
+      "main": [
+        [
+          {
+            "node": "Parse action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse action": {
+      "main": [
+        [
+          {
+            "node": "Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Load listing state",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram — not allowed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load listing state": {
+      "main": [
+        [
+          {
+            "node": "Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve?": {
+      "main": [
+        [
+          {
+            "node": "Approve (review)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve (review)": {
+      "main": [
+        [
+          {
+            "node": "Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish": {
+      "main": [
+        [
+          {
+            "node": "Result message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reject": {
+      "main": [
+        [
+          {
+            "node": "Result message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result message": {
+      "main": [
+        [
+          {
+            "node": "Telegram — answer button",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram — answer button": {
+      "main": [
+        [
+          {
+            "node": "Telegram — result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "active": false,
+  "pinData": {}
+}

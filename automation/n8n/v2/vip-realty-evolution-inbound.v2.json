@@ -1,0 +1,562 @@
+{
+  "id": "rsceQ0VwVoJpmm75",
+  "name": "VIP Realty — Evolution Inbound (DEMO media)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "c62e989e-ad23-42fa-873f-be7c7f0c5b13",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "name": "Evolution webhook (messages.upsert)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        432
+      ],
+      "webhookId": "7b3c1f28-5d9a-4e61-9a2c-0f4d6b8e3a17",
+      "id": "5d0d885c-bdc6-475a-b589-00c59568e6b1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "LzB7brTMcKV2Gdkh",
+          "name": "VIP Realty — Evolution webhook secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst EV_KNOWN_TYPES = ['text', 'image', 'document', 'video', 'audio', 'sticker', 'location',\n  'contacts', 'interactive', 'button', 'reaction', 'order', 'system', 'unsupported'];\nconst EV_MEDIA_TYPES = ['image', 'video', 'audio', 'document', 'sticker'];\n\nconst EV_INSTANCE_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;\nconst EV_GROUP_RE = /^[0-9]{5,30}@g\\.us$/;\nconst EV_LID_RE = /^[0-9]{5,25}@lid$/;\nconst EV_MSGID_RE = /^[^:\\s]{1,128}$/;\n\nconst EV_FORBIDDEN_KEYS = ['apikey', 'apiKey', 'sender', 'server_url', 'serverUrl', 'destination',\n  'base64', 'mediaKey', 'mediaKeyTimestamp', 'directPath', 'url', 'jpegThumbnail', 'messageSecret',\n  'fileEncSha256', 'streamingSidecar', 'agency_id', 'channel_id', 'agent_id', 'create_sessions'];\n\nconst EV_MAX_TEXT = 65536;      // whatsapp_messages_body_check\nconst EV_MAX_RAW_TEXT = 8192;   // per-field cap inside raw_payload, as in the database rebuild\nconst EV_MAX_RAW_BYTES = 32768; // whatsapp_messages_evolution_raw_payload_safe\n\nconst EV_TYPE_BY_KEY = {\n  conversation: 'text',\n  extendedTextMessage: 'text',\n  imageMessage: 'image',\n  videoMessage: 'video',\n  audioMessage: 'audio',\n  ptvMessage: 'video',\n  documentMessage: 'document',\n  documentWithCaptionMessage: 'document',\n  stickerMessage: 'sticker',\n  locationMessage: 'location',\n  liveLocationMessage: 'location',\n  contactMessage: 'contacts',\n  contactsArrayMessage: 'contacts',\n  reactionMessage: 'reaction',\n  orderMessage: 'order',\n  protocolMessage: 'system',\n  senderKeyDistributionMessage: 'system',\n  buttonsResponseMessage: 'button',\n  templateButtonReplyMessage: 'button',\n  listResponseMessage: 'interactive',\n  interactiveResponseMessage: 'interactive',\n};\n\nfunction evIsObject(v) {\n  return v !== null && typeof v === 'object' && !Array.isArray(v);\n}\n\nfunction evText(v, max) {\n  if (typeof v !== 'string') return null;\n  const t = v.replace(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/g, ' ').trim();\n  if (t === '') return null;\n  return t.length > max ? t.slice(0, max) : t;\n}\n\nfunction evInt(v) {\n  if (typeof v === 'number') return Number.isSafeInteger(v) ? v : null;\n  if (typeof v === 'string' && /^[0-9]{1,19}$/.test(v)) {\n    const n = Number(v);\n    return Number.isSafeInteger(n) ? n : null;\n  }\n  if (evIsObject(v) && typeof v.low === 'number' && (v.high === 0 || v.high === undefined)) {\n    return Number.isSafeInteger(v.low) && v.low >= 0 ? v.low : null;\n  }\n  return null;\n}\n\nfunction evStripped(obj) {\n  const out = {};\n  for (const k of Object.keys(obj)) {\n    const v = obj[k];\n    if (v === null || v === undefined) continue;\n    if (evIsObject(v) && Object.keys(v).length === 0) continue;\n    out[k] = v;\n  }\n  return out;\n}\n\nfunction evHasForbiddenKey(value) {\n  if (Array.isArray(value)) return value.some(evHasForbiddenKey);\n  if (!evIsObject(value)) return false;\n  for (const k of Object.keys(value)) {\n    if (EV_FORBIDDEN_KEYS.includes(k)) return true;\n    if (evHasForbiddenKey(value[k])) return true;\n  }\n  return false;\n}\n\nfunction evFail(disposition, reason) {\n  return { ok: false, disposition: disposition, reason: reason };\n}\n\nfunction normalizeEvolutionEvent(payload) {\n  if (!evIsObject(payload)) return evFail('invalid', 'payload_not_object');\n  if (payload.event !== 'messages.upsert') return evFail('skipped', 'event_not_messages_upsert');\n\n  const data = payload.data;\n  if (!evIsObject(data)) return evFail('invalid', 'data_not_object');\n  const key = data.key;\n  if (!evIsObject(key)) return evFail('invalid', 'key_not_object');\n\n  const remoteJid = typeof key.remoteJid === 'string' ? key.remoteJid.trim() : '';\n  if (!EV_GROUP_RE.test(remoteJid)) return evFail('skipped', 'not_a_group_message');\n\n  const instance = typeof payload.instance === 'string' ? payload.instance.trim() : '';\n  if (!EV_INSTANCE_RE.test(instance)) return evFail('invalid', 'invalid_instance');\n\n  const messageId = typeof key.id === 'string' ? key.id.trim() : '';\n  if (!EV_MSGID_RE.test(messageId)) return evFail('invalid', 'invalid_message_id');\n\n  const participant = typeof key.participant === 'string' ? key.participant.trim() : '';\n  if (!EV_LID_RE.test(participant)) return evFail('invalid', 'invalid_sender_jid');\n\n  if (typeof key.fromMe !== 'boolean') return evFail('invalid', 'invalid_from_me');\n\n  const seconds = evInt(data.messageTimestamp);\n  if (seconds === null || seconds < 1230768000 || seconds > 99999999999) {\n    return evFail('invalid', 'invalid_timestamp');\n  }\n\n  const message = evIsObject(data.message) ? data.message : {};\n  const declared = typeof data.messageType === 'string' ? data.messageType : null;\n  const firstKey = Object.keys(message).find((k) => k !== 'messageContextInfo') || null;\n  const typeKey = (declared && (EV_TYPE_BY_KEY[declared] || message[declared] !== undefined))\n    ? declared\n    : firstKey;\n  let messageType = (typeKey && EV_TYPE_BY_KEY[typeKey]) || 'unsupported';\n  if (!EV_KNOWN_TYPES.includes(messageType)) messageType = 'unsupported';\n\n  const ext = evIsObject(message.extendedTextMessage) ? message.extendedTextMessage : {};\n  const img = evIsObject(message.imageMessage) ? message.imageMessage : {};\n  const vid = evIsObject(message.videoMessage) ? message.videoMessage : {};\n  const aud = evIsObject(message.audioMessage) ? message.audioMessage : {};\n  const doc = evIsObject(message.documentMessage) ? message.documentMessage : {};\n  const stk = evIsObject(message.stickerMessage) ? message.stickerMessage : {};\n  const proto = evIsObject(message.protocolMessage) ? message.protocolMessage : {};\n  const album = evIsObject(message.albumMessage) ? message.albumMessage : {};\n  const ctxInfo = evIsObject(ext.contextInfo) ? ext.contextInfo : {};\n  const msgCtx = evIsObject(message.messageContextInfo) ? message.messageContextInfo : {};\n  const assoc = evIsObject(msgCtx.messageAssociation) ? msgCtx.messageAssociation : {};\n  const assocParent = evIsObject(assoc.parentMessageKey) ? assoc.parentMessageKey : {};\n\n  const textBody = evText(message.conversation, EV_MAX_TEXT)\n    ?? evText(ext.text, EV_MAX_TEXT)\n    ?? evText(img.caption, EV_MAX_TEXT)\n    ?? evText(vid.caption, EV_MAX_TEXT)\n    ?? evText(doc.caption, EV_MAX_TEXT);\n\n  let media = null;\n  if (EV_MEDIA_TYPES.includes(messageType)) {\n    const node = messageType === 'image' ? img\n      : messageType === 'video' ? vid\n        : messageType === 'audio' ? aud\n          : messageType === 'sticker' ? stk\n            : doc;\n    const mime = evText(node.mimetype, 255);\n    const size = evInt(node.fileLength);\n    const fields = evStripped({\n      mime_type: mime && /^[a-z0-9.+-]+\\/[a-z0-9.+-]+(\\s*;.*)?$/i.test(mime) ? mime : null,\n      file_size: size !== null && size > 0 ? size : null,\n    });\n    if (Object.keys(fields).length > 0) media = fields;\n  }\n\n  const rawKey = evStripped({\n    remoteJid: remoteJid,\n    id: messageId,\n    fromMe: key.fromMe,\n    participant: participant,\n    addressingMode: evText(key.addressingMode, 32),\n  });\n  const rawExtCtx = evStripped({\n    stanzaId: evText(ctxInfo.stanzaId, 255),\n    participant: evText(ctxInfo.participant, 64),\n  });\n  const rawExt = evStripped({\n    text: evText(ext.text, EV_MAX_RAW_TEXT),\n    contextInfo: rawExtCtx,\n  });\n  const rawImg = evStripped({\n    mimetype: evText(img.mimetype, 255),\n    fileLength: evInt(img.fileLength),\n    fileSha256: evText(img.fileSha256, 128),\n    width: evInt(img.width),\n    height: evInt(img.height),\n    caption: evText(img.caption, EV_MAX_RAW_TEXT),\n  });\n  const rawProto = evStripped({\n    type: evText(proto.type, 64),\n    id: evIsObject(proto.key) ? evText(proto.key.id, 128) : null,\n  });\n  const rawAlbum = evStripped({ expectedImageCount: evInt(album.expectedImageCount) });\n  const rawAssoc = evStripped({\n    associationType: evInt(assoc.associationType) ?? evText(assoc.associationType, 64),\n    parentMessageId: evText(assocParent.id, 128),\n  });\n  const rawMessage = evStripped({\n    conversation: evText(message.conversation, EV_MAX_RAW_TEXT),\n    extendedTextMessage: rawExt,\n    imageMessage: rawImg,\n    protocolMessage: rawProto,\n    albumMessage: rawAlbum,\n    messageAssociation: rawAssoc,\n  });\n  const rawData = evStripped({\n    key: rawKey,\n    status: evText(data.status, 64),\n    source: evText(data.source, 64),\n    instanceId: evText(data.instanceId, 128),\n    messageType: evText(declared, 64),\n    messageTimestamp: seconds,\n    message: rawMessage,\n  });\n  const rawPayload = evStripped({\n    event: 'messages.upsert',\n    instance: instance,\n    data: rawData,\n  });\n\n  const event = evStripped({\n    schema_version: 3,\n    provider: 'evolution',\n    instance: instance,\n    group_id: remoteJid,\n    provider_message_id: instance + ':' + remoteJid + ':' + messageId,\n    sender_jid: participant,\n    from_me: key.fromMe,\n    sender_name: evText(data.pushName, 256),\n    message_type: messageType,\n    text_body: textBody,\n    provider_timestamp: String(seconds),\n    context_provider_message_id: evText(ctxInfo.stanzaId, 255),\n    media: media,\n    raw_payload: rawPayload,\n  });\n\n  if (evHasForbiddenKey(event)) return evFail('invalid', 'forbidden_key_present');\n  const rawBytes = typeof Buffer === 'function'\n    ? Buffer.byteLength(JSON.stringify(rawPayload), 'utf8')\n    : new TextEncoder().encode(JSON.stringify(rawPayload)).length;\n  if (rawBytes > EV_MAX_RAW_BYTES) return evFail('invalid', 'raw_payload_too_large');\n\n  return { ok: true, event: event };\n}\n\ntry {\n  if (typeof module === 'object' && module && module.exports) {\n    module.exports = {\n      normalizeEvolutionEvent,\n      EV_KNOWN_TYPES,\n      EV_MEDIA_TYPES,\n      EV_FORBIDDEN_KEYS,\n      EV_TYPE_BY_KEY,\n    };\n  }\n} catch (e) {\n}\n\nfunction demoFindBase64(value, depth = 0) {\n  if (depth > 5 || value === null || typeof value !== 'object') return null;\n  if (typeof value.base64 === 'string' && value.base64.length > 100) return value.base64;\n  for (const v of Object.values(value)) {\n    const found = demoFindBase64(v, depth + 1);\n    if (found) return found;\n  }\n  return null;\n}\n\nconst DEMO_GROUP = '__DEMO_GROUP_JID__';\n\nconst out = [];\nfor (const item of $input.all()) {\n  const body = item.json && typeof item.json.body === 'object' && item.json.body !== null\n    ? item.json.body\n    : item.json;\n  const result = normalizeEvolutionEvent(body);\n  if (result.ok) {\n    let demoMedia = null;\n    const key = body?.data?.key || {};\n    if (\n      result.event.message_type === 'image' &&\n      result.event.group_id === DEMO_GROUP\n    ) {\n      const b64 = demoFindBase64(body);\n      if (b64) {\n        demoMedia = {\n          base64: b64,\n          message_id: key.id,\n          provider_media_id: result.event.provider_message_id,\n          width: body?.data?.message?.imageMessage?.width ?? null,\n          height: body?.data?.message?.imageMessage?.height ?? null,\n          mime_type: body?.data?.message?.imageMessage?.mimetype || 'image/jpeg',\n          timestamp: evInt(body?.data?.messageTimestamp)\n        };\n      }\n    }\n    out.push({ json: { event: result.event, _demo_media: demoMedia } });\n    continue;\n  }\n  if (result.disposition === 'skipped') continue;\n  throw new Error('Evolution event not ingestable: ' + result.reason);\n}\nreturn out;\n"
+      },
+      "name": "Normalize Evolution event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1264,
+        432
+      ],
+      "id": "7aec5718-22bf-4b60-9351-b99e19043f5b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/ingest_whatsapp_message",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_event: $json.event, p_correlation_id: \"n8n:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Persist shadow message (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -928,
+        432
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "id": "2dcdde05-0014-41fd-8256-06f4a48146b3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "errorMessage": "=Supabase shadow ingestion failed after 3 attempts for provider message {{ $(\"Normalize Evolution event\").item.json.event.provider_message_id || \"without id\" }}. The event is preserved in this failed execution; retry it from Executions once Supabase is reachable."
+      },
+      "name": "Fail: ingestion unavailable (retry execution)",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        688
+      ],
+      "id": "08d74a58-07da-4878-a0dd-33d9d68695a6"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "stored"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stored"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "duplicate"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "duplicate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "ignored"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ignored"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "unroutable"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unroutable"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.outcome }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "rejected"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "rejected"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unexpected"
+        }
+      },
+      "name": "Route by ingestion outcome",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -624,
+        320
+      ],
+      "id": "3c7edb80-7270-4c0d-92d3-d272b293b805"
+    },
+    {
+      "parameters": {},
+      "name": "Stored — shadow row only (no session, no extraction)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d2b6be69-b3b4-4953-8cfc-b0455ed420a1"
+    },
+    {
+      "parameters": {},
+      "name": "Duplicate delivery — already stored",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ],
+      "id": "c61d2ea9-23f7-4113-b034-f1ec96466d55"
+    },
+    {
+      "parameters": {},
+      "name": "Ignored — before channel activation",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        320
+      ],
+      "id": "824f6793-eb40-47d9-a0ae-914542ab4648"
+    },
+    {
+      "parameters": {},
+      "name": "Unroutable — no trusted channel (recorded in automation_events)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        480
+      ],
+      "id": "adaecb99-c816-41aa-9fdc-3c662a32fb22"
+    },
+    {
+      "parameters": {},
+      "name": "Rejected — recorded in automation_events",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        640
+      ],
+      "id": "b31c9ef6-9352-439f-92bd-d7ea25dcc43f"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Supabase shadow ingestion returned an unexpected response; the event is preserved in this execution."
+      },
+      "name": "Fail: unexpected ingestion response",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        0,
+        800
+      ],
+      "id": "42370e15-bc47-410b-951a-97a2feb9a9eb"
+    },
+    {
+      "parameters": {
+        "jsCode": "const n = $(\"Normalize Evolution event\").item.json;\nconst m = n?._demo_media;\nif (!m?.base64 || !m?.provider_media_id || !m?.message_id) return [];\nreturn [{ json: {\n  provider_media_id: m.provider_media_id,\n  message_id: m.message_id,\n  mime_type: m.mime_type || 'image/jpeg',\n  width: m.width ?? null,\n  height: m.height ?? null\n} }];"
+      },
+      "name": "DEMO — image gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        64
+      ],
+      "id": "3b271ec5-bad8-4d58-92e8-d4df6e20aa05"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/whatsapp_media?select=id,mime_type&provider_media_id=eq.' + encodeURIComponent($json.provider_media_id) + '&limit=1' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Photo — find media row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -400,
+        64
+      ],
+      "id": "5faaef15-765d-4b97-a199-5f34d79bfa19",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store the photo right away in the inbox; the listing it belongs to is decided later (any order of text/photos).\nconst m = $('Normalize Evolution event').first().json._demo_media;\nconst row = $json;\nif (!m?.base64 || !row?.id) return [];\nconst EXT = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };\nconst mime = String(row.mime_type || m.mime_type || 'image/jpeg').toLowerCase().split(';')[0].trim();\nconst ext = EXT[mime];\nif (!ext) return [];\nconst ct = mime === 'image/jpg' ? 'image/jpeg' : mime;\nreturn [{ json: { media_id: row.id, path: 'inbox/' + row.id + '.' + ext, mime: ct,\n  width: Number.isInteger(m.width) ? m.width : null, height: Number.isInteger(m.height) ? m.height : null },\n  binary: { data: { data: m.base64, mimeType: ct, fileName: row.id + '.' + ext } } }];"
+      },
+      "name": "Photo — prepare inbox file",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        64
+      ],
+      "id": "055d404b-e043-490e-b7b7-6f2c72bcc47c"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://vqdxqqsvlkddgkzulaxv.supabase.co/storage/v1/object/property-images/' + $json.path }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ $json.mime }}"
+            },
+            {
+              "name": "x-upsert",
+              "value": "true"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Photo — upload to inbox",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        48,
+        64
+      ],
+      "id": "676a1a47-543e-412e-9ddb-c9b044c86739",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/whatsapp_media?id=eq.' + $('Photo — prepare inbox file').item.json.media_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status_reason: 'demo_inbox', width: $('Photo — prepare inbox file').item.json.width, height: $('Photo — prepare inbox file').item.json.height }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Photo — mark in inbox",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        272,
+        64
+      ],
+      "id": "c5868024-e8cf-4a8f-b77a-6eb2729c991e",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Evolution webhook (messages.upsert)": {
+      "main": [
+        [
+          {
+            "node": "Normalize Evolution event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Evolution event": {
+      "main": [
+        [
+          {
+            "node": "Persist shadow message (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist shadow message (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Route by ingestion outcome",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "DEMO — image gate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail: ingestion unavailable (retry execution)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by ingestion outcome": {
+      "main": [
+        [
+          {
+            "node": "Stored — shadow row only (no session, no extraction)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Duplicate delivery — already stored",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignored — before channel activation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unroutable — no trusted channel (recorded in automation_events)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rejected — recorded in automation_events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail: unexpected ingestion response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEMO — image gate": {
+      "main": [
+        [
+          {
+            "node": "Photo — find media row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Photo — find media row": {
+      "main": [
+        [
+          {
+            "node": "Photo — prepare inbox file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Photo — prepare inbox file": {
+      "main": [
+        [
+          {
+            "node": "Photo — upload to inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Photo — upload to inbox": {
+      "main": [
+        [
+          {
+            "node": "Photo — mark in inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "active": false,
+  "pinData": {}
+}

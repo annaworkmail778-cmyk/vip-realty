@@ -1,0 +1,184 @@
+{
+  "id": "90LsLrFN7xNFiglR",
+  "name": "VIP Realty — website inquiries to Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "name": "Every minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "53ed8473-5d03-4e2a-a2ca-df1bc55824c6"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Remembers the newest inquiry already sent (workflow static data; persists for the active workflow).\nconst s = $getWorkflowStaticData('global');\nif (!s.since) s.since = new Date().toISOString(); // first run: start from now, do not replay history\nreturn [{ json: { since: s.since } }];"
+      },
+      "name": "Cursor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "91d87b25-c517-4276-98d1-7460c7516c50"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/inquiries?select=id,created_at,name,phone,email,message,property:properties(slug,title,agent:agents(name,phone))&order=created_at.asc&limit=20&created_at=gt.' + encodeURIComponent($json.since) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Load new inquiries",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        0
+      ],
+      "id": "c527e802-3b15-4c62-99b4-0bdb553824ad",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const __out = [];\nconst __items = $input.all();\nfor (let __k = 0; __k < __items.length; __k++) {\n  const $json = __items[__k].json;\n  const __r = (() => {\n    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n    const q = $json; if (!q || !q.id) return [];\n    const SITE = 'https://vip-realty.netlify.app';\n    const lines = ['📩 <b>Նոր հարցում կայքից</b>', '👤 ' + esc(q.name)];\n    if (q.phone) lines.push('📞 ' + esc(q.phone));\n    if (q.email) lines.push('✉️ ' + esc(q.email));\n    if (q.property?.slug) lines.push('🏠 ' + SITE + '/properties/' + esc(q.property.slug));\n    if (q.property?.agent?.name) lines.push('🧑‍💼 Գործակալ՝ ' + esc(q.property.agent.name) + (q.property.agent.phone ? ' · ' + esc(q.property.agent.phone) : ''));\n    if (q.message) lines.push('', esc(String(q.message).slice(0, 800)));\n    lines.push('', '🗂 ' + SITE + '/admin/inquiries');\n    return [{ json: { text: lines.join('\\n'), created_at: q.created_at } }];\n  })();\n  for (const x of (__r || [])) __out.push(x);\n}\nreturn __out;"
+      },
+      "name": "Format inquiry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "cf87fcde-6be9-4f1d-9a59-fd457804b781"
+    },
+    {
+      "parameters": {
+        "chatId": "__ADMIN_CHAT_ID__",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "name": "Telegram — new inquiry",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "89997728-0376-4837-9b00-a3d1377c5933",
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "webhookId": "83914ad8-895d-499b-a4f7-0d36f423c271"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Only after the messages were sent: move the cursor to the newest inquiry delivered.\nconst s = $getWorkflowStaticData('global');\nconst times = $('Format inquiry').all().map((i) => i.json.created_at).filter(Boolean).sort();\nif (times.length) s.since = times[times.length - 1];\nreturn [{ json: { since: s.since, sent: times.length } }];"
+      },
+      "name": "Advance cursor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "2cb2771e-adf3-4330-aa68-a0a07d119c32"
+    }
+  ],
+  "connections": {
+    "Every minute": {
+      "main": [
+        [
+          {
+            "node": "Cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cursor": {
+      "main": [
+        [
+          {
+            "node": "Load new inquiries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load new inquiries": {
+      "main": [
+        [
+          {
+            "node": "Format inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format inquiry": {
+      "main": [
+        [
+          {
+            "node": "Telegram — new inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram — new inquiry": {
+      "main": [
+        [
+          {
+            "node": "Advance cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "active": false,
+  "pinData": {}
+}

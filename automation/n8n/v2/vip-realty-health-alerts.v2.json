@@ -1,0 +1,165 @@
+{
+  "id": "Tk8RuahlWBdY2ldD",
+  "name": "VIP Realty — Health alerts (Telegram)",
+  "nodes": [
+    {
+      "id": "a750ebcd-9e41-40fa-8403-6b926796782d",
+      "name": "Automation error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "61206042-25f6-4362-8d4e-fbd3e3e0f25c",
+      "name": "Describe error (30 min dedupe)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const ADMIN = 'https://vip-realty.netlify.app/admin';\nconst sd = $getWorkflowStaticData('global');\nsd.sent = sd.sent || {};\nconst now = Date.now();\nfor (const k of Object.keys(sd.sent)) if (now - sd.sent[k] > 6 * 3600 * 1000) delete sd.sent[k];\nconst esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst out = [];\nfor (const it of $input.all()) {\n  const e = it.json || {};\n  const wf = e.workflow?.name || '?';\n  const node = e.execution?.lastNodeExecuted || e.execution?.error?.node?.name || '?';\n  const msg = String(e.execution?.error?.message || e.trigger?.error?.message || 'unknown error');\n  const url = e.execution?.url;\n  let text, key;\n  const notValid = msg.match(/^Extraction was not valid \\(status: ([^)]*)\\)/);\n  if (notValid) {\n    key = 'nv|' + (e.execution?.id || now);\n    text = '📝 <b>Հայտարարությունը չմշակվեց</b>\\n\\nAI-ը կարդաց WhatsApp-ի հաղորդագրությունը, բայց տվյալները թերի են (' + esc(notValid[1]) + ')։ Telegram քարտ չի ստեղծվել։\\n\\nԽնդրեք գործակալին նորից ուղարկել ամբողջական տեքստով՝ գործարքի տեսակ, գույքի տեսակ, գին, քաղաք/թաղամաս։\\n\\n<a href=\"' + ADMIN + '/pipeline\">Մանրամասներ ադմինում</a>';\n  } else if (/extraction failed/i.test(msg) || /Gemini/i.test(msg)) {\n    key = 'ai';\n    text = '🤖 <b>AI-ը չկարողացավ մշակել հայտարարությունը</b>\\n\\nGemini-ն անհասանելի էր կամ սխալ պատասխանեց (փորձվել են 3 մոդել)։ Եթե կրկնվում է, ստուգեք Gemini API key-ը և հաշվի վճարումը։\\n\\n<a href=\"' + ADMIN + '/pipeline\">Մանրամասներ ադմինում</a>';\n  } else {\n    key = wf + '|' + node + '|' + msg.slice(0, 80);\n    text = '⚠️ <b>Ավտոմատացման սխալ</b>\\n\\nWorkflow՝ ' + esc(wf) + '\\nՔայլ՝ ' + esc(node) + '\\nՍխալ՝ <code>' + esc(msg.slice(0, 300)) + '</code>\\n\\nԵթե սխալը կրկնվում է, հայտարարությունները կարող են չհասնել Telegram։' + (url ? '\\n<a href=\"' + url + '\">Բացել n8n-ում</a>' : '');\n  }\n  if (sd.sent[key] && now - sd.sent[key] < 30 * 60 * 1000) continue;\n  sd.sent[key] = now;\n  out.push({ json: { text } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "90b0f2f8-1bba-4f13-a4be-66da48403f8c",
+      "name": "Telegram — automation error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "chatId": "__ADMIN_CHAT_ID__",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "webhookId": "5054f704-a737-4976-83c6-55ff2aa7ec9a"
+    },
+    {
+      "id": "0572096b-a1ff-4e10-8960-bb8df2fff078",
+      "name": "WhatsApp status (from server check)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "cf537428-61fc-4e8d-b602-aceadc28819b",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vip-realty-health",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "da61f00b-11ac-4b69-b3bb-9f051d01b40c",
+      "name": "Check token & describe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "jsCode": "const TOKEN = '__HEALTH_WEBHOOK_TOKEN__';\nconst out = [];\nfor (const it of $input.all()) {\n  const hdr = it.json.headers || {};\n  if (hdr['x-vip-health-token'] !== TOKEN) continue;\n  const b = it.json.body || {};\n  const state = String(b.state || 'unknown').replace(/[^a-z_]/gi, '').slice(0, 30);\n  const text = state === 'open'\n    ? '✅ <b>WhatsApp-ը նորից միացված է</b>\\n\\nԽմբի հայտարարությունները կրկին ընդունվում են։'\n    : '🔴 <b>WhatsApp-ն անջատված է</b> (' + state + ')\\n\\nԽմբի հայտարարությունները հիմա չեն ստացվում։ Անհրաժեշտ է նորից միացնել WhatsApp-ը QR կոդով։' + (b.minutes ? '\\nԱնջատված է արդեն ' + Number(b.minutes) + ' րոպե։' : '');\n  out.push({ json: { text } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "3b7ac60a-7b86-4661-81ad-011c1b21eecf",
+      "name": "Telegram — WhatsApp status",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "chatId": "__ADMIN_CHAT_ID__",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "webhookId": "7ad59763-a8cb-4ff5-92a6-0c1b4380752a"
+    }
+  ],
+  "connections": {
+    "Automation error": {
+      "main": [
+        [
+          {
+            "node": "Describe error (30 min dedupe)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Describe error (30 min dedupe)": {
+      "main": [
+        [
+          {
+            "node": "Telegram — automation error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp status (from server check)": {
+      "main": [
+        [
+          {
+            "node": "Check token & describe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check token & describe": {
+      "main": [
+        [
+          {
+            "node": "Telegram — WhatsApp status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "availableInMCP": true
+  },
+  "active": false,
+  "pinData": {}
+}

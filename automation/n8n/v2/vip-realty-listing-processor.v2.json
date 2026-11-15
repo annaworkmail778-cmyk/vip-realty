@@ -1,0 +1,1439 @@
+{
+  "id": "a0VYq5Nxbbd9kSKh",
+  "name": "VIP Realty — DEMO Listing Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 15
+            }
+          ]
+        }
+      },
+      "name": "Every 15 seconds (DEMO)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3344,
+        368
+      ],
+      "id": "3484d055-090d-4d17-a5fc-28c87a73568f"
+    },
+    {
+      "parameters": {},
+      "name": "Idle — nothing to process",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -2560,
+        528
+      ],
+      "id": "9e156960-0f22-4b43-8b99-8357679af69f"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/claim_submission_session",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_worker: \"n8n-demo:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Claim session for extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -2032,
+        112
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "id": "dce63536-b815-4ad9-b0fb-e0696d2f2618",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.claimed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Session claimed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1776,
+        112
+      ],
+      "id": "e10e4377-a46f-4ad0-8f49-f6ba0d5d0283"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "6EDc1dVBJsl970Xw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/6EDc1dVBJsl970Xw",
+          "cachedResultName": "VIP Realty — DEMO Property Extraction AI"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "attempt_id": "={{ $json.attempt_id }}",
+            "extraction_input": "={{ $json.extraction_input }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "attempt_id",
+              "displayName": "attempt_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "extraction_input",
+              "displayName": "extraction_input",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "name": "Run DEMO AI extraction",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -1520,
+        16
+      ],
+      "id": "311142c3-c0df-452f-bc24-6cca15d5484d",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/record_extraction_result",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_attempt_id: $json.attempt_id, p_provider: $json.provider, p_model: $json.model, p_prompt_version: $json.prompt_version, p_raw_output: $json.raw_output, p_correlation_id: \"n8n-demo:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Record extraction result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1264,
+        -112
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "id": "33e46b98-6f05-4549-82a5-7d22d08d0890",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/record_extraction_failure",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_attempt_id: $('Claim session for extraction').item.json.attempt_id, p_error_code: \"demo_extraction_failed\", p_error_message: \"DEMO lane: AI extraction or result recording failed\", p_provider: \"gemini\", p_correlation_id: \"n8n-demo:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Record extraction failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1264,
+        192
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "id": "e08f5773-5b2f-4f08-a706-86cb4588f899",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Extraction valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -992,
+        -80
+      ],
+      "id": "1105ed69-9231-454e-9865-de8563101900"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/generate_pending_property_drafts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_limit: 5, p_correlation_id: \"n8n-demo:\" + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Generate property draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -736,
+        -192
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "id": "0742fcfa-1c0a-4c27-b495-dbba13eab601",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "=Extraction was not valid (status: {{ $json.status || \"unknown\" }}). No property was created; review the attempt in extraction_results."
+      },
+      "name": "Stop: extraction not valid",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        32
+      ],
+      "id": "876d8b37-ec03-4e1e-b48e-24ddfcc2b3f8"
+    },
+    {
+      "parameters": {
+        "errorMessage": "DEMO lane: extraction failed and the failure was recorded. No property was created."
+      },
+      "name": "Stop: extraction failure recorded",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        -992,
+        192
+      ],
+      "id": "faada7d7-4b3f-4564-be47-58b94575a547"
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per draft this run actually created (generate_pending_property_drafts results).\nconst r = $json || {};\nreturn (r.results || [])\n  .filter((x) => x && x.ok && x.outcome === 'created' && /^[0-9a-f-]{36}$/.test(String(x.property_id || '')))\n  .map((x) => ({ json: { property_id: x.property_id } }));"
+      },
+      "name": "Drafts created",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -476,
+        -192
+      ],
+      "id": "38b6a4a6-3a4e-40d3-b3c9-e78e43062177"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/properties?select=id,slug,title,intent,property_type,price,currency,price_period,rooms,area_sqm,floor,total_floors,district,city,description,listing_status,review_status,state_version,property_images(storage_path,sort_order,is_primary),agents(name,phone,whatsapp_phone)&id=eq.' + $json.property_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Load draft with photos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        44,
+        -192
+      ],
+      "id": "68bf1574-16a3-4a15-9c94-7660bca88885",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Runs once for all items; each input item is processed in turn (same logic as per-item).\nconst __out = [];\nconst __items = $input.all();\nfor (let __k = 0; __k < __items.length; __k++) {\n  const $json = __items[__k].json;\n  const __r = (() => {\n    // The extraction prompt never derives the city from a district. For the twelve\n    // administrative districts of Yerevan the city is certain, so it is filled in (through the\n    // audited admin_update_property path) instead of blocking publication with \"missing city\".\n    const YEREVAN = ['ajapnyak','arabkir','avan','davtashen','erebuni','kanaker-zeytun','kentron','malatia-sebastia',\n                     'nor-nork','nork-marash','nubarashen','shengavit'];\n    const p = $json;\n    const d = String(p.district || '').toLowerCase().trim().replace(/[\\s_]+/g, '-');\n    return [{ json: { ...p, needs_city: !p.city && YEREVAN.includes(d) } }];\n  })();\n  for (const x of (__r || [])) __out.push(x);\n}\nreturn __out;"
+      },
+      "name": "Needs city?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        164,
+        -192
+      ],
+      "id": "e4d7c62e-bec5-48d2-ab70-3c3deb91d2df"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.needs_city }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "City missing?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        -192
+      ],
+      "id": "3e4d89a3-e995-44cd-8e52-7a36995c3991"
+    },
+    {
+      "parameters": {
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/admin_update_property",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000
+        },
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_property_id: $json.id, p_expected_version: $json.state_version, p_changes: { city: 'Yerevan' }, p_actor: 'automation:city-from-district' }) }}"
+      },
+      "name": "Fill city: Yerevan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        444,
+        -352
+      ],
+      "id": "039473ed-3aa0-49e1-9180-2274d3f0707f",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Runs once for all items; each input item is processed in turn (same logic as per-item).\nconst __out = [];\nconst __items = $input.all();\nfor (let __k = 0; __k < __items.length; __k++) {\n  const $json = __items[__k].json;\n  const __r = (() => {\n    const p = $('Needs city?').all()[__k].json;\n    const r = $json || {};\n    return [{ json: { ...p, city: (r.ok && ['updated', 'unchanged'].includes(r.outcome)) ? 'Yerevan' : p.city } }];\n  })();\n  for (const x of (__r || [])) __out.push(x);\n}\nreturn __out;"
+      },
+      "name": "Apply city",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        584,
+        -352
+      ],
+      "id": "b72b909e-faa5-4ac5-98f9-f9da55819149"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Runs once for all items; each input item is processed in turn (same logic as per-item).\nconst __out = [];\nconst __items = $input.all();\nfor (let __k = 0; __k < __items.length; __k++) {\n  const $json = __items[__k].json;\n  const __r = (() => {\n    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n    const p = $json;\n    if (!p || !p.id) return [];\n    const SB = 'https://vqdxqqsvlkddgkzulaxv.supabase.co', SITE = 'https://vip-realty.netlify.app';\n    const imgs = (p.property_images || []).slice().sort((a, b) => (b.is_primary - a.is_primary) || (a.sort_order - b.sort_order));\n    const deal = p.intent === 'rent' ? 'Վարձակալություն' : p.intent === 'buy' ? 'Վաճառք' : '—';\n    const price = p.price ? Number(p.price).toLocaleString('en-US') + ' ' + (p.currency || '') + (p.price_period === 'month' ? ' / ամիս' : '') : '—';\n    const facts = [p.rooms ? p.rooms + ' սենյակ' : null, p.area_sqm ? Number(p.area_sqm) + ' քմ' : null,\n                   p.floor ? p.floor + (p.total_floors ? '/' + p.total_floors : '') + ' հարկ' : null].filter(Boolean).join(' · ');\n    const place = [p.district, p.city].filter(Boolean).join(', ') || '—';\n    const missing = [['title', 'վերնագիր'], ['intent', 'վաճառք/վարձ'], ['property_type', 'գույքի տեսակ'], ['city', 'քաղաք'],\n                     ['price', 'գին'], ['currency', 'արժույթ']].filter(([k]) => p[k] == null || p[k] === '').map(([, l]) => l);\n    const ag = p.agents || null;\n    const agentLine = ag ? `👤 ${esc(ag.name)}${ag.phone || ag.whatsapp_phone ? ' · ' + esc(ag.phone || ag.whatsapp_phone) : ' · ⚠️ հեռախոս չկա (կայքում կերևա գործակալության համարը)'}` : '👤 —';\n    const desc = String(p.description || '').slice(0, 350);\n    let caption = `🏠 <b>Նոր հայտարարություն՝ հաստատման համար</b>\\n\\n<b>${esc(deal)}</b> · ${esc(price)}\\n📍 ${esc(place)}\\n${esc(facts)}\\n📷 ${imgs.length} լուսանկար\\n${agentLine}`;\n    if (missing.length) caption += `\\n\\n⚠️ <b>Լրացնել մինչև հրապարակումը՝</b> ${esc(missing.join(', '))} («Խմբագրել»)`;\n    if (desc) caption += `\\n\\n${esc(desc)}${String(p.description || '').length > 350 ? '…' : ''}`;\n    caption = caption.slice(0, 1000);\n    const cover = imgs[0] ? SB + '/storage/v1/object/public/property-images/' + imgs[0].storage_path.split('/').map(encodeURIComponent).join('/') : null;\n    return [{ json: { property_id: p.id, caption, photo_url: cover, admin_url: SITE + '/admin/properties/' + p.id, edit_url: SITE + '/admin/properties/' + p.id + '/edit' } }];\n  })();\n  for (const x of (__r || [])) __out.push(x);\n}\nreturn __out;"
+      },
+      "name": "Build review card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        664,
+        -192
+      ],
+      "id": "b77fe4b1-d70c-49c9-9f3a-1c140204c671"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!$json.photo_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Has a photo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        924,
+        -192
+      ],
+      "id": "683f4557-ed1a-4e4d-a1f9-069681e22998"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "__ADMIN_CHAT_ID__",
+        "file": "={{ $json.photo_url }}",
+        "additionalFields": {
+          "caption": "={{ $json.caption }}",
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        },
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Հաստատել և հրապարակել",
+                    "additionalFields": {
+                      "callback_data": "={{ 'pub:' + $json.property_id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Մերժել",
+                    "additionalFields": {
+                      "callback_data": "={{ 'rej:' + $json.property_id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✏️ Խմբագրել",
+                    "additionalFields": {
+                      "url": "={{ $json.edit_url }}"
+                    }
+                  },
+                  {
+                    "text": "👁 Բացել ադմինում",
+                    "additionalFields": {
+                      "url": "={{ $json.admin_url }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "name": "Telegram — review card (photo)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1184,
+        -292
+      ],
+      "id": "e17cd7a4-5c44-4560-adb7-16419be8acbe",
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "webhookId": "6716a94b-3ec6-43f3-93a4-711184c36ea9"
+    },
+    {
+      "parameters": {
+        "chatId": "__ADMIN_CHAT_ID__",
+        "text": "={{ $json.caption }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        },
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Հաստատել և հրապարակել",
+                    "additionalFields": {
+                      "callback_data": "={{ 'pub:' + $json.property_id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Մերժել",
+                    "additionalFields": {
+                      "callback_data": "={{ 'rej:' + $json.property_id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✏️ Խմբագրել",
+                    "additionalFields": {
+                      "url": "={{ $json.edit_url }}"
+                    }
+                  },
+                  {
+                    "text": "👁 Բացել ադմինում",
+                    "additionalFields": {
+                      "url": "={{ $json.admin_url }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "name": "Telegram — review card (text)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1184,
+        -92
+      ],
+      "id": "d5e764d9-6933-4d23-a003-bcda0a535404",
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "webhookId": "6e51d20c-4630-4d9a-b71e-9ee6660c779a"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/demo_open_next_burst",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_worker: 'n8n-demo:' + $execution.id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Open next listing (burst)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -3072,
+        368
+      ],
+      "id": "5363848c-b0b3-4ac8-9338-350b1ff6a9c8",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.outcome === 'opened' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Listing opened?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2816,
+        368
+      ],
+      "id": "5af3cc1d-a867-4ca3-89fb-7523927fe82b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/demo_photos_to_attach",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_property_ids: $('Drafts created').all().map(i => i.json.property_id), p_limit: 60 }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Photos for new drafts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -300,
+        -192
+      ],
+      "id": "4a500c28-0b16-4729-8b17-34489b341711",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json || {};\nconst photos = Array.isArray(r.photos) ? r.photos : [];\nif (!photos.length) return [{ json: { skip: true } }];\nreturn photos.map((p) => ({ json: p }));"
+      },
+      "name": "Split draft photos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -192
+      ],
+      "id": "81362c90-a710-44c7-b2fe-64b73000137e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Draft has photos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        120,
+        -192
+      ],
+      "id": "465ef609-d65f-465c-9615-658ce90350c8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/storage/v1/object/move",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ bucketId: 'property-images', sourceKey: $('Split draft photos').item.json.inbox_path, destinationKey: $('Split draft photos').item.json.dest_path }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Move draft photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        320,
+        -300
+      ],
+      "id": "22b18247-b037-49ea-bf9e-457506a5cf1b",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/demo_record_photo",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_media_id: $('Split draft photos').item.json.media_id, p_property_id: $('Split draft photos').item.json.property_id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Record draft photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        -300
+      ],
+      "id": "8e744683-0dce-45be-9d6e-a9691672cb14",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $('Drafts created').all().map((i) => ({ json: { property_id: i.json.property_id } }));"
+      },
+      "name": "Back to drafts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -192
+      ],
+      "id": "bf544df7-a51a-4668-b9a7-063f30b0c433",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/demo_photos_to_attach",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_property_ids: null, p_limit: 30 }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Late photos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -3072,
+        800
+      ],
+      "id": "3fd55b3a-facd-4dc7-b3d6-034d7c00aacb",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json || {};\nconst photos = Array.isArray(r.photos) ? r.photos : [];\nif (!photos.length) return [{ json: { skip: true } }];\nreturn photos.map((p) => ({ json: p }));"
+      },
+      "name": "Split late photos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2816,
+        800
+      ],
+      "id": "8cb82609-830f-4447-b1c1-58af7b08e57b"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.skip !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Any late photos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2600,
+        800
+      ],
+      "id": "2518dacb-0401-4140-8231-5d57c9b35537"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/storage/v1/object/move",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ bucketId: 'property-images', sourceKey: $('Split late photos').item.json.inbox_path, destinationKey: $('Split late photos').item.json.dest_path }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Move late photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -2380,
+        720
+      ],
+      "id": "efc1f82e-b39c-4efe-9899-f23e4e3f56d9",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vqdxqqsvlkddgkzulaxv.supabase.co/rest/v1/rpc/demo_record_photo",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_media_id: $('Split late photos').item.json.media_id, p_property_id: $('Split late photos').item.json.property_id }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "name": "Record late photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -2160,
+        720
+      ],
+      "id": "595732c1-cca3-4367-b732-a9ca4ae5460c",
+      "credentials": {
+        "supabaseApi": {
+          "id": "vDSxhxan97gJxabq",
+          "name": "VIP Realty Supabase (service role)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const SITE = 'https://vip-realty.netlify.app';\nconst by = {};\nfor (const i of $input.all()) { if (i.json && i.json.ok) by[i.json.property_id] = (by[i.json.property_id] || 0) + 1; }\nreturn Object.entries(by).map(([pid, n]) => ({ json: { text: '📷 <b>+' + n + ' նկար</b> ավելացվեց հայտարարությանը\\n👁 ' + SITE + '/admin/properties/' + pid } }));"
+      },
+      "name": "Late photo notice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1940,
+        720
+      ],
+      "id": "3e2259c0-5d74-48c6-bc4a-be743e686b29"
+    },
+    {
+      "parameters": {
+        "chatId": "__ADMIN_CHAT_ID__",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "name": "Telegram — late photos",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1720,
+        720
+      ],
+      "id": "e8966eac-bd6e-4b31-b380-fccf905c8492",
+      "credentials": {
+        "telegramApi": {
+          "id": "MKFUC7fkNxjl4Rrt",
+          "name": "VIP Realty Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "webhookId": "ba0644eb-5afb-444f-8386-07ea034cf8b2"
+    }
+  ],
+  "connections": {
+    "Every 15 seconds (DEMO)": {
+      "main": [
+        [
+          {
+            "node": "Claim session for extraction",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Late photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim session for extraction": {
+      "main": [
+        [
+          {
+            "node": "Session claimed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session claimed?": {
+      "main": [
+        [
+          {
+            "node": "Run DEMO AI extraction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Open next listing (burst)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run DEMO AI extraction": {
+      "main": [
+        [
+          {
+            "node": "Record extraction result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record extraction failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record extraction result": {
+      "main": [
+        [
+          {
+            "node": "Extraction valid?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record extraction failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record extraction failure": {
+      "main": [
+        [
+          {
+            "node": "Stop: extraction failure recorded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraction valid?": {
+      "main": [
+        [
+          {
+            "node": "Generate property draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop: extraction not valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate property draft": {
+      "main": [
+        [
+          {
+            "node": "Drafts created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drafts created": {
+      "main": [
+        [
+          {
+            "node": "Photos for new drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load draft with photos": {
+      "main": [
+        [
+          {
+            "node": "Needs city?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs city?": {
+      "main": [
+        [
+          {
+            "node": "City missing?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "City missing?": {
+      "main": [
+        [
+          {
+            "node": "Fill city: Yerevan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build review card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fill city: Yerevan": {
+      "main": [
+        [
+          {
+            "node": "Apply city",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply city": {
+      "main": [
+        [
+          {
+            "node": "Build review card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build review card": {
+      "main": [
+        [
+          {
+            "node": "Has a photo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has a photo?": {
+      "main": [
+        [
+          {
+            "node": "Telegram — review card (photo)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram — review card (text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open next listing (burst)": {
+      "main": [
+        [
+          {
+            "node": "Listing opened?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listing opened?": {
+      "main": [
+        [
+          {
+            "node": "Claim session for extraction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Idle — nothing to process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Photos for new drafts": {
+      "main": [
+        [
+          {
+            "node": "Split draft photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split draft photos": {
+      "main": [
+        [
+          {
+            "node": "Draft has photos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft has photos?": {
+      "main": [
+        [
+          {
+            "node": "Move draft photo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Back to drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move draft photo": {
+      "main": [
+        [
+          {
+            "node": "Record draft photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record draft photo": {
+      "main": [
+        [
+          {
+            "node": "Back to drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Back to drafts": {
+      "main": [
+        [
+          {
+            "node": "Load draft with photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Late photos": {
+      "main": [
+        [
+          {
+            "node": "Split late photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split late photos": {
+      "main": [
+        [
+          {
+            "node": "Any late photos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any late photos?": {
+      "main": [
+        [
+          {
+            "node": "Move late photo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Move late photo": {
+      "main": [
+        [
+          {
+            "node": "Record late photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record late photo": {
+      "main": [
+        [
+          {
+            "node": "Late photo notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Late photo notice": {
+      "main": [
+        [
+          {
+            "node": "Telegram — late photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "active": false,
+  "pinData": {}
+}
