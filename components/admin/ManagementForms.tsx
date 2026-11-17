@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { Field, Result, Select, Submit, TextArea, Toggle } from "@/components/admin/forms";
 import {
-  arrangeImagesAction, createAgentAction, linkIdentityAction, saveAgencyAction, saveAgentAction, updateListingAction,
+  arrangeImagesAction, createAgentAction, dismissSenderAction, linkIdentityAction, unlinkIdentityAction, saveAgencyAction, saveAgentAction, updateListingAction,
 } from "@/lib/admin/management-actions";
 import type { AgencyRow, AgentRow, UnlinkedSender } from "@/lib/admin/management";
 import { useAdminT } from "@/components/admin/AdminI18n";
@@ -184,6 +184,80 @@ export function NewAgentForm({ agencies, senders }: { agencies: AgencyRow[]; sen
       <div className="flex items-center gap-4">
         <Submit>{t("Add agent")}</Submit>
       </div>
+      <Result state={state} />
+    </form>
+  );
+}
+
+/** The agent's WhatsApp-group link: shows it with an Unlink button, or lets the admin pick their message. */
+export function GroupIdentityPanel({ agent, senders }: { agent: AgentRow; senders: UnlinkedSender[] }) {
+  const [unlinkState, unlink] = useActionState(unlinkIdentityAction, null);
+  const [linkState, link] = useActionState(linkIdentityAction, null);
+  const { t, dateLocale } = useAdminT();
+  const when = (iso: string) => new Intl.DateTimeFormat(dateLocale, {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Yerevan",
+  }).format(new Date(iso));
+  const candidates = senders.filter((s) => s.agencyId === agent.agencyId);
+
+  return (
+    <section className="max-w-2xl space-y-4 border border-ivory/12 p-5">
+      <h2 className="label text-ivory/40">{t("Their WhatsApp in the listings group")}</h2>
+      {agent.groupIdentity ? (
+        <>
+          <p className="text-[0.9rem] text-champagne">
+            ✓ {t("Linked")}{agent.groupIdentity.profileName ? ` · ${agent.groupIdentity.profileName}` : ""}
+            <span className="label ml-2 text-ivory/40">{t("since {date}", { date: when(agent.groupIdentity.linkedAt) })}</span>
+          </p>
+          <p className="text-[0.85rem] text-ivory/55">{t("Every listing this person posts in the group is processed as this agent's.")}</p>
+          <form action={unlink} onSubmit={(e) => { if (!window.confirm(t("Unlink this WhatsApp sender from the agent? Their new messages will no longer create listings until linked again."))) e.preventDefault(); }}>
+            <input type="hidden" name="identity_id" value={agent.groupIdentity.id} />
+            <input type="hidden" name="agent_id" value={agent.id} />
+            <input type="hidden" name="updated_at" value={agent.updatedAt} />
+            <Submit tone="default">{t("Unlink")}</Submit>
+          </form>
+          <Result state={unlinkState} />
+        </>
+      ) : (
+        <>
+          <p className="text-[0.9rem] text-ivory/70">
+            ✗ {t("Not linked yet — listings from this agent are not processed.")}
+          </p>
+          {candidates.length === 0 ? (
+            <p className="label text-ivory/35">
+              {t("Ask the agent to send any message in the WhatsApp group, then refresh this page.")}
+            </p>
+          ) : (
+            <form action={link} className="space-y-2">
+              <input type="hidden" name="agent_id" value={agent.id} />
+              <input type="hidden" name="updated_at" value={agent.updatedAt} />
+              {candidates.map((s, i) => (
+                <label key={s.messageId} className="flex items-start gap-3 border border-ivory/10 p-3 hover:border-ivory/25">
+                  <input type="radio" name="message_id" value={s.messageId} defaultChecked={i === 0} className="mt-1 accent-champagne" />
+                  <span className="min-w-0 text-[0.85rem]">
+                    <span className="text-ivory/90">{s.profileName ?? s.senderPhone ?? t("unknown sender")}</span>
+                    <span className="label ml-2 text-ivory/40">{when(s.receivedAt)} · {t("{n} message(s)", { n: s.messageCount })}</span>
+                    {s.bodyPreview && <span className="mt-1 block truncate text-ivory/55">“{s.bodyPreview}”</span>}
+                  </span>
+                </label>
+              ))}
+              <Submit>{t("Link")}</Submit>
+              <Result state={linkState} />
+            </form>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/** "Not an agent": hides a group member's messages from the unrecognised list. */
+export function DismissSenderButton({ messageId }: { messageId: string }) {
+  const [state, action] = useActionState(dismissSenderAction, null);
+  const { t } = useAdminT();
+  return (
+    <form action={action} onSubmit={(e) => { if (!window.confirm(t("Hide this person? Their messages will be ignored. You can still add them as an agent later."))) e.preventDefault(); }}>
+      <input type="hidden" name="message_id" value={messageId} />
+      <Submit tone="default">{t("Not an agent")}</Submit>
       <Result state={state} />
     </form>
   );

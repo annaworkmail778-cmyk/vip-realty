@@ -44,6 +44,8 @@ export interface AgentRow {
   lastMessageAt: string | null;
   hasHistory: boolean;
   updatedAt: string;
+  /** The WhatsApp group sender linked to this agent (Evolution LID), if any. */
+  groupIdentity: { id: string; linkedAt: string; profileName: string | null } | null;
 }
 
 export interface UnlinkedSender {
@@ -143,6 +145,7 @@ export async function listAgents(): Promise<AdminResult<AgentRow[]>> {
     logFailure("agents", error);
     return { ok: false, reason: "unavailable" };
   }
+  const identities = await groupIdentities(db);
   return {
     ok: true,
     data: ((data ?? []) as unknown as Row[]).map((g) => ({
@@ -161,8 +164,36 @@ export async function listAgents(): Promise<AdminResult<AgentRow[]>> {
       lastMessageAt: str(g.last_message_at),
       hasHistory: bool(g.has_history),
       updatedAt: String(g.updated_at),
+      groupIdentity: identities.get(String(g.id)) ?? null,
     })),
   };
+}
+
+/** Active WhatsApp-group identities by agent id, with the profile name of the message they were linked from. */
+async function groupIdentities(db: NonNullable<ReturnType<typeof supabaseAdmin>>) {
+  const map = new Map<string, { id: string; linkedAt: string; profileName: string | null }>();
+  const { data, error } = await db.from("agent_identities")
+    .select("id, agent_id, linked_at, linked_message_id")
+    .eq("is_active", true).eq("provider", "evolution").limit(1000);
+  if (error) {
+    logFailure("agent identities", error);
+    return map;
+  }
+  const rows = (data ?? []) as unknown as Row[];
+  const messageIds = rows.map((r) => str(r.linked_message_id)).filter((x): x is string => x !== null);
+  const names = new Map<string, string | null>();
+  if (messageIds.length > 0) {
+    const m = await db.from("whatsapp_messages").select("id, sender_name").in("id", messageIds);
+    for (const r of ((m.data ?? []) as unknown as Row[])) names.set(String(r.id), str(r.sender_name));
+  }
+  for (const r of rows) {
+    map.set(String(r.agent_id), {
+      id: String(r.id),
+      linkedAt: String(r.linked_at),
+      profileName: names.get(String(r.linked_message_id)) ?? null,
+    });
+  }
+  return map;
 }
 
 export async function getAgent(id: string): Promise<AdminResult<AgentRow>> {

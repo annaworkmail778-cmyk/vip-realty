@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DataNotice, EmptyState, PageHeader } from "@/components/admin/pieces";
-import { LinkIdentityForm } from "@/components/admin/ManagementForms";
+import { DismissSenderButton, LinkIdentityForm } from "@/components/admin/ManagementForms";
 import { listAgencies, listAgents, listUnlinkedSenders } from "@/lib/admin/management";
 import { getAdminT } from "@/lib/admin/i18n.server";
 
@@ -67,7 +67,7 @@ export default async function AgentsPage() {
           <table className="w-full min-w-[52rem] border-collapse text-left">
             <thead>
               <tr className="border-b border-ivory/15">
-                {["Agent", "Phone shown on listings", "Agency", "Listings (published)", "Last message", ""].map((h) => (
+                {["Agent", "Phone shown on listings", "WhatsApp group", "Listings (published)", "Last message", ""].map((h) => (
                   <th key={h} className="label py-2 pr-3 font-normal text-ivory/35">{h && t(h)}</th>
                 ))}
               </tr>
@@ -80,8 +80,10 @@ export default async function AgentsPage() {
                     {!a.isActive && <span className="label ml-2 text-ivory/40">{t("inactive")}</span>}
                   </td>
                   <td className="py-3 pr-3 label text-ivory/70">{a.phone ?? a.whatsappPhone ?? "—"}</td>
-                  <td className="py-3 pr-3 text-[0.85rem] text-ivory/60">
-                    {a.agencyName}{!a.agencyActive && <span className="label ml-2 text-ivory/40">{t("inactive")}</span>}
+                  <td className="py-3 pr-3 label">
+                    {a.groupIdentity
+                      ? <span className="text-champagne">✓ {a.groupIdentity.profileName ?? t("Linked")}</span>
+                      : <Link href={`/admin/agents/${a.id}`} className="link-underline text-ivory/70">✗ {t("Not linked")}</Link>}
                   </td>
                   <td className="py-3 pr-3 label text-ivory/60">{a.listingCount} ({a.publishedCount})</td>
                   <td className="py-3 pr-3 label text-ivory/40">{dateTime(a.lastMessageAt)}</td>
@@ -119,7 +121,10 @@ export default async function AgentsPage() {
                   </p>
                   {s.bodyPreview && <p className="mt-2 text-ivory/55">“{s.bodyPreview}”</p>}
                 </div>
-                <LinkIdentityForm sender={s} agents={agents.data} />
+                <div className="space-y-3">
+                  <LinkIdentityForm sender={s} agents={agents.data} />
+                  <DismissSenderButton messageId={s.messageId} />
+                </div>
               </li>
             ))}
           </ul>

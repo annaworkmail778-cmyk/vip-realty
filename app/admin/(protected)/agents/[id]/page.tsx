@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DataNotice, PageHeader } from "@/components/admin/pieces";
-import { AgentForm } from "@/components/admin/ManagementForms";
-import { getAgent, listAgencies } from "@/lib/admin/management";
+import { AgentForm, GroupIdentityPanel } from "@/components/admin/ManagementForms";
+import { getAgent, listAgencies, listUnlinkedSenders } from "@/lib/admin/management";
 import { getAdminT } from "@/lib/admin/i18n.server";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditAgentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [agent, agencies, { t }] = await Promise.all([getAgent(id), listAgencies(), getAdminT()]);
+  const [agent, agencies, senders, { t }] = await Promise.all([getAgent(id), listAgencies(), listUnlinkedSenders(), getAdminT()]);
   if (!agent.ok && agent.reason === "not_found") notFound();
 
   return (
@@ -26,7 +26,10 @@ export default async function EditAgentPage({ params }: { params: Promise<{ id: 
       {!agent.ok || !agencies.ok ? (
         <DataNotice reason="unavailable" />
       ) : (
-        <div className="mt-8"><AgentForm agent={agent.data} agencies={agencies.data} /></div>
+        <div className="mt-8 space-y-10">
+          <GroupIdentityPanel agent={agent.data} senders={senders.ok ? senders.data : []} />
+          <AgentForm agent={agent.data} agencies={agencies.data} />
+        </div>
       )}
     </div>
   );

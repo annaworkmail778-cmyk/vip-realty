@@ -79,6 +79,7 @@ function failure(t: AdminT, result: Rpc | null, kind: "agency" | "agent" | "list
       if (reason === "identity_in_use") return { ok: false, message: t("Another agent is already linked to that WhatsApp sender.") };
       if (reason === "agency_mismatch" || reason === "channel_mismatch") return { ok: false, message: t("That message belongs to another agency.") };
       if (reason === "not_direct_message") return { ok: false, message: t("Only direct messages can be linked.") };
+      if (reason === "identity_linked") return { ok: false, message: t("This person is already linked to an agent.") };
       if (reason === "no_identity") return { ok: false, message: t("That message carries no WhatsApp identity.") };
       return { ok: false, message: t("The request was not valid.") };
     case "invalid_value": {
@@ -283,6 +284,51 @@ export async function createAgentAction(_prev: ActionState, fd: FormData): Promi
 
   refreshAdmin(["/admin/agents", "/admin/operations"]);
   redirect("/admin/agents");
+}
+
+/** Detaches an agent's WhatsApp-group sender, e.g. a phone that changed hands or a test number. */
+export async function unlinkIdentityAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const ctx = await context();
+  if ("error" in ctx) return ctx.error;
+  const { t } = ctx;
+  const identityId = text(fd, "identity_id");
+  if (!UUID.test(identityId)) return { ok: false, message: t("The request was not valid.") };
+
+  const { data, error } = await ctx.db.rpc("admin_unlink_agent_identity", {
+    p_identity_id: identityId,
+    p_expected_updated_at: optional(fd, "updated_at"),
+    p_actor: ctx.actor,
+    p_reason: "admin_unlinked",
+  });
+  if (error) {
+    console.error("[admin] unlink identity failed", { code: error.code });
+    return { ok: false, message: t("The action could not be completed. Try again.") };
+  }
+  const result = data as Rpc | null;
+  if (!result?.ok) return failure(t, result, "agent");
+  refreshAdmin(["/admin/agents", "/admin/agents/new", `/admin/agents/${text(fd, "agent_id")}`, "/admin/operations"]);
+  return { ok: true, message: t("Unlinked. Their group messages now appear under unrecognised senders.") };
+}
+
+/** Marks a group member as not an agent: their messages stop appearing as unrecognised. */
+export async function dismissSenderAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const ctx = await context();
+  if ("error" in ctx) return ctx.error;
+  const { t } = ctx;
+  const messageId = text(fd, "message_id");
+  if (!UUID.test(messageId)) return { ok: false, message: t("The request was not valid.") };
+
+  const { data, error } = await ctx.db.rpc("admin_dismiss_sender", {
+    p_message_id: messageId, p_actor: ctx.actor, p_reason: "not_an_agent",
+  });
+  if (error) {
+    console.error("[admin] dismiss sender failed", { code: error.code });
+    return { ok: false, message: t("The action could not be completed. Try again.") };
+  }
+  const result = data as Rpc | null;
+  if (!result?.ok) return failure(t, result, "agent");
+  refreshAdmin(["/admin/agents", "/admin/agents/new", "/admin/operations"]);
+  return { ok: true, message: t("Hidden. Messages from this person are no longer listed.") };
 }
 
 /* ------------------------------------------------------------- listing edits */
