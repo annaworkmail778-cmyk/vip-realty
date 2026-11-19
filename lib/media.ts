@@ -29,6 +29,14 @@ export const media = {
       poster: `${MEDIA_ROOT}/hero/hero-poster.jpg`,
     },
     evening: `${MEDIA_ROOT}/hero/evening.jpg`,
+    /** The hero film (2026-11): a slow dolly through a penthouse toward Ararat, played forward then back
+     *  so the loop has no jump. 1080p for wide screens, a 720×1280 centre crop for phones. */
+    film: {
+      wide: `${MEDIA_ROOT}/hero/penthouse-1080.mp4`,
+      wideposter: `${MEDIA_ROOT}/hero/penthouse-poster.jpg`,
+      portrait: `${MEDIA_ROOT}/hero/penthouse-portrait.mp4`,
+      portraitPoster: `${MEDIA_ROOT}/hero/penthouse-poster-portrait.jpg`,
+    },
 
     og: `${MEDIA_ROOT}/hero/og.jpg`,
   },

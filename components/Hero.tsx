@@ -3,15 +3,16 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui/ArrowLink";
-import { gsap, useGsap } from "@/lib/motion";
+import { gsap, useGsap, useMediaQuery, useReducedMotion } from "@/lib/motion";
 import { media } from "@/lib/media";
 import { useDict } from "@/components/site/LocaleProvider";
 import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 
 /* ----------------------------------------------------------------------------
    01 — Hero.
-   The architectural still (portrait master on phones) under the full overlay:
-   blessing, headline, copy and actions. A slow push-in, scroll
+   A slow film through a penthouse toward Ararat (portrait crop on phones,
+   poster only with reduced motion) under the full overlay: blessing,
+   headline, copy and actions. A slow push-in, scroll
    parallax and (with a mouse) a gentle 3D tilt bring the still to life.
 ---------------------------------------------------------------------------- */
 
@@ -26,6 +27,12 @@ export function Hero() {
   const { brandName } = useSiteProfile();
   const dict = useDict();
   const root = useRef<HTMLElement>(null);
+  /* One film per device shape; the server renders the phone poster, the client swaps in what fits. */
+  const wide = useMediaQuery("(min-width: 640px)");
+  const still = useReducedMotion();
+  const film = wide
+    ? { src: media.hero.film.wide, poster: media.hero.film.wideposter }
+    : { src: media.hero.film.portrait, poster: media.hero.film.portraitPoster };
 
   useGsap(() => {
     // fromTo rather than from: explicit end values keep the entrance correct
@@ -78,17 +85,27 @@ export function Hero() {
       className="relative h-[100svh] min-h-[34rem] w-full overflow-hidden bg-black"
     >
       <div className="media-fill [perspective:1400px]" data-hero="media">
-        {/* Art directed: phones get the text-free portrait crop, wider screens the whole key visual. */}
-        <picture data-hero="tilt" className="block h-full w-full scale-[1.04] will-change-transform">
-          <source media="(max-width: 639px)" srcSet={media.hero.imagePortrait} />
-          <img
-            src={media.hero.image}
-            alt=""
-            fetchPriority="high"
-            decoding="async"
-            className="h-full w-full object-cover object-[50%_55%]"
-          />
-        </picture>
+        <div data-hero="tilt" className="h-full w-full scale-[1.04] will-change-transform">
+          {still ? (
+            // eslint-disable-next-line @next/next/no-img-element -- pre-sized poster, served directly
+            <img src={film.poster} alt="" fetchPriority="high" className="h-full w-full object-cover" />
+          ) : (
+            <video
+              key={film.src}
+              className="h-full w-full object-cover"
+              poster={film.poster}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              aria-hidden
+              disablePictureInPicture
+            >
+              <source src={film.src} type="video/mp4" />
+            </video>
+          )}
+        </div>
       </div>
 
       {/* Phone: full scrim for the text. Wider: only a soft fade at the bottom for the actions. */}
