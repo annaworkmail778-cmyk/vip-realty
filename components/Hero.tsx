@@ -10,9 +10,8 @@ import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 
 /* ----------------------------------------------------------------------------
    01 — Hero.
-   Phones show the text-free Ararat crop of the agency's key visual; wider
-   screens the architectural still (until a text-free 16:9 key visual exists).
-   Overlay at every size: blessing, headline, copy and actions. A slow push-in, scroll
+   The architectural still (portrait master on phones) under the full overlay:
+   blessing, headline, copy and actions. A slow push-in, scroll
    parallax and (with a mouse) a gentle 3D tilt bring the still to life.
 ---------------------------------------------------------------------------- */
 
@@ -81,9 +80,7 @@ export function Hero() {
       <div className="media-fill [perspective:1400px]" data-hero="media">
         {/* Art directed: phones get the text-free portrait crop, wider screens the whole key visual. */}
         <picture data-hero="tilt" className="block h-full w-full scale-[1.04] will-change-transform">
-          {/* Wider screens keep the previous still until a text-free 16:9 version of the key visual exists;
-              then point media.hero.image at it. */}
-          <source media="(max-width: 639px)" srcSet={media.hero.brandPortrait} />
+          <source media="(max-width: 639px)" srcSet={media.hero.imagePortrait} />
           <img
             src={media.hero.image}
             alt=""

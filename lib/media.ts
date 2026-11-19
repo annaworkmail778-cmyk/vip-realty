@@ -29,11 +29,7 @@ export const media = {
       poster: `${MEDIA_ROOT}/hero/hero-poster.jpg`,
     },
     evening: `${MEDIA_ROOT}/hero/evening.jpg`,
-    /** The agency's own key visual (2026-11): logo, services and Ararat over Yerevan, text baked in. */
-    brand: `${MEDIA_ROOT}/hero/brand-hero.jpg`,
-    brand1280: `${MEDIA_ROOT}/hero/brand-hero-1280.jpg`,
-    /** Text-free portrait crop of the key visual (Ararat and the city) for phones. */
-    brandPortrait: `${MEDIA_ROOT}/hero/brand-hero-portrait.jpg`,
+
     og: `${MEDIA_ROOT}/hero/og.jpg`,
   },
 
@@ -80,6 +76,9 @@ export const media = {
    */
   founders: null as string | null,
 
+  /** The agency's key visual (2026-11): logo, "Real estate in Armenia", buy · sell · rent, Ararat over Yerevan. */
+  aboutVisual: `${MEDIA_ROOT}/brand/about-visual.jpg`,
+  aboutVisual1200: `${MEDIA_ROOT}/brand/about-visual-1200.jpg`,
   brand: {
     /** The agency's gold mark (cut from the supplied logo), transparent PNG. */
     mark: `${MEDIA_ROOT}/brand/vip-realty-mark.png`,

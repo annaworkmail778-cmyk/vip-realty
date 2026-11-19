@@ -21,8 +21,8 @@ export function AboutSection() {
   const root = useRef<HTMLElement>(null);
 
   useGsap(() => {
-    gsap.fromTo("[data-about-img]", { yPercent: 10 }, {
-      yPercent: -10,
+    gsap.fromTo("[data-about-img]", { scale: 1.12 }, {
+      scale: 1,
       ease: "none",
       scrollTrigger: { trigger: "[data-about-frame]", start: "top bottom", end: "bottom top", scrub: true },
     });
@@ -67,19 +67,19 @@ export function AboutSection() {
         </div>
       </div>
 
-      {/* Brand panel instead of a team photograph: the agency prefers not to
-          publish staff photos, and nothing here may depict people who are not
-          its team. The mark drifts slowly as the panel scrolls past. */}
-      <div
-        data-about-frame
-        className="relative mt-16 flex h-[46vh] w-full items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_center,#4a3a31_0%,#2a1d16_70%)] sm:h-[58vh] lg:mt-24"
-      >
-        <div data-about-img className="flex flex-col items-center text-center">
-          <Image src={media.brand.mark} alt="" width={254} height={315} className="h-[clamp(7rem,22vh,12rem)] w-auto" />
-          <p className="wordmark mt-8 text-[clamp(1.1rem,2.6vw,1.6rem)] tracking-[0.34em] text-champagne">
-            {brandName.toUpperCase()}
-          </p>
-          <p className="label mt-3 text-ivory/60">{dict.about.panelTagline}</p>
+      {/* The agency's key visual (logo, services, Ararat over Yerevan). Shown whole at every width —
+          its text is part of the picture — and revealed with a slow zoom as it scrolls in. */}
+      <div data-about-frame className="shell mt-16 lg:mt-24">
+        <div className="relative aspect-[16/9] w-full overflow-hidden bg-black shadow-[0_40px_80px_-40px_rgba(42,29,22,.55)]">
+          <div data-about-img className="absolute inset-0">
+            <Image
+              src={media.aboutVisual}
+              alt={`${brandName} — ${dict.about.panelTagline}`}
+              fill
+              sizes="(max-width: 1280px) 100vw, 1280px"
+              className="object-cover"
+            />
+          </div>
         </div>
       </div>
 
