@@ -88,12 +88,34 @@ export function MotionRoot() {
 
     }); // end context
 
+    /* 3D tilt on cards (mouse only): the card leans toward the cursor and a soft glare follows it. */
+    const offs: (() => void)[] = [];
+    if (window.matchMedia("(pointer: fine)").matches) {
+      document.querySelectorAll<HTMLElement>("[data-tilt]").forEach((card) => {
+        const rx = gsap.quickTo(card, "rotationX", { duration: 0.6, ease: "power3.out" });
+        const ry = gsap.quickTo(card, "rotationY", { duration: 0.6, ease: "power3.out" });
+        const move = (e: PointerEvent) => {
+          const b = card.getBoundingClientRect();
+          const x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
+          ry((x - 0.5) * 7);
+          rx(-(y - 0.5) * 6);
+          card.style.setProperty("--gx", `${x * 100}%`);
+          card.style.setProperty("--gy", `${y * 100}%`);
+        };
+        const leave = () => { rx(0); ry(0); };
+        card.addEventListener("pointermove", move);
+        card.addEventListener("pointerleave", leave);
+        offs.push(() => { card.removeEventListener("pointermove", move); card.removeEventListener("pointerleave", leave); });
+      });
+    }
+
     // Late-loading webfonts change layout; recalculate trigger positions.
     document.fonts?.ready.then(() => ScrollTrigger.refresh()).catch(() => {});
     const onLoad = () => ScrollTrigger.refresh();
     window.addEventListener("load", onLoad);
 
     return () => {
+      offs.forEach((off) => off());
       window.removeEventListener("load", onLoad);
       ctx.revert();
     };

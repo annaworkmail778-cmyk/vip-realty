@@ -29,6 +29,11 @@ export const media = {
       poster: `${MEDIA_ROOT}/hero/hero-poster.jpg`,
     },
     evening: `${MEDIA_ROOT}/hero/evening.jpg`,
+    /** The agency's own key visual (2026-11): logo, services and Ararat over Yerevan, text baked in. */
+    brand: `${MEDIA_ROOT}/hero/brand-hero.jpg`,
+    brand1280: `${MEDIA_ROOT}/hero/brand-hero-1280.jpg`,
+    /** Text-free portrait crop of the key visual (Ararat and the city) for phones. */
+    brandPortrait: `${MEDIA_ROOT}/hero/brand-hero-portrait.jpg`,
     og: `${MEDIA_ROOT}/hero/og.jpg`,
   },
 

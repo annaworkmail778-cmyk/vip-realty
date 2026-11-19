@@ -10,8 +10,12 @@ import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 
 /* ----------------------------------------------------------------------------
    01 — Hero.
-   A single architectural still, held under a slow push-in and parallax.
-   Minimal overlay: one label, one headline, one line of copy, two actions.
+   The agency's key visual. On tablets and computers it is shown whole — its
+   logo and services are part of the picture — so only the actions sit over it
+   (bottom left, on the terrace). On a phone the text-free Ararat crop carries
+   the full overlay: blessing, headline, copy and actions. The headline stays
+   in the HTML for search engines at every size. A slow push-in, scroll
+   parallax and (with a mouse) a gentle 3D tilt bring the still to life.
 ---------------------------------------------------------------------------- */
 
 /* Quick entry points into the index; labels come from the navigation dictionary. */
@@ -39,6 +43,22 @@ export function Hero() {
       .fromTo("[data-hero='quick'] > *", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.07 }, 1.45)
       .fromTo("[data-hero='scroll']", { opacity: 0 }, { opacity: 1, duration: 1 }, 1.6);
 
+    // Pointer tilt: the picture leans a few degrees toward the cursor (mouse only).
+    const el = root.current;
+    const media = el?.querySelector<HTMLElement>("[data-hero='tilt']");
+    let off: (() => void) | undefined;
+    if (el && media && window.matchMedia("(pointer: fine)").matches) {
+      const rx = gsap.quickTo(media, "rotationX", { duration: 1.2, ease: "power3.out" });
+      const ry = gsap.quickTo(media, "rotationY", { duration: 1.2, ease: "power3.out" });
+      const onMove = (e: PointerEvent) => {
+        const b = el.getBoundingClientRect();
+        ry(((e.clientX - b.left) / b.width - 0.5) * 3);
+        rx(-((e.clientY - b.top) / b.height - 0.5) * 2.2);
+      };
+      el.addEventListener("pointermove", onMove);
+      off = () => el.removeEventListener("pointermove", onMove);
+    }
+
     // Content drifts up and dims as the next section arrives.
     gsap.to("[data-hero='content']", {
       yPercent: -14,
@@ -51,6 +71,7 @@ export function Hero() {
       ease: "none",
       scrollTrigger: { trigger: root.current, start: "top top", end: "bottom top", scrub: true },
     });
+    return off;
   }, root);
 
   return (
@@ -59,39 +80,38 @@ export function Hero() {
       data-nav-tone="dark"
       className="relative h-[100svh] min-h-[34rem] w-full overflow-hidden bg-black"
     >
-      <div className="media-fill" data-hero="media">
-        {/* Art directed rather than CSS-cropped: a phone gets the portrait
-            master, which keeps the building's form, while wide viewports get a
-            16:9 crop with sky behind the navigation. Both files are already
-            sized and compressed for their viewport, so they are served
-            directly instead of through the image optimizer. */}
-        <picture className="block h-full w-full">
-          <source media="(max-width: 639px)" srcSet={media.hero.imagePortrait} />
+      <div className="media-fill [perspective:1400px]" data-hero="media">
+        {/* Art directed: phones get the text-free portrait crop, wider screens the whole key visual. */}
+        <picture data-hero="tilt" className="block h-full w-full scale-[1.04] will-change-transform">
+          <source media="(max-width: 639px)" srcSet={media.hero.brandPortrait} />
+          <source media="(max-width: 1279px)" srcSet={media.hero.brand1280} />
           <img
-            src={media.hero.image}
-            alt=""
+            src={media.hero.brand}
+            alt={brandName}
             fetchPriority="high"
             decoding="async"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover object-[50%_55%]"
           />
         </picture>
       </div>
 
-      <div className="absolute inset-0 scrim-full" aria-hidden />
+      {/* Phone: full scrim for the text. Wider: only a soft fade at the bottom for the actions. */}
+      <div className="absolute inset-0 scrim-full sm:hidden" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-1/3 bg-gradient-to-t from-black/60 to-transparent sm:block" aria-hidden />
 
       <div className="shell relative flex h-full flex-col pb-[clamp(2rem,6vh,4rem)]" data-hero="content">
-        <p data-hero="label" className="label pt-[calc(var(--nav-h)+clamp(1.5rem,7vh,4rem))] text-ivory/70">
+        <p data-hero="label" className="label pt-[calc(var(--nav-h)+clamp(1.5rem,7vh,4rem))] text-ivory/70 sm:invisible">
           <span className="text-champagne">{brandName.toUpperCase()}</span>
           <span className="mx-3 opacity-40">/</span>
           {dict.brand.tagline}
         </p>
 
         {/* The agency's blessing to every visitor, in the brand gold. */}
-        <p data-hero="blessing" className="mt-auto font-display text-[clamp(1.15rem,2.4vw,1.6rem)] italic tracking-[0.08em] text-champagne">
+        <p data-hero="blessing" className="mt-auto sm:hidden font-display text-[clamp(1.15rem,2.4vw,1.6rem)] italic tracking-[0.08em] text-champagne">
           {dict.hero.blessing}
         </p>
 
-        <h1 className="display-xl mt-3 text-ivory">
+        <h1 className="display-xl mt-3 text-ivory sm:sr-only">
           {dict.hero.headline.map((line) => (
             <span key={line} className="block overflow-hidden">
               <span data-hero="line" className="block">
@@ -101,12 +121,12 @@ export function Hero() {
           ))}
         </h1>
 
-        <div className="mt-8 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-          <p data-hero="copy" className="measure text-[1.02rem] font-light leading-relaxed text-ivory/75">
+        <div className="mt-8 flex flex-col gap-8 sm:mt-auto md:flex-row md:items-end md:justify-between">
+          <p data-hero="copy" className="measure text-[1.02rem] font-light leading-relaxed text-ivory/75 sm:hidden">
             {dict.hero.copy}
           </p>
 
-          <div className="flex flex-col gap-4 md:items-end">
+          <div className="flex flex-col gap-4 sm:items-start">
             <div data-hero="cta" className="flex flex-wrap items-center gap-3 sm:gap-4">
               <ButtonLink href="/properties">{dict.hero.explore}</ButtonLink>
               <ButtonLink href="/#contact" variant="outline">{dict.contact.contactUs}</ButtonLink>

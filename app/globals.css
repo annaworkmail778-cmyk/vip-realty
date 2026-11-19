@@ -460,3 +460,7 @@ html.motion-on [data-reveal="mask"] { clip-path: inset(0 0 100% 0); }
   .cta-star { animation: none; }
   .cta-line, .cta-window { transition: none; }
 }
+
+/* Card glare for the 3D tilt (components/MotionRoot.tsx). */
+.tilt-glare { background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 30%), rgba(255, 244, 222, .22), transparent 60%); mix-blend-mode: soft-light; }
+@media (prefers-reduced-motion: reduce) { .tilt-glare { display: none; } }

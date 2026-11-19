@@ -7,6 +7,7 @@ import { getSiteProfile } from "@/lib/site/profile.server";
 import { LanguageGate } from "@/components/site/LanguageGate";
 import { FloatingContact } from "@/components/site/FloatingContact";
 import { LeadPrompt } from "@/components/site/LeadPrompt";
+import { ScrollProgress } from "@/components/site/ScrollProgress";
 
 /* The public site's chrome. The admin panel sits outside this group so it does
    not inherit the marketing navigation, footer or scroll animation runtime.
@@ -18,6 +19,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <>
       <MotionRoot />
+      <ScrollProgress />
       {/* Rendered by the server only when no language has been chosen yet, so it is
           part of the first HTML rather than something revealed after hydration. */}
       {!chosen && <LanguageGate dict={dict} brand={profile.brandName} />}

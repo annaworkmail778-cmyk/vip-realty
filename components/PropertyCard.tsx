@@ -39,8 +39,10 @@ export function PropertyCard({
   const isRent = listing.intent === "rent";
 
   return (
-    <Link href={`/properties/${listing.slug}`} className="group block h-full w-full">
-      <article className="card flex h-full flex-col overflow-hidden">
+    <Link href={`/properties/${listing.slug}`} className="group block h-full w-full [perspective:1100px]">
+      <article data-tilt className="card relative flex h-full flex-col overflow-hidden will-change-transform">
+        {/* Soft light that follows the cursor across the card (set by MotionRoot). */}
+        <span aria-hidden className="tilt-glare pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         <div className="relative aspect-[4/3] overflow-hidden bg-ivory-3">
           {cover ? (
             <Image
