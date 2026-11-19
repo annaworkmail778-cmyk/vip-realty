@@ -93,10 +93,28 @@ export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
   const isDesktop = useMediaQuery(DESKTOP);
   const [intent, setIntent] = useState<Intent>("buy");
   const [hovered, setHovered] = useState<Intent | null>(null);
+  /* The option crossing the middle of the screen while scrolling: it lights up and its film plays,
+     so the films follow one another (sale → rent → land) without tapping or hovering. */
+  const [inView, setInView] = useState<Intent | null>(null);
+  const list = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const el = list.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) setInView((e.target as HTMLElement).dataset.intent as Intent);
+        }
+      },
+      { rootMargin: "-45% 0px -45% 0px" },
+    );
+    el.querySelectorAll("[data-intent]").forEach((li) => io.observe(li));
+    return () => io.disconnect();
+  }, []);
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const router = useRouter();
 
-  const shown = hovered ?? intent;
+  const shown = hovered ?? inView ?? intent;
   const shownLabel = dict.filters[INTENTS.find((x) => x.id === shown)!.label];
   const intentLabel = dict.filters[INTENTS.find((x) => x.id === intent)!.label];
   // Split around {intent} so the chosen intent keeps its champagne accent while
@@ -118,17 +136,17 @@ export function PropertySearch({ districts }: { districts: DistrictOption[] }) {
 
         <div className="mt-14 grid gap-10 lg:mt-20 lg:grid-cols-[1fr_minmax(20rem,34%)] lg:gap-16">
           {/* intents */}
-          <ul className="border-t border-ivory/12" onMouseLeave={() => setHovered(null)}>
+          <ul ref={list} className="border-t border-ivory/12" onMouseLeave={() => setHovered(null)}>
             {INTENTS.map((item, i) => {
               const active = intent === item.id;
               const lit = shown === item.id;
               return (
-                <li key={item.id} data-reveal="up" className="border-b border-ivory/12">
+                <li key={item.id} data-intent={item.id} data-reveal="up" className="border-b border-ivory/12">
                   <button
                     type="button"
                     onMouseEnter={() => setHovered(item.id)}
                     onFocus={() => setHovered(item.id)}
-                    onClick={() => setIntent(item.id)}
+                    onClick={() => { setIntent(item.id); setInView(item.id); }}
                     aria-pressed={active}
                     className="group grid w-full grid-cols-[auto_1fr] items-center gap-x-6 py-7 text-left sm:py-9"
                   >
