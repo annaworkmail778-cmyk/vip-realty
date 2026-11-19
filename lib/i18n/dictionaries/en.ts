@@ -266,7 +266,7 @@ export const en: Dictionary = {
   },
 
   hero: {
-    headline: ["Your new home", "is waiting."],
+    headline: ["Your new home", "is waiting"],
     blessing: "God bless you",
     copy: "Apartments, houses and commercial property in Yerevan, chosen by experienced agents.",
     explore: "Explore properties",

@@ -10,11 +10,9 @@ import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 
 /* ----------------------------------------------------------------------------
    01 — Hero.
-   The agency's key visual. On tablets and computers it is shown whole — its
-   logo and services are part of the picture — so only the actions sit over it
-   (bottom left, on the terrace). On a phone the text-free Ararat crop carries
-   the full overlay: blessing, headline, copy and actions. The headline stays
-   in the HTML for search engines at every size. A slow push-in, scroll
+   Phones show the text-free Ararat crop of the agency's key visual; wider
+   screens the architectural still (until a text-free 16:9 key visual exists).
+   Overlay at every size: blessing, headline, copy and actions. A slow push-in, scroll
    parallax and (with a mouse) a gentle 3D tilt bring the still to life.
 ---------------------------------------------------------------------------- */
 
@@ -83,11 +81,12 @@ export function Hero() {
       <div className="media-fill [perspective:1400px]" data-hero="media">
         {/* Art directed: phones get the text-free portrait crop, wider screens the whole key visual. */}
         <picture data-hero="tilt" className="block h-full w-full scale-[1.04] will-change-transform">
+          {/* Wider screens keep the previous still until a text-free 16:9 version of the key visual exists;
+              then point media.hero.image at it. */}
           <source media="(max-width: 639px)" srcSet={media.hero.brandPortrait} />
-          <source media="(max-width: 1279px)" srcSet={media.hero.brand1280} />
           <img
-            src={media.hero.brand}
-            alt={brandName}
+            src={media.hero.image}
+            alt=""
             fetchPriority="high"
             decoding="async"
             className="h-full w-full object-cover object-[50%_55%]"
@@ -96,24 +95,23 @@ export function Hero() {
       </div>
 
       {/* Phone: full scrim for the text. Wider: only a soft fade at the bottom for the actions. */}
-      <div className="absolute inset-0 scrim-full sm:hidden" aria-hidden />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-1/3 bg-gradient-to-t from-black/60 to-transparent sm:block" aria-hidden />
+      <div className="absolute inset-0 scrim-full" aria-hidden />
 
       <div className="shell relative flex h-full flex-col pb-[clamp(2rem,6vh,4rem)]" data-hero="content">
-        <p data-hero="label" className="label pt-[calc(var(--nav-h)+clamp(1.5rem,7vh,4rem))] text-ivory/70 sm:invisible">
+        <p data-hero="label" className="label pt-[calc(var(--nav-h)+clamp(1.5rem,7vh,4rem))] text-ivory/70">
           <span className="text-champagne">{brandName.toUpperCase()}</span>
           <span className="mx-3 opacity-40">/</span>
           {dict.brand.tagline}
         </p>
 
         {/* The agency's blessing to every visitor, in the brand gold. */}
-        <p data-hero="blessing" className="mt-auto sm:hidden font-display text-[clamp(1.15rem,2.4vw,1.6rem)] italic tracking-[0.08em] text-champagne">
+        <p data-hero="blessing" className="mt-auto font-display text-[clamp(1.15rem,2.4vw,1.6rem)] italic tracking-[0.08em] text-champagne">
           {dict.hero.blessing}
         </p>
 
-        <h1 className="display-xl mt-3 text-ivory sm:sr-only">
+        <h1 className="display-xl mt-3 text-ivory">
           {dict.hero.headline.map((line) => (
-            <span key={line} className="block overflow-hidden">
+            <span key={line} className="-mb-[0.18em] block overflow-hidden pb-[0.18em]">
               <span data-hero="line" className="block">
                 {line}
               </span>
@@ -121,12 +119,12 @@ export function Hero() {
           ))}
         </h1>
 
-        <div className="mt-8 flex flex-col gap-8 sm:mt-auto md:flex-row md:items-end md:justify-between">
-          <p data-hero="copy" className="measure text-[1.02rem] font-light leading-relaxed text-ivory/75 sm:hidden">
+        <div className="mt-8 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+          <p data-hero="copy" className="measure text-[1.02rem] font-light leading-relaxed text-ivory/75">
             {dict.hero.copy}
           </p>
 
-          <div className="flex flex-col gap-4 sm:items-start">
+          <div className="flex flex-col gap-4 md:items-end">
             <div data-hero="cta" className="flex flex-wrap items-center gap-3 sm:gap-4">
               <ButtonLink href="/properties">{dict.hero.explore}</ButtonLink>
               <ButtonLink href="/#contact" variant="outline">{dict.contact.contactUs}</ButtonLink>

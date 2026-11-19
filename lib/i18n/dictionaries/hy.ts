@@ -313,7 +313,7 @@ export const hy = {
 
   hero: {
     // Two display lines, animated separately.
-    headline: ["Ձեր նոր տունը", "սպասում է Ձեզ։"],
+    headline: ["Ձեր նոր տունը", "սպասում է Ձեզ"],
     /** The agency's blessing to its visitors, shown above the headline. */
     blessing: "Աստված օրհնի Ձեզ",
     copy: "Բնակարաններ, առանձնատներ և կոմերցիոն տարածքներ Երևանում՝ փորձառու գործակալների ընտրությամբ։",
