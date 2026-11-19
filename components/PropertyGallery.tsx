@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import { fill } from "@/lib/i18n/fill";
@@ -51,6 +51,18 @@ export function PropertyGallery({
     return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
   }, [open, move]);
 
+  /* Lightbox swipe: a horizontal drag of 50 px or more moves one photo. */
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touch.current;
+    touch.current = null;
+    if (!start) return;
+    const dx = e.changedTouches[0].clientX - start.x;
+    const dy = e.changedTouches[0].clientY - start.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) move(dx < 0 ? 1 : -1);
+  };
+
   if (images.length === 0) return null;
 
   const supporting = images.slice(1, 5);
@@ -69,6 +81,8 @@ export function PropertyGallery({
       {variant === "hero" ? (
         <div>
           <div className="grid gap-2 lg:aspect-[16/9] lg:grid-cols-[1.7fr_1fr]">
+            {/* Phone and tablet: every photo in a swipeable track, tap opens the lightbox. */}
+            <SwipeTrack images={images} altOf={altOf} labelOf={openLabel} onOpen={setOpen} />
             <Frame
               image={images[0]}
               alt={altOf(0)}
@@ -77,8 +91,8 @@ export function PropertyGallery({
               onOpen={setOpen}
               label={openLabel(0)}
               priority
-              sizes="(max-width: 1024px) 100vw, 62vw"
-              className="aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-full"
+              sizes="62vw"
+              className="hidden lg:block lg:h-full"
             />
 
             {supporting.length > 0 && (
@@ -115,7 +129,7 @@ export function PropertyGallery({
             <button
               type="button"
               onClick={() => setOpen(0)}
-              className="label mt-3 inline-flex items-center gap-2.5 text-espresso/70 transition-colors duration-500 hover:text-espresso"
+              className="label mt-3 hidden lg:inline-flex items-center gap-2.5 text-espresso/70 transition-colors duration-500 hover:text-espresso"
             >
               <span className="link-underline">
                 {fill(dict.gallery.viewAll, { count: images.length })}
@@ -149,6 +163,8 @@ export function PropertyGallery({
           aria-modal="true"
           aria-label={fill(dict.gallery.of, { name })}
           className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 p-4"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
         >
           <button
             type="button"
@@ -181,6 +197,67 @@ export function PropertyGallery({
         </div>
       )}
     </>
+  );
+}
+
+/** Horizontal scroll-snap track with a "3 / 8" counter and dots; native swipe, no library. */
+function SwipeTrack({
+  images, altOf, labelOf, onOpen,
+}: {
+  images: ListingImage[];
+  altOf: (i: number) => string;
+  labelOf: (i: number) => string;
+  onOpen: (i: number) => void;
+}) {
+  const track = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  const onScroll = () => {
+    const el = track.current;
+    if (el) setIndex(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
+  };
+  return (
+    <div className="relative lg:hidden">
+      <div
+        ref={track}
+        onScroll={onScroll}
+        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {images.map((image, i) => (
+          <button
+            key={image.url}
+            type="button"
+            onClick={() => onOpen(i)}
+            aria-label={labelOf(i)}
+            className="relative aspect-[4/3] w-full shrink-0 snap-center overflow-hidden bg-ivory-3"
+          >
+            <Image
+              src={image.url}
+              alt={altOf(i)}
+              fill
+              sizes="100vw"
+              priority={i === 0}
+              loading={i === 0 ? undefined : "lazy"}
+              className="object-cover"
+            />
+          </button>
+        ))}
+      </div>
+      {images.length > 1 && (
+        <>
+          <span className="label pointer-events-none absolute right-3 top-3 rounded-full bg-ink/70 px-3 py-1 text-ivory">
+            {index + 1} / {images.length}
+          </span>
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
+            {images.slice(0, 12).map((image, i) => (
+              <span
+                key={image.url}
+                className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? "w-5 bg-ivory" : "w-1.5 bg-ivory/55"}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

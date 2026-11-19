@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { gsap, ScrollTrigger, prefersReducedMotion } from "@/lib/motion";
 
@@ -21,6 +21,20 @@ const TO: Record<string, gsap.TweenVars> = {
 
 export function MotionRoot() {
   const pathname = usePathname();
+  const fromHistory = useRef(false);
+
+  /* Back/forward keeps the browser's own scroll restoration; every other route change starts at the top.
+     Without this, opening a listing from far down the home page (whose pinned sections confuse the router's
+     own scroll handling) landed the visitor at the bottom of the property page. */
+  useEffect(() => {
+    const onPop = () => { fromHistory.current = true; };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  useEffect(() => {
+    if (fromHistory.current) { fromHistory.current = false; return; }
+    if (!window.location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
 
   useEffect(() => {
     if (prefersReducedMotion()) return;

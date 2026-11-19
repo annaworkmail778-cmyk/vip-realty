@@ -3,7 +3,7 @@ import { Hero } from "@/components/Hero";
 import { PropertySearch } from "@/components/PropertySearch";
 import { LatestProperties } from "@/components/LatestProperties";
 import { NextAddress } from "@/components/NextAddress";
-import { TransformationSection } from "@/components/TransformationSection";
+import { ServicesSection } from "@/components/ServicesSection";
 import { PropertyCollection } from "@/components/PropertyCollection";
 import { AboutSection } from "@/components/AboutSection";
 import { FaithSection } from "@/components/FaithSection";
@@ -55,7 +55,7 @@ export default async function HomePage() {
           scroll past several full-height sections to see a property. */}
       <LatestProperties listings={listings.slice(0, LATEST_LIMIT)} />
       <NextAddress listings={listings.slice(0, SEQUENCE_LENGTH)} />
-      <TransformationSection />
+      <ServicesSection profile={profile} />
       <PropertyCollection counts={counts.ok ? counts.data : null} />
       <AboutSection />
       <FaithSection />

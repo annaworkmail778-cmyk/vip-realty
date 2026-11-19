@@ -171,6 +171,29 @@ export const en: Dictionary = {
     openMap: "Open in Maps",
     visitUs: "Visit us",
     follow: "Follow us",
+    callAgent: "Call the agent",
+    noAnswer: "Agent not answering?",
+    callAgency: "Call the agency",
+  },
+
+  lead: {
+    title: "Selling or looking for a home?",
+    body: "Write or call us and we will arrange everything professionally.",
+    call: "Call",
+    write: "Write on WhatsApp",
+    close: "Close",
+    whatsapp: "Hello {brand} — I would like advice on selling or buying a property.",
+  },
+
+  services: {
+    label: "Services",
+    title: "How we can help",
+    items: [
+      { title: "Sell or let", text: "We value the property, photograph it, find a reliable buyer or tenant and see the deal through." },
+      { title: "Buy a home", text: "We shortlist homes that match your needs, arrange viewings and check the documents." },
+      { title: "Rent a home", text: "We find a suitable flat for your budget and dates, without wasted time." },
+    ],
+    cta: "Contact us",
   },
 
   inquiry: {

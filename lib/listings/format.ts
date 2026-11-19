@@ -167,7 +167,10 @@ export function createFormat(locale: Locale, dict: Dictionary): Format {
   const sentence = (text: string) => text.charAt(0).toLocaleUpperCase(tag) + text.slice(1);
 
   const title = (listing: TitleFields, options: { short?: boolean } = {}) => {
-    if (!isGeneratedTitle(listing)) return listing.name;
+    /* Pipeline titles are English. In Armenian or Russian an all-Latin stored title is replaced by one
+       generated from the fields, so the page never mixes languages; Armenian/Cyrillic titles stay verbatim. */
+    const latinOnly = locale !== "en" && /^[\x20-\x7E²–—]+$/.test(listing.name) && listing.propertyType in dict.listingTitle.subject;
+    if (!isGeneratedTitle(listing) && !latinOnly) return listing.name;
     const t = dict.listingTitle;
     const type = listing.propertyType;
     const withRooms = type in t.rooms && listing.rooms !== null && listing.rooms > 0

@@ -100,7 +100,7 @@ export async function PropertyDetail({
           </div>
 
           {/* ---------------------------------------------------------------- title block */}
-          <header className="mt-9 border-b border-espresso/12 pb-9">
+          <header className="mt-7 border-b border-espresso/12 pb-8 sm:mt-9 sm:pb-9">
             <div className="flex flex-wrap items-center gap-3">
               <span className={`badge ${isRent ? "bg-cocoa text-ivory" : "bg-espresso text-ivory"}`}>
                 {fmt.intent(listing)}
@@ -112,7 +112,7 @@ export async function PropertyDetail({
             </div>
 
             {/* The place is on the line below, so a generated title omits it here. */}
-            <h1 data-reveal="up" className="display-lg mt-5 max-w-[18ch] text-ink">{fmt.title(listing, { short: true })}</h1>
+            <h1 className="display-lg mt-5 max-w-[18ch] text-ink">{fmt.title(listing, { short: true })}</h1>
 
             <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
               <p className="label text-cocoa">{fmt.districtFirstLine(listing)}</p>
@@ -124,14 +124,19 @@ export async function PropertyDetail({
         <div className="shell grid gap-14 pb-[var(--spacing-inventory)] pt-12 lg:grid-cols-[1fr_21rem] lg:gap-20">
           {/* main column */}
           <div className="min-w-0">
-            <dl className="grid grid-cols-2 gap-y-7 border-b border-espresso/12 pb-10 sm:grid-cols-3">
+            {/* Key facts as an even grid of tiles: easy to scan on a phone. */}
+            <dl className="grid grid-cols-2 gap-px overflow-hidden border border-espresso/12 bg-espresso/12 sm:grid-cols-3">
               {facts.map((f) => (
-                <div key={f.label} data-reveal="up">
+                <div key={f.label} className="bg-ivory px-4 py-4 sm:px-5 sm:py-5">
                   <dt className="label text-espresso/50">{f.label}</dt>
-                  <dd className="mt-2 font-display text-[1.45rem] leading-none text-ink">{f.value}</dd>
+                  <dd className="mt-2 font-display text-[1.3rem] leading-none text-ink sm:text-[1.45rem]">{f.value}</dd>
                 </div>
               ))}
+              {facts.length % 2 === 1 && <div className="bg-ivory sm:hidden" aria-hidden />}
             </dl>
+
+            {/* Phone: the agent's contact card sits right after the facts, before the long text. */}
+            <ContactPanel listing={listing} inquiry={inquiry} tone="light" className="mt-10 lg:hidden" />
 
             {listing.description.length > 0 && (
               <section className="mt-12">
@@ -179,7 +184,7 @@ export async function PropertyDetail({
             </section>
           </div>
 
-          <ContactPanel listing={listing} inquiry={inquiry} tone="light" />
+          <ContactPanel listing={listing} inquiry={inquiry} tone="light" className="hidden lg:block" />
         </div>
 
         {/* more */}

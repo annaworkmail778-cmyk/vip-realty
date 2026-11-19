@@ -6,7 +6,7 @@ import { useSiteProfile } from "@/components/site/SiteProfileProvider";
 import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import { fill } from "@/lib/i18n/fill";
 import { formatPhone, listingContact, telHref, telLink, viberUrl, whatsappUrl } from "@/lib/site/profile";
-import { ViberGlyph, WhatsAppGlyph } from "@/components/ui/ContactIcons";
+import { PhoneGlyph, ViberGlyph, WhatsAppGlyph } from "@/components/ui/ContactIcons";
 import type { Listing } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
@@ -26,10 +26,12 @@ export function ContactPanel({
   listing,
   inquiry,
   tone = "dark",
+  className = "",
 }: {
   listing: Listing;
   inquiry: InquiryListing;
   tone?: "dark" | "light";
+  className?: string;
 }) {
   const agency = useSiteProfile();
   /* The agent who brought the listing answers for it; the agency otherwise. */
@@ -67,61 +69,84 @@ export function ContactPanel({
       : "bg-ivory text-ink hover:bg-champagne",
   };
 
-  return (
-    <aside className="lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)]">
-      <div className={t.shell}>
-        <p className={`label ${t.muted}`}>{dict.contact.price}</p>
-        <p className={`price price-lg mt-2 ${t.price}`}>{fmt.price(listing)}</p>
+  const hasAgent = Boolean(agentName && listing.agent && (listing.agent.phone || listing.agent.whatsapp));
+  /* The agency line is offered as a fallback only when the agent's own number is shown above it. */
+  const agencyTel = hasAgent ? telHref(agency) : null;
+  const btn = "label-lg flex w-full items-center justify-center gap-3 px-6 py-4 transition-colors duration-500";
+  const outline = light
+    ? "border border-espresso/20 text-espresso hover:border-gold hover:text-gold"
+    : "border border-ivory/25 text-ivory hover:border-champagne hover:text-champagne";
 
-        <div className="mt-6">
-          <InquiryButton listing={inquiry} variant={light ? "ink" : "primary"} />
-          <p className={`label mt-3 ${t.faint}`}>{dict.contact.leaveDetails}</p>
+  return (
+    <aside className={`lg:sticky lg:top-[calc(var(--nav-h)+1.5rem)] ${className}`}>
+      <div className={t.shell}>
+        {/* The page header already shows the price on a phone. */}
+        <div className="hidden lg:block">
+          <p className={`label ${t.muted}`}>{dict.contact.price}</p>
+          <p className={`price price-lg mt-2 ${t.price}`}>{fmt.price(listing)}</p>
         </div>
 
-        <div className={`mt-7 border-t pt-6 ${t.divider}`}>
+        <div className={`lg:mt-7 lg:border-t lg:pt-6 ${t.divider}`}>
           <p className={`label ${t.muted}`}>{agentName ? dict.contact.agent : dict.contact.contact}</p>
-          <p className={`mt-3 font-display text-[1.35rem] leading-tight ${t.name}`}>{agentName ?? profile.legalName}</p>
-          {agentName && <p className={`label mt-2 ${t.hours}`}>{profile.legalName}</p>}
-          {profile.officeHours && <p className={`label mt-2 ${t.hours}`}>{profile.officeHours}</p>}
+          <p className={`mt-2 font-display text-[1.45rem] leading-tight ${t.name}`}>{agentName ?? profile.legalName}</p>
+          {agentName && <p className={`label mt-1.5 ${t.hours}`}>{profile.legalName}</p>}
 
-          <div className="mt-5 space-y-2.5">
+          {tel && (
+            <a href={tel} className={`mt-4 block font-display text-[1.6rem] leading-none tracking-wide ${t.name}`}>
+              {formatPhone(profile.phone!)}
+            </a>
+          )}
+
+          <div className="mt-5 flex flex-col gap-3">
             {tel && (
-              <a href={tel} className={`label link-underline block ${t.link}`}>{formatPhone(profile.phone!)}</a>
+              <a href={tel} className={`${btn} ${t.whatsapp}`}>
+                <PhoneGlyph size={16} />
+                {agentName ? dict.contact.callAgent : dict.contact.call}
+              </a>
             )}
-            {secondTel && (
-              <a href={secondTel} className={`label link-underline block ${t.link}`}>{formatPhone(profile.phoneSecondary!)}</a>
+            {whatsapp && (
+              <a href={whatsapp} target="_blank" rel="noreferrer" className={`${btn} ${outline}`}>
+                <WhatsAppGlyph size={15} />
+                {dict.contact.whatsapp}
+              </a>
             )}
-            {profile.email && (
-              <a href={`mailto:${profile.email}`} className={`label link-underline block ${t.link}`}>
-                {profile.email}
+            {viber && (
+              <a href={viber} className={`${btn} ${outline}`}>
+                <ViberGlyph size={15} />
+                {dict.contact.viber}
               </a>
             )}
           </div>
 
-          {whatsapp && (
-            <a
-              href={whatsapp}
-              target="_blank"
-              rel="noreferrer"
-              className={`label-lg mt-6 flex w-full items-center justify-center gap-3 px-6 py-4 transition-colors duration-500 ${t.whatsapp}`}
-            >
-              <WhatsAppGlyph size={15} />
-              {dict.contact.whatsapp}
-            </a>
+          {!hasAgent && (secondTel || profile.officeHours) && (
+            <div className="mt-4 flex flex-col gap-1.5">
+              {secondTel && (
+                <a href={secondTel} className={`label link-underline self-start ${t.link}`}>{formatPhone(profile.phoneSecondary!)}</a>
+              )}
+              {profile.officeHours && <p className={`label ${t.hours}`}>{profile.officeHours}</p>}
+            </div>
           )}
-          {viber && (
-            <a
-              href={viber}
-              className={`label-lg mt-3 flex w-full items-center justify-center gap-3 border px-6 py-4 transition-colors duration-500 ${light ? "border-espresso/20 text-espresso hover:border-gold hover:text-gold" : "border-ivory/25 text-ivory hover:border-champagne hover:text-champagne"}`}
-            >
-              <ViberGlyph size={15} />
-              {dict.contact.viber}
-            </a>
+
+          {agencyTel && (
+            <div className={`mt-6 border-t pt-5 ${t.divider}`}>
+              <p className={`label ${t.muted}`}>{dict.contact.noAnswer}</p>
+              <a href={agencyTel} className={`${btn} mt-3 ${outline}`}>
+                <PhoneGlyph size={15} />
+                <span>{dict.contact.callAgency}</span>
+              </a>
+              <p className={`label mt-2 text-center ${t.hours}`}>
+                {agency.brandName} · {formatPhone(agency.phone!)}
+                {agency.officeHours ? ` · ${agency.officeHours}` : ""}
+              </p>
+            </div>
           )}
         </div>
 
+        <div className={`mt-7 border-t pt-6 ${t.divider}`}>
+          <InquiryButton listing={inquiry} variant={light ? "ink" : "primary"} />
+          <p className={`label mt-3 ${t.faint}`}>{dict.contact.leaveDetails}</p>
+        </div>
       </div>
     </aside>
   );
 }
-

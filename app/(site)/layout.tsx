@@ -6,6 +6,7 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { getSiteProfile } from "@/lib/site/profile.server";
 import { LanguageGate } from "@/components/site/LanguageGate";
 import { FloatingContact } from "@/components/site/FloatingContact";
+import { LeadPrompt } from "@/components/site/LeadPrompt";
 
 /* The public site's chrome. The admin panel sits outside this group so it does
    not inherit the marketing navigation, footer or scroll animation runtime.
@@ -30,6 +31,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <main id="main">{children}</main>
       <Footer districts={facets.districts} />
       <FloatingContact />
+      <LeadPrompt />
     </>
   );
 }
