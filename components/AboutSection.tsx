@@ -85,14 +85,19 @@ export function AboutSection() {
 
       {stats.length > 0 && (
         <div className="shell">
+          {/* The confirmed figures as two (or three) equal tiles side by side at every width. */}
           <dl
-            className={`mt-12 grid gap-y-10 border-t border-espresso/12 pt-10 lg:mt-16 ${
-              stats.length === 1 ? "" : stats.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
-            }`}
+            className={`mt-12 grid gap-3 sm:gap-5 lg:mt-16 ${stats.length >= 3 ? "grid-cols-1 sm:grid-cols-3" : stats.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}
           >
             {stats.map((stat) => (
-              <div key={stat.key} data-reveal="up">
-                <dt className="display-md text-espresso tabular-nums">
+              <div
+                key={stat.key}
+                data-reveal="up"
+                className="relative flex flex-col justify-between overflow-hidden bg-espresso px-5 py-7 text-ivory sm:px-9 sm:py-10"
+              >
+                <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-champagne to-transparent" />
+                <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-champagne/10 blur-2xl" />
+                <dt className="font-display text-[clamp(2.6rem,11vw,5.5rem)] leading-none text-champagne tabular-nums">
                   {(() => {
                     const m = /^(\d+)(.*)$/.exec(String(stat.value));
                     if (!m) return stat.value;
@@ -101,7 +106,7 @@ export function AboutSection() {
                     return <span data-count={n} data-count-from={n > 1900 && n < 2100 ? n - 22 : 0} data-suffix={m[2]}>{stat.value}</span>;
                   })()}
                 </dt>
-                <dd className="label mt-3 text-espresso/55">{dict.about[stat.key]}</dd>
+                <dd className="label mt-5 border-t border-ivory/15 pt-4 text-ivory/70">{dict.about[stat.key]}</dd>
               </div>
             ))}
           </dl>
