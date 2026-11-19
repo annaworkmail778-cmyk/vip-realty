@@ -266,9 +266,9 @@ export const en: Dictionary = {
   },
 
   hero: {
-    headline: ["Find", "your place."],
+    headline: ["Your new home", "is waiting."],
     blessing: "God bless you",
-    copy: "Discover properties selected for the way you want to live.",
+    copy: "Apartments, houses and commercial property in Yerevan, chosen by experienced agents.",
     explore: "Explore properties",
     scroll: "Scroll to explore",
   },
@@ -338,11 +338,11 @@ export const en: Dictionary = {
   map: {
     label: "Neighbourhoods",
     title: ["Find your place", "in Yerevan."],
-    note: "Five districts, five different ways to live in the same city. Select one to see what is available.",
+    note: "All twelve Yerevan districts on a real map. Pick one to see what is available.",
     all: "All Yerevan",
     available: "{count} available",
     empty: "Nothing listed here at the moment. Try another neighbourhood.",
-    alt: "Stylized map of Yerevan districts",
+    alt: "Map of Yerevan by district",
     districtCount: "{district}, {count} properties",
   },
 
@@ -371,6 +371,13 @@ export const en: Dictionary = {
     davtashen: "Open skies and new build. Families, space, the ring road close by.",
     ajapnyak: "West of the gorge. Wide views back toward the city and Ararat.",
     avan: "Elevated and calm, on the north-eastern edge. Air and distance.",
+    "kanaker-zeytun": "Close to the centre, on the heights. Good amenities and city views.",
+    "nor-nork": "A large, green residential district. Schools, shops, made for families.",
+    "nork-marash": "Small, quiet and very close to the centre. Houses and leafy courtyards.",
+    "malatia-sebastia": "The west of the city. Affordable prices, wide avenues and markets.",
+    "shengavit": "South-west, by the lake. Metro, new developments and quick links to the centre.",
+    "erebuni": "The city's oldest quarter. Space, private houses and the airport nearby.",
+    "nubarashen": "The southern edge. Quiet, space and plots for houses.",
   },
 
   featured: {
@@ -379,8 +386,8 @@ export const en: Dictionary = {
   },
 
   cta: {
-    eyebrow: "Find your place. Own your next chapter.",
-    title: "Your next address is closer than you think.",
+    eyebrow: "With you at every step",
+    title: "Let's find your next address together.",
   },
 
   footer: {

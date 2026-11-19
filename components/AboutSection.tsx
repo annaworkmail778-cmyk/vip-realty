@@ -92,7 +92,15 @@ export function AboutSection() {
           >
             {stats.map((stat) => (
               <div key={stat.key} data-reveal="up">
-                <dt className="display-md text-espresso">{stat.value}</dt>
+                <dt className="display-md text-espresso tabular-nums">
+                  {(() => {
+                    const m = /^(\d+)(.*)$/.exec(String(stat.value));
+                    if (!m) return stat.value;
+                    const n = Number(m[1]);
+                    /* Counts up when scrolled into view (MotionRoot); years count from a nearby year. */
+                    return <span data-count={n} data-count-from={n > 1900 && n < 2100 ? n - 22 : 0} data-suffix={m[2]}>{stat.value}</span>;
+                  })()}
+                </dt>
                 <dd className="label mt-3 text-espresso/55">{dict.about[stat.key]}</dd>
               </div>
             ))}

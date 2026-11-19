@@ -35,8 +35,8 @@ export type CurrencyCode = "USD" | "AMD" | "EUR" | "RUB";
 
 export type PricePeriod = "month" | "day" | "year";
 
-/** Ids of the districts drawn on the stylized Yerevan map. */
-export type MapDistrictId = "kentron" | "arabkir" | "davtashen" | "ajapnyak" | "avan";
+/** Ids of the districts shown on the Yerevan map: all twelve administrative districts. */
+export type MapDistrictId = import("./places").DistrictId;
 
 export interface ListingImage {
   url: string;
@@ -88,7 +88,7 @@ export interface Listing {
     images: ListingImage[];
   };
   /** Position on the stylized map, only when the district is one the map draws. */
-  map: { district: MapDistrictId; x: number; y: number } | null;
+  map: { district: MapDistrictId; lat: number; lng: number } | null;
   /** The agent who brought the listing (public name and numbers only), or null.
    *  The listing page contacts this agent and falls back to the agency. */
   agent: ListingAgent | null;

@@ -417,3 +417,46 @@ html.motion-on [data-reveal="mask"] { clip-path: inset(0 0 100% 0); }
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---------------------------------------------------------------- Yerevan map markers (components/YerevanMap.tsx) */
+.vr-map .leaflet-container, .vr-map { font-family: var(--font-sans); background: #0e0e10; }
+.vr-pin-wrap { background: none; border: 0; }
+.vr-pin {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;
+}
+.vr-pin-dot {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 14px; height: 14px; padding: 0 4px; border-radius: 999px;
+  background: rgba(196, 155, 91, 0.35); border: 1px solid rgba(225, 179, 119, 0.7);
+  color: #0e0e10; font-size: 11px; font-weight: 600; line-height: 1;
+  transition: transform .4s var(--ease-editorial, ease), background .4s ease;
+}
+.vr-pin.has-items .vr-pin-dot { min-width: 26px; height: 26px; background: #c49b5b; box-shadow: 0 0 0 6px rgba(196,155,91,.18); }
+.vr-pin.is-on .vr-pin-dot { background: #e1b377; transform: scale(1.18); box-shadow: 0 0 0 10px rgba(225,179,119,.22); animation: vr-pulse 2.2s ease-out infinite; }
+.vr-pin-label {
+  font-size: 11px; letter-spacing: .08em; color: rgba(244, 239, 231, .82);
+  text-shadow: 0 1px 6px #000, 0 0 2px #000;
+}
+.vr-pin.is-on .vr-pin-label { color: #e1b377; }
+@keyframes vr-pulse { 0% { box-shadow: 0 0 0 0 rgba(225,179,119,.45); } 100% { box-shadow: 0 0 0 18px rgba(225,179,119,0); } }
+.vr-map .leaflet-control-zoom a { background: #17171a; color: #e9e2d6; border-color: #2a2a2e; }
+.vr-map .leaflet-control-zoom a:hover { background: #222226; color: #e1b377; }
+.vr-map .leaflet-control-attribution { background: rgba(14,14,16,.7); color: rgba(244,239,231,.45); font-size: 9px; }
+.vr-map .leaflet-control-attribution a { color: rgba(244,239,231,.6); }
+@media (prefers-reduced-motion: reduce) { .vr-pin.is-on .vr-pin-dot { animation: none; } }
+/* OpenStreetMap's standard tiles, toned to the site's dark, warm palette. */
+.vr-map .vr-tiles { filter: invert(1) hue-rotate(185deg) brightness(.78) contrast(.92) saturate(.35) sepia(.18); }
+.vr-pin:not(.has-items):not(.is-on) .vr-pin-label { display: none; }
+
+/* ---------------------------------------------------------------- closing scene (components/CtaBackdrop.tsx) */
+.cta-star { opacity: .55; animation: cta-twinkle 4.5s ease-in-out infinite; }
+@keyframes cta-twinkle { 0%, 100% { opacity: .15; } 50% { opacity: .8; } }
+.cta-line { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 3.2s cubic-bezier(.65,0,.35,1); }
+.cta-scene.is-drawn .cta-line { stroke-dashoffset: 0; }
+.cta-window { opacity: 0; transition: opacity 1.2s ease; }
+.cta-scene.is-drawn .cta-window { opacity: .85; }
+@media (prefers-reduced-motion: reduce) {
+  .cta-star { animation: none; }
+  .cta-line, .cta-window { transition: none; }
+}

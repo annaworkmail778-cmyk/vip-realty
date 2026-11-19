@@ -1,7 +1,6 @@
-import Image from "next/image";
+import { CtaBackdrop } from "@/components/CtaBackdrop";
 import { ButtonLink } from "@/components/ui/ArrowLink";
 import { PhoneGlyph, ViberGlyph, WhatsAppGlyph } from "@/components/ui/ContactIcons";
-import { media } from "@/lib/media";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { fill } from "@/lib/i18n/fill";
 import { formatPhone, mapsUrl, telLink, viberUrl, whatsappUrl, type SiteProfile } from "@/lib/site/profile";
@@ -30,10 +29,8 @@ export async function FinalCTA({ profile }: { profile: SiteProfile }) {
       data-nav-tone="dark"
       className="relative flex min-h-[86svh] items-center justify-center overflow-hidden bg-black text-center text-ivory"
     >
-      <div className="media-fill">
-        <Image src={media.hero.evening} alt="" fill sizes="100vw" loading="lazy" className="object-cover opacity-80" />
-      </div>
-      <div className="pointer-events-none absolute inset-0 bg-black/55" aria-hidden />
+      <CtaBackdrop />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/70" aria-hidden />
 
       <div className="shell relative py-[var(--spacing-section)]">
         <p data-reveal="fade" className="label text-champagne">{dict.cta.eyebrow}</p>

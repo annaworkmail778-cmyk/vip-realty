@@ -1,44 +1,46 @@
 "use client";
 
+import "leaflet/dist/leaflet.css";
+import { useEffect, useRef } from "react";
+import type * as Leaflet from "leaflet";
 import { MAP_DISTRICTS as DISTRICTS } from "@/lib/listings/taxonomy";
 import { useDict, useFormat } from "@/components/site/LocaleProvider";
 import { fill } from "@/lib/i18n/fill";
 import type { MapDistrictId as District } from "@/lib/listings/types";
 
 /* ----------------------------------------------------------------------------
-   The stylized Yerevan map, shared by the neighbourhood section and the
-   property detail page.
+   The Yerevan map, shared by the neighbourhood section and the property page.
 
-   MAP_SHAPES is abstract placeholder geometry. Replace the five paths with real
-   district outlines (or put a tile image behind the <svg>) and every consumer
-   keeps working — pins are placed at their district's position from
-   MAP_DISTRICTS in lib/listings/taxonomy.ts, never at an address.
+   A real street map (OpenStreetMap tiles, toned dark in CSS to match the site) with one marker per administrative district. Listings are counted at
+   their district's centre — never placed at an address. Leaflet is loaded in
+   the browser only; the server renders the sized, dark frame.
+
+   On touch screens one-finger drag is left to the page scroll; the zoom
+   buttons and pinch still work. The mouse wheel never zooms the map.
 ---------------------------------------------------------------------------- */
 
 export interface MapPin {
   slug: string;
-  map: { x: number; y: number };
+  map: { district: District; lat: number; lng: number };
 }
 
-export const MAP_SHAPES: Record<District, string> = {
-  davtashen: "M 8 8 L 40 12 L 37 35 L 11 33 Z",
-  arabkir:   "M 41 14 L 66 18 L 62 45 L 38 42 Z",
-  avan:      "M 69 12 L 94 18 L 89 43 L 66 39 Z",
-  ajapnyak:  "M 6 40 L 34 46 L 30 70 L 8 65 Z",
-  kentron:   "M 38 48 L 66 50 L 70 78 L 40 75 Z",
-};
+const CENTER: [number, number] = [40.1792, 44.5152];
+const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>';
+
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 export function YerevanMap({
   selected = null,
   pins = [],
-  activeSlug = null,
   counts,
   onSelectDistrict,
-  onSelectPin,
   className = "",
 }: {
   selected?: District | null;
   pins?: MapPin[];
+  /** Kept for callers that track the previewed listing; markers are per district. */
   activeSlug?: string | null;
   counts?: Partial<Record<District, number>>;
   onSelectDistrict?: (id: District) => void;
@@ -47,115 +49,93 @@ export function YerevanMap({
 }) {
   const dict = useDict();
   const fmt = useFormat();
+  const box = useRef<HTMLDivElement>(null);
+  const map = useRef<Leaflet.Map | null>(null);
+  const layer = useRef<Leaflet.LayerGroup | null>(null);
+  const lib = useRef<typeof Leaflet | null>(null);
+  const select = useRef(onSelectDistrict);
+  select.current = onSelectDistrict;
   const interactive = Boolean(onSelectDistrict);
+  const flownTo = useRef<string | null | undefined>(undefined);
+
+  /* One map per mount. */
+  useEffect(() => {
+    let cancelled = false;
+    import("leaflet").then((L) => {
+      if (cancelled || !box.current || map.current) return;
+      lib.current = L;
+      const touch = window.matchMedia("(pointer: coarse)").matches;
+      const m = L.map(box.current, {
+        center: CENTER,
+        zoom: 12,
+        minZoom: 11,
+        maxZoom: 17,
+        scrollWheelZoom: false,
+        dragging: !touch,
+        zoomControl: false,
+        attributionControl: false,
+      });
+      L.control.zoom({ position: "bottomright" }).addTo(m);
+      L.control.attribution({ position: "bottomleft", prefix: false }).addAttribution(ATTRIBUTION).addTo(m);
+      L.tileLayer(TILES, { maxZoom: 19, className: "vr-tiles" }).addTo(m);
+      map.current = m;
+      layer.current = L.layerGroup().addTo(m);
+      draw();
+    });
+    return () => {
+      cancelled = true;
+      map.current?.remove();
+      map.current = null;
+      layer.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Markers follow the selection and counts. */
+  function draw() {
+    const L = lib.current, m = map.current, g = layer.current;
+    if (!L || !m || !g) return;
+    g.clearLayers();
+
+    const pinned = new Set(pins.map((p) => p.map.district));
+    const shown = interactive ? DISTRICTS : DISTRICTS.filter((d) => d.id === selected || pinned.has(d.id));
+
+    for (const d of shown) {
+      const on = selected === d.id;
+      const count = counts?.[d.id] ?? 0;
+      const label = fmt.district(d.id);
+      const html =
+        `<span class="vr-pin${on ? " is-on" : ""}${count > 0 || !interactive ? " has-items" : ""}">` +
+        `<span class="vr-pin-dot">${interactive && count > 0 ? count : ""}</span>` +
+        `<span class="vr-pin-label">${esc(label)}</span></span>`;
+      const marker = L.marker([d.map.lat, d.map.lng], {
+        icon: L.divIcon({ html, className: "vr-pin-wrap", iconSize: [0, 0] }),
+        keyboard: interactive,
+        title: interactive ? fill(dict.map.districtCount, { district: label, count }) : label,
+        riseOnHover: true,
+        zIndexOffset: on ? 1000 : count > 0 ? 500 : 0,
+      });
+      if (interactive) marker.on("click", () => select.current?.(d.id));
+      marker.addTo(g);
+    }
+
+    /* Move the camera only when the selection changes, not on every render. */
+    if (flownTo.current === selected) return;
+    const first = flownTo.current === undefined;
+    flownTo.current = selected;
+    const focus = DISTRICTS.find((d) => d.id === selected);
+    if (focus) m.flyTo([focus.map.lat, focus.map.lng], 14, { duration: first ? 0 : 0.8 });
+    else if (!first) m.flyTo(CENTER, 12, { duration: 0.8 });
+  }
+
+  useEffect(draw); // cheap: at most twelve markers
 
   return (
-    <svg
-      viewBox="0 0 100 85"
+    <div
+      ref={box}
       role="img"
       aria-label={dict.map.alt}
-      className={`w-full ${className}`}
-    >
-      <defs>
-        <linearGradient id="mapDistrict" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2a1d16" />
-          <stop offset="1" stopColor="#1b1512" />
-        </linearGradient>
-      </defs>
-
-      <rect width="100" height="85" fill="#100d0c" />
-
-      {/* the gorge */}
-      <path
-        d="M 37 0 C 31 16 23 28 27 44 C 31 60 25 72 19 85"
-        stroke="#1d2a2b" strokeWidth="3.4" fill="none" strokeLinecap="round" opacity="0.9"
-      />
-
-      {/* avenues */}
-      <g stroke="#3b2a20" strokeWidth="0.45" fill="none" opacity="0.85">
-        <path d="M 0 47 L 100 41" />
-        <path d="M 52 0 L 48 85" />
-        <path d="M 12 78 L 88 20" />
-        <circle cx="53" cy="60" r="9" />
-      </g>
-
-      {DISTRICTS.map((d) => {
-        const on = selected === d.id;
-        const count = counts?.[d.id];
-        const label = fmt.district(d.id);
-        const Shape = (
-          <>
-            <path
-              d={MAP_SHAPES[d.id]}
-              fill={on ? "#3b2a20" : "url(#mapDistrict)"}
-              stroke={on ? "#c49b5b" : "#4a3428"}
-              strokeWidth={on ? 0.55 : 0.3}
-              opacity={selected && !on ? 0.4 : 1}
-              className="transition-all duration-500"
-            />
-            <text
-              x={d.map.x} y={d.map.y} textAnchor="middle"
-              fill={on ? "#e1b377" : "#c9b79f"}
-              opacity={selected && !on ? 0.45 : 0.85}
-              /* Uppercased by CSS, not in JS, so the Armenian override in
-                 globals.css can opt out of Latin small-caps convention. */
-              className="map-district-label pointer-events-none select-none"
-              style={{ fontSize: 2.6, letterSpacing: 0.55, fontFamily: "var(--font-sans)" }}
-            >
-              {label}
-            </text>
-            {count !== undefined && (
-              <text
-                x={d.map.x} y={d.map.y + 3.6} textAnchor="middle"
-                fill="#c49b5b" opacity={on ? 0.9 : 0.45}
-                className="pointer-events-none select-none"
-                style={{ fontSize: 2, fontFamily: "var(--font-sans)" }}
-              >
-                {count}
-              </text>
-            )}
-          </>
-        );
-
-        return interactive ? (
-          <g
-            key={d.id}
-            role="button"
-            tabIndex={0}
-            aria-pressed={on}
-            aria-label={
-              count === undefined ? label : fill(dict.map.districtCount, { district: label, count })
-            }
-            className="cursor-pointer outline-none focus-visible:[&>path]:stroke-champagne"
-            onClick={() => onSelectDistrict?.(d.id)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectDistrict?.(d.id); }
-            }}
-          >
-            {Shape}
-          </g>
-        ) : (
-          <g key={d.id}>{Shape}</g>
-        );
-      })}
-
-      {pins.map((p) => {
-        const on = activeSlug === p.slug;
-        return (
-          <g
-            key={p.slug}
-            transform={`translate(${p.map.x} ${p.map.y + 7})`}
-            className={onSelectPin ? "cursor-pointer" : undefined}
-            onClick={onSelectPin ? () => onSelectPin(p.slug) : undefined}
-          >
-            <circle r={on ? 1.5 : 1} fill={on ? "#e1b377" : "#f4efe7"} className="transition-all duration-500" />
-            <circle
-              r={on ? 3.4 : 2.2} fill="none" stroke="#c49b5b" strokeWidth="0.22"
-              opacity={on ? 0.9 : 0.35} className="transition-all duration-500"
-            />
-          </g>
-        );
-      })}
-    </svg>
+      className={`vr-map relative z-0 h-[22rem] w-full overflow-hidden bg-[#0e0e10] sm:h-[28rem] lg:h-[32rem] ${className}`}
+    />
   );
 }

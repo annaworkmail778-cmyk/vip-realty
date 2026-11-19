@@ -58,7 +58,35 @@ export function MotionRoot() {
             gsap.to(batch, { ...TO[kind], stagger: { each: 0.08, from: "start" }, overwrite: "auto" }),
         });
       }
-    });
+
+      /* Numbers count up once when they enter the view: "1000+", "2022". */
+      gsap.utils.toArray<HTMLElement>("[data-count]").forEach((el) => {
+        const to = Number(el.dataset.count);
+        const from = Number(el.dataset.countFrom ?? 0);
+        const suffix = el.dataset.suffix ?? "";
+        if (!Number.isFinite(to)) return;
+        const state = { v: from };
+        el.textContent = `${from}${suffix}`;
+        gsap.to(state, {
+          v: to,
+          duration: 2,
+          ease: "power2.out",
+          scrollTrigger: { trigger: el, start: "top 90%", once: true },
+          onUpdate: () => { el.textContent = `${Math.round(state.v)}${suffix}`; },
+        });
+      });
+
+      /* Gentle depth on large images: they drift a little slower than the page. */
+      gsap.utils.toArray<HTMLElement>("[data-parallax]").forEach((el) => {
+        const amount = Number(el.dataset.parallax) || 8;
+        gsap.fromTo(el, { yPercent: -amount }, {
+          yPercent: amount,
+          ease: "none",
+          scrollTrigger: { trigger: el.parentElement ?? el, start: "top bottom", end: "bottom top", scrub: true },
+        });
+      });
+
+    }); // end context
 
     // Late-loading webfonts change layout; recalculate trigger positions.
     document.fonts?.ready.then(() => ScrollTrigger.refresh()).catch(() => {});

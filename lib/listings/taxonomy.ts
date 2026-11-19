@@ -93,12 +93,20 @@ export type RoomFilter = (typeof ROOM_OPTIONS)[number]["id"];
  * Ids are frozen (they travel in `?district=`); labels and blurbs are
  * translated via dict.districts[id] and dict.districtBlurbs[id].
  */
-export const MAP_DISTRICTS: { id: MapDistrictId; map: { x: number; y: number } }[] = [
-  { id: "kentron",   map: { x: 52, y: 58 } },
-  { id: "arabkir",   map: { x: 46, y: 34 } },
-  { id: "davtashen", map: { x: 24, y: 22 } },
-  { id: "ajapnyak",  map: { x: 20, y: 52 } },
-  { id: "avan",      map: { x: 78, y: 26 } },
+/* Approximate centre of each district (WGS84). A listing is shown at its district's centre, never at its address. */
+export const MAP_DISTRICTS: { id: MapDistrictId; map: { lat: number; lng: number } }[] = [
+  { id: "kentron",          map: { lat: 40.1812, lng: 44.5136 } },
+  { id: "arabkir",          map: { lat: 40.2068, lng: 44.5049 } },
+  { id: "ajapnyak",         map: { lat: 40.2046, lng: 44.4612 } },
+  { id: "davtashen",        map: { lat: 40.2286, lng: 44.4939 } },
+  { id: "avan",             map: { lat: 40.2163, lng: 44.5842 } },
+  { id: "kanaker-zeytun",   map: { lat: 40.2128, lng: 44.5397 } },
+  { id: "nor-nork",         map: { lat: 40.1983, lng: 44.5667 } },
+  { id: "nork-marash",      map: { lat: 40.1883, lng: 44.5462 } },
+  { id: "malatia-sebastia", map: { lat: 40.1699, lng: 44.4519 } },
+  { id: "shengavit",        map: { lat: 40.1525, lng: 44.4933 } },
+  { id: "erebuni",          map: { lat: 40.1409, lng: 44.5300 } },
+  { id: "nubarashen",       map: { lat: 40.1140, lng: 44.5560 } },
 ];
 
 export const isMapDistrict = (id: string | null): id is MapDistrictId =>
